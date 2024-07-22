@@ -25,9 +25,9 @@ also keeps records for developer wallet, fees, and `CMAccount` implementation
 address. Accounts can only be upgraded to this implementation address that the
 manager holds.
 
-### MessengerCashier.sol
+### ChequeManager.sol
 
-The `MessengerCashier` contract handles the processing of cheques. It verifies the
+The `ChequeManager` contract handles the processing of cheques. It verifies the
 signatures, checks the validity of the cheques, and transfers the funds between
 accounts. It also calculates the developer fee and transfers it to the developer's
 wallet.

@@ -4,7 +4,8 @@ const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
 // @dev TODO: Extend and tidy up tests
-// @dev TODO: Add MessengerCashier tests
+// @dev TODO: Add ChequeManager tests
+// @dev TODO: Use fixtures for CM account creations in various tests
 
 describe("CMAccountManager", function () {
     async function deployCMAccountManagerFixture() {
@@ -86,12 +87,24 @@ describe("CMAccountManager", function () {
             const { cmAccountManager, cmAccount, initialOwner, pauser, upgrader, otherAccount } =
                 await loadFixture(deployCMAccountManagerFixture);
 
+            const anyOneCanDeposit = true;
+
             await expect(
-                await cmAccountManager.createCMAccount(initialOwner.address, pauser.address, upgrader.address),
+                await cmAccountManager.createCMAccount(
+                    initialOwner.address,
+                    pauser.address,
+                    upgrader.address,
+                    anyOneCanDeposit,
+                ),
             ).to.emit(cmAccountManager, "CMAccountCreated");
 
             // Create CMAccount
-            const tx = await cmAccountManager.createCMAccount(initialOwner.address, pauser.address, upgrader.address);
+            const tx = await cmAccountManager.createCMAccount(
+                initialOwner.address,
+                pauser.address,
+                upgrader.address,
+                anyOneCanDeposit,
+            );
             const receipt = await tx.wait();
 
             // Decode the event log
@@ -100,6 +113,7 @@ describe("CMAccountManager", function () {
                     return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
                 } catch (e) {
                     return false;
+                    const anyOneCanDeposit = true;
                 }
             });
 
@@ -115,8 +129,15 @@ describe("CMAccountManager", function () {
         it("should revert if the owner address is invalid", async function () {
             const { cmAccountManager, cmAccount, pauser, upgrader } = await loadFixture(deployCMAccountManagerFixture);
 
+            const anyOneCanDeposit = true;
+
             await expect(
-                cmAccountManager.createCMAccount(ethers.ZeroAddress, pauser.address, upgrader.address),
+                cmAccountManager.createCMAccount(
+                    ethers.ZeroAddress,
+                    pauser.address,
+                    upgrader.address,
+                    anyOneCanDeposit,
+                ),
             ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidOwner");
         });
     });
@@ -145,11 +166,18 @@ describe("CMAccountManager", function () {
             await cmAccountManager.connect(pauser).pause();
             expect(await cmAccountManager.paused()).to.be.true;
 
+            const anyOneCanDeposit = true;
+
             // Try to create CMAccount
             await expect(
                 cmAccountManager
                     .connect(pauser)
-                    .createCMAccount(otherAccount.address, otherAccount.address, otherAccount.address),
+                    .createCMAccount(
+                        otherAccount.address,
+                        otherAccount.address,
+                        otherAccount.address,
+                        anyOneCanDeposit,
+                    ),
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
     });
@@ -162,8 +190,15 @@ describe("CMAccountManager", function () {
             // Get old implementation address from the factory
             const oldImplementation = await cmAccountManager.getAccountImplementation();
 
+            const anyOneCanDeposit = true;
+
             // Create CMAccount with old implementation
-            const tx = await cmAccountManager.createCMAccount(initialOwner.address, pauser.address, upgrader.address);
+            const tx = await cmAccountManager.createCMAccount(
+                initialOwner.address,
+                pauser.address,
+                upgrader.address,
+                anyOneCanDeposit,
+            );
             const receipt = await tx.wait();
 
             // Decode the event log
@@ -207,8 +242,15 @@ describe("CMAccountManager", function () {
             const { cmAccountManager, cmAccount, initialOwner, pauser, upgrader, otherAccount } =
                 await loadFixture(deployCMAccountManagerFixture);
 
+            const anyOneCanDeposit = true;
+
             // Create CMAccount
-            const tx = await cmAccountManager.createCMAccount(initialOwner.address, pauser.address, upgrader.address);
+            const tx = await cmAccountManager.createCMAccount(
+                initialOwner.address,
+                pauser.address,
+                upgrader.address,
+                anyOneCanDeposit,
+            );
             const receipt = await tx.wait();
 
             // Decode the event log
@@ -248,8 +290,15 @@ describe("CMAccountManager", function () {
             const { cmAccountManager, cmAccount, initialOwner, pauser, upgrader } =
                 await loadFixture(deployCMAccountManagerFixture);
 
+            const anyOneCanDeposit = true;
+
             // Create CMAccount
-            const tx = await cmAccountManager.createCMAccount(initialOwner.address, pauser.address, upgrader.address);
+            const tx = await cmAccountManager.createCMAccount(
+                initialOwner.address,
+                pauser.address,
+                upgrader.address,
+                anyOneCanDeposit,
+            );
             const receipt = await tx.wait();
 
             // Decode the event log

@@ -13,8 +13,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-// Cashier
-import "./MessengerCashier.sol";
+// Cheques
+import "./ChequeManager.sol";
 
 interface ICMAccountManager {
     function getAccountImplementation() external view returns (address);
@@ -29,25 +29,38 @@ interface ICMAccountManager {
  *
  * This account holds funds that will be paid to the cheque beneficiaries.
  */
-contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable, MessengerCashier {
+contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable, ChequeManager {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
+    bytes32 public constant DEPOSITER_ROLE = keccak256("DEPOSITER_ROLE");
+    bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
     address private _manager;
+    bool private _anyoneCanDeposit;
 
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
 
     /**
-     * CMAccount upgrade event. Emitted when the CMAccount implementation is upgraded.
+     * @dev CMAccount upgrade event. Emitted when the CMAccount implementation is upgraded.
      */
     event CMAccountUpgraded(address indexed oldImplementation, address indexed newImplementation);
+
+    /**
+     * @dev Deposit event, emitted when there is a new deposit
+     */
+    event Deposit(address indexed sender, uint256 amount);
+
+    /**
+     * @dev Withdraw event, emitted when there is a new withdrawal
+     */
+    event Withdraw(address indexed receiver, uint256 amount);
 
     /***************************************************
      *                    ERRORS                       *
@@ -63,6 +76,32 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      */
     error CMAccountNoUpdateNeeded(address oldImplementation, address newImplementation);
 
+    /**
+     * @dev Error to revert with if depositer is not allowed
+     */
+    error DepositerNotAllowed(address sender);
+
+    /**
+     * @dev Error to revert zero value deposits
+     */
+    error ZeroValueDeposit(address sender);
+
+    /***************************************************
+     *                   MODIFIERS                     *
+     ***************************************************/
+
+    /**
+     * @dev Modifier to check if deposits are allowed.
+     * If anyoneCanDeposit is true, allows any msg.sender.
+     * If anyoneCanDeposit is false, checks if msg.sender has the DEPOSITER_ROLE.
+     */
+    modifier onlyAllowedDepositer() {
+        if (!_anyoneCanDeposit && !hasRole(DEPOSITER_ROLE, msg.sender)) {
+            revert DepositerNotAllowed(msg.sender);
+        }
+        _;
+    }
+
     /***************************************************
      *         CONSTRUCTOR & INITIALIZATION            *
      ***************************************************/
@@ -72,24 +111,24 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    /**
-     * @dev Account should be able to receive CAM
-     *
-     * FIXME: Check if this is ok legally or we need to introduce checks
-     */
-    receive() external payable virtual {}
-
-    function initialize(address manager, address defaultAdmin, address pauser, address upgrader) public initializer {
+    function initialize(
+        address manager,
+        address defaultAdmin,
+        address pauser,
+        address upgrader,
+        bool anyoneCanDeposit
+    ) public initializer {
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
-        __MessengerCashier_init();
+        __ChequeManager_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(PAUSER_ROLE, pauser);
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
+        _anyoneCanDeposit = anyoneCanDeposit;
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -149,5 +188,33 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     function getDeveloperFeeBp() public view override returns (uint256) {
         uint256 developerFeeBp = ICMAccountManager(_manager).getDeveloperFeeBp();
         return developerFeeBp;
+    }
+
+    /**
+     * @dev Set the anyoneCanDeposit flag.
+     * @param anyoneCanDeposit The new value of the anyoneCanDeposit flag.
+     */
+    function setAnyoneCanDeposit(bool anyoneCanDeposit) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _anyoneCanDeposit = anyoneCanDeposit;
+    }
+
+    /**
+     * @dev Deposit CAM to the CMAccount
+     */
+    function deposit() public payable onlyAllowedDepositer {
+        if (msg.value == 0) {
+            revert ZeroValueDeposit(msg.sender);
+        }
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    using Address for address payable;
+
+    /**
+     * @dev Withdraw CAM from the CMAccount
+     */
+    function withdraw(address payable recipient, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
+        recipient.sendValue(amount);
+        emit Withdraw(recipient, amount);
     }
 }
