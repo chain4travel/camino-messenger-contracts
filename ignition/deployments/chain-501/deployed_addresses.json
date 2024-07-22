@@ -1,0 +1,6 @@
+{
+  "ProxyModule#CMAccountFactory": "0xe034f743F27e846320Ff568cF045c95039d36C3b",
+  "ProxyModule#ERC1967Proxy": "0x80dAeb44d11B0a5f27a60f96A46b436BDF8FCC28",
+  "CMAccountFactoryModule#CMAccountFactory": "0x80dAeb44d11B0a5f27a60f96A46b436BDF8FCC28",
+  "UpgradeModule#CMAccountFactoryV2": "0x5cAF8c61BA205f86b2c69e56D17c412C7f43b2CE"
+}
