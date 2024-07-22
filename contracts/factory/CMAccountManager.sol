@@ -40,7 +40,7 @@ contract CMAccountManager is
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant VERSIONER_ROLE = keccak256("VERSIONER_ROLE");
     bytes32 public constant FEE_ADMIN_ROLE = keccak256("FEE_ADMIN_ROLE");
-    bytes32 public constant DEVELOPER_WALLET_ROLE = keccak256("DEVELOPER_WALLET_ROLE");
+    bytes32 public constant DEVELOPER_WALLET_ADMIN_ROLE = keccak256("DEVELOPER_WALLET_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -225,14 +225,14 @@ contract CMAccountManager is
     /**
      * @dev Return developer wallet address
      */
-    function getDeveloperWallet() public view returns (address) {
+    function getDeveloperWallet() public view returns (address developerWallet) {
         return _developerWallet;
     }
 
     /**
      * @dev Set developer wallet address
      */
-    function setDeveloperWallet(address developerWallet) public onlyRole(DEVELOPER_WALLET_ROLE) {
+    function setDeveloperWallet(address developerWallet) public onlyRole(DEVELOPER_WALLET_ADMIN_ROLE) {
         if (developerWallet == address(0)) {
             revert InvalidDeveloperWallet(developerWallet);
         }

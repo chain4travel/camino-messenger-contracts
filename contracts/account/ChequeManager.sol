@@ -301,7 +301,7 @@ abstract contract ChequeManager is Initializable {
      *
      * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
      * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
-     * 100 bp = 1%, 10−2, ⁠1/100⁠, or 0.01.
+     * 100 bp = 1%, ⁠1/100⁠, or 0.01.
      */
     function getDeveloperFeeBp() public view virtual returns (uint256 developerFee);
 }

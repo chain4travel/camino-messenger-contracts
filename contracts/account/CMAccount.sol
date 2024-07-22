@@ -30,6 +30,12 @@ interface ICMAccountManager {
  * This account holds funds that will be paid to the cheque beneficiaries.
  */
 contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable, ChequeManager {
+    using Address for address payable;
+
+    /***************************************************
+     *                    ROLES                        *
+     ***************************************************/
+
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
@@ -40,7 +46,15 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      *                   STORAGE                       *
      ***************************************************/
 
+    /**
+     * @dev Address of the CMAccountManager
+     */
     address private _manager;
+
+    /**
+     * @dev If true, anyone can deposit CAM to this account.
+     * If false only the DEPOSITER_ROLE can deposit.
+     */
     bool private _anyoneCanDeposit;
 
     /***************************************************
@@ -131,6 +145,10 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _anyoneCanDeposit = anyoneCanDeposit;
     }
 
+    function getManagerAddress() public view returns (address) {
+        return _manager;
+    }
+
     function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
     }
@@ -208,13 +226,11 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         emit Deposit(msg.sender, msg.value);
     }
 
-    using Address for address payable;
-
     /**
      * @dev Withdraw CAM from the CMAccount
      */
     function withdraw(address payable recipient, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
-        recipient.sendValue(amount);
         emit Withdraw(recipient, amount);
+        recipient.sendValue(amount);
     }
 }
