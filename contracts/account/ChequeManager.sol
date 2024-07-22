@@ -9,13 +9,13 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
- * @dev MessengerCashier manages, verifies, and cashes in messenger cheques.
+ * @dev ChequeManager manages, verifies, and cashes in messenger cheques.
  *
  * EIP712 Domain name & version:
  *   DOMAIN_NAME = "CaminoMessenger"
  *   DOMAIN_VERSION= "1"
  */
-abstract contract MessengerCashier is Initializable {
+abstract contract ChequeManager is Initializable {
     using ECDSA for bytes32;
     using Address for address payable;
 
@@ -136,7 +136,7 @@ abstract contract MessengerCashier is Initializable {
      *   uint256 chainid;
      * }
      */
-    function __MessengerCashier_init() internal onlyInitializing {
+    function __ChequeManager_init() internal onlyInitializing {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
         );
@@ -263,6 +263,8 @@ abstract contract MessengerCashier is Initializable {
      * @dev Sets `CashIn(uint256 lastCounter, uint256 lastAmount)` for given `fromBot`, `toBot` pair.
      */
     function setLastCashIn(address fromBot, address toBot, uint256 counter, uint256 amount) internal {
+        payable(address(this)).sendValue(amount);
+
         lastCashIns[fromBot][toBot] = LastCashIn(counter, amount);
     }
 

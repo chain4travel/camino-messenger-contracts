@@ -16,7 +16,13 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 
 // ABI of the CMAccount implementation contract
 interface ICMAccount {
-    function initialize(address manager, address owner, address pauser, address upgrader) external;
+    function initialize(
+        address manager,
+        address owner,
+        address pauser,
+        address upgrader,
+        bool anyOneCanDeposit
+    ) external;
 }
 
 /// @custom:security-contact https://r.xyz/program/camino-network
@@ -174,12 +180,18 @@ contract CMAccountManager is
     function createCMAccount(
         address initialOwner,
         address pauser,
-        address upgrader
+        address upgrader,
+        bool anyOneCanDeposit
     ) external nonReentrant whenNotPaused returns (address) {
-        return _createCMAccount(initialOwner, pauser, upgrader);
+        return _createCMAccount(initialOwner, pauser, upgrader, anyOneCanDeposit);
     }
 
-    function _createCMAccount(address initialOwner, address pauser, address upgrader) private returns (address) {
+    function _createCMAccount(
+        address initialOwner,
+        address pauser,
+        address upgrader,
+        bool anyOneCanDeposit
+    ) private returns (address) {
         // Checks
         address latestAccountImplementation = _latestAccountImplementation;
         if (latestAccountImplementation.code.length == 0) {
@@ -197,7 +209,7 @@ contract CMAccountManager is
         cmAccounts[address(cmAccountProxy)] = true;
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), initialOwner, pauser, upgrader);
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), initialOwner, pauser, upgrader, anyOneCanDeposit);
 
         return address(cmAccountProxy);
     }
