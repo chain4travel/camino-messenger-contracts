@@ -16,7 +16,7 @@ const {
 } = require("./utils/fixtures");
 
 describe("CMAccountManager", function () {
-    describe("Deployment", function () {
+    describe("Main", function () {
         it("should deploy correctly with the right state", async function () {
             // Set up signers
             await setupSigners();
@@ -38,6 +38,45 @@ describe("CMAccountManager", function () {
             await expect(await cmAccountManager.getDeveloperWallet()).to.be.equal(signers.developerWallet.address);
             await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(developerFeeBp);
             await expect(await cmAccountManager.paused()).to.be.false;
+        });
+
+        it("should set developer wallet and roles correctly", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            oldDeveloperWallet = signers.developerWallet.address;
+            newDeveloperWallet = signers.otherAccount1.address;
+
+            await expect(cmAccountManager.connect(signers.developerWalletAdmin).setDeveloperWallet(newDeveloperWallet))
+                .to.emit(cmAccountManager, "DeveloperWalletUpdated")
+                .withArgs(oldDeveloperWallet, newDeveloperWallet);
+        });
+
+        it("should fail to set developer wallet to zero address", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            await expect(cmAccountManager.connect(signers.developerWalletAdmin).setDeveloperWallet(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(cmAccountManager, "InvalidDeveloperWallet")
+                .withArgs(ethers.ZeroAddress);
+        });
+
+        it("should set developer fee bassis points", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            const oldFeeBp = await cmAccountManager.getDeveloperFeeBp();
+            const newFeeBp = 500;
+
+            await expect(cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp))
+                .to.emit(cmAccountManager, "DeveloperFeeBpUpdated")
+                .withArgs(oldFeeBp, newFeeBp);
         });
     });
     describe("Upgrades", function () {
@@ -163,6 +202,39 @@ describe("CMAccountManager", function () {
             await expect(await cmAccountManager.isCMAccount(signers.otherAccount1.address)).to.be.false;
             await expect(await cmAccountManager.isCMAccount(ethers.ZeroAddress)).to.be.false;
             await expect(await cmAccount.getManagerAddress()).to.be.equal(cmAccountManagerAddress);
+        });
+
+        it("should fail if admin is zero address", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
+
+            await expect(
+                cmAccountManager.createCMAccount(
+                    ethers.ZeroAddress,
+                    signers.cmAccountPauser,
+                    signers.cmAccountUpgrader,
+                    true,
+                ),
+            ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidAdmin");
+        });
+
+        it("should fail if the manager is paused", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
+
+            await cmAccountManager.connect(signers.managerPauser).pause();
+            await expect(
+                cmAccountManager.createCMAccount(
+                    signers.cmAccountAdmin.address,
+                    signers.cmAccountPauser,
+                    signers.cmAccountUpgrader,
+                    true,
+                ),
+            ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
     });
 });

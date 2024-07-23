@@ -101,7 +101,7 @@ contract CMAccountManager is
      * @dev The admin address is invalid
      * @param admin The admin address
      */
-    error CMAccountInvalidOwner(address admin);
+    error CMAccountInvalidAdmin(address admin);
 
     /**
      * @dev Invalid developer address
@@ -178,16 +178,16 @@ contract CMAccountManager is
      * Emits a {CMAccountCreated} event.
      */
     function createCMAccount(
-        address initialOwner,
+        address admin,
         address pauser,
         address upgrader,
         bool anyOneCanDeposit
     ) external nonReentrant whenNotPaused returns (address) {
-        return _createCMAccount(initialOwner, pauser, upgrader, anyOneCanDeposit);
+        return _createCMAccount(admin, pauser, upgrader, anyOneCanDeposit);
     }
 
     function _createCMAccount(
-        address initialOwner,
+        address admin,
         address pauser,
         address upgrader,
         bool anyOneCanDeposit
@@ -197,8 +197,8 @@ contract CMAccountManager is
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
         }
-        if (initialOwner == address(0)) {
-            revert CMAccountInvalidOwner(initialOwner);
+        if (admin == address(0)) {
+            revert CMAccountInvalidAdmin(admin);
         }
 
         // Create CMAccount Proxy and set the implementation address
@@ -209,7 +209,7 @@ contract CMAccountManager is
         cmAccounts[address(cmAccountProxy)] = true;
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), initialOwner, pauser, upgrader, anyOneCanDeposit);
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), admin, pauser, upgrader, anyOneCanDeposit);
 
         return address(cmAccountProxy);
     }

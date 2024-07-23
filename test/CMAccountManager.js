@@ -138,7 +138,7 @@ describe("CMAccountManager", function () {
                     upgrader.address,
                     anyOneCanDeposit,
                 ),
-            ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidOwner");
+            ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidAdmin");
         });
     });
 
