@@ -8,7 +8,7 @@
 
 pragma solidity ^0.8.24;
 
-import { CMAccountManager } from "./CMAccountManager.sol";
+import { CMAccountManager } from "../CMAccountManager.sol";
 
 contract CMAccountManagerV2 is CMAccountManager {
     function getVersion() public pure returns (string memory) {
