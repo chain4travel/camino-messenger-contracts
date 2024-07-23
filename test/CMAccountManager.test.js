@@ -134,7 +134,7 @@ describe("CMAccountManager", function () {
             await expect(await cmAccountManager.getAccountImplementation()).to.be.equal(cmAccountImplAddress);
         });
 
-        it("should revert if the implementation is zero address", async function () {
+        it("should revert if the implementation is zero code length address", async function () {
             // Set up signers
             await setupSigners();
 

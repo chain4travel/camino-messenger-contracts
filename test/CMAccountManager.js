@@ -320,7 +320,7 @@ describe("CMAccountManager", function () {
             const factoryImplementation = await cmAccountManager.getAccountImplementation();
 
             await expect(cmAccountProxy.connect(upgrader).upgradeToAndCall(factoryImplementation, "0x"))
-                .to.revertedWithCustomError(cmAccountProxy, "CMAccountNoUpdateNeeded")
+                .to.revertedWithCustomError(cmAccountProxy, "CMAccountNoUpgradeNeeded")
                 .withArgs(factoryImplementation, factoryImplementation);
         });
     });

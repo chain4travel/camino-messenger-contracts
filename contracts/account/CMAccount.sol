@@ -39,7 +39,7 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
-    bytes32 public constant DEPOSITER_ROLE = keccak256("DEPOSITER_ROLE");
+    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
 
     /***************************************************
@@ -88,12 +88,12 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     /**
      * @dev New implementation is the same as the current implementation, no update needed
      */
-    error CMAccountNoUpdateNeeded(address oldImplementation, address newImplementation);
+    error CMAccountNoUpgradeNeeded(address oldImplementation, address newImplementation);
 
     /**
      * @dev Error to revert with if depositer is not allowed
      */
-    error DepositerNotAllowed(address sender);
+    error DepositorNotAllowed(address sender);
 
     /**
      * @dev Error to revert zero value deposits
@@ -110,8 +110,8 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      * If anyoneCanDeposit is false, checks if msg.sender has the DEPOSITER_ROLE.
      */
     modifier onlyAllowedDepositer() {
-        if (!_anyoneCanDeposit && !hasRole(DEPOSITER_ROLE, msg.sender)) {
-            revert DepositerNotAllowed(msg.sender);
+        if (!_anyoneCanDeposit && !hasRole(DEPOSITOR_ROLE, msg.sender)) {
+            revert DepositorNotAllowed(msg.sender);
         }
         _;
     }
@@ -174,7 +174,7 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
 
         // Revert if the new implementation is the same as the old one
         if (oldImplementation == newImplementation) {
-            revert CMAccountNoUpdateNeeded(oldImplementation, newImplementation);
+            revert CMAccountNoUpgradeNeeded(oldImplementation, newImplementation);
         }
 
         // Check if new implementation matches the implementation address in the manager
@@ -217,9 +217,16 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     }
 
     /**
+     * @dev Get the anyoneCanDeposit flag.
+     */
+    function getAnyoneCanDeposit() public view returns (bool) {
+        return _anyoneCanDeposit;
+    }
+
+    /**
      * @dev Deposit CAM to the CMAccount
      */
-    function deposit() public payable onlyAllowedDepositer {
+    function deposit() external payable onlyAllowedDepositer {
         if (msg.value == 0) {
             revert ZeroValueDeposit(msg.sender);
         }

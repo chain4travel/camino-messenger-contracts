@@ -130,6 +130,28 @@ async function deployAndConfigureAllFixture() {
     return { cmAccountManager, cmAccount };
 }
 
+async function deployCMAccountWithDepositFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+    // Grant withdrawer role
+    const WITHDRAWER_ROLE = await cmAccount.WITHDRAWER_ROLE();
+    await cmAccount.connect(signers.cmAccountAdmin).grantRole(WITHDRAWER_ROLE, signers.withdrawer.address);
+
+    // Grant depositor role
+    const DEPOSITOR_ROLE = await cmAccount.DEPOSITOR_ROLE();
+    await cmAccount.connect(signers.cmAccountAdmin).grantRole(DEPOSITOR_ROLE, signers.depositor.address);
+
+    const depositAmount = ethers.parseEther("1");
+
+    await cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true);
+    await cmAccount.connect(signers.depositor).deposit({ value: depositAmount });
+
+    return { cmAccount, WITHDRAWER_ROLE };
+}
+
 module.exports = {
     setupSigners,
     developerFeeBp,
@@ -137,4 +159,5 @@ module.exports = {
     deployCMAccountImplFixture,
     deployCMAccountManagerWithCMAccountImplFixture,
     deployAndConfigureAllFixture,
+    deployCMAccountWithDepositFixture,
 };
