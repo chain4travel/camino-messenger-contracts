@@ -161,6 +161,7 @@ describe("CMAccountManager", function () {
 
             await expect(await cmAccountManager.isCMAccount(cmAccountAddress)).to.be.true;
             await expect(await cmAccountManager.isCMAccount(signers.otherAccount1.address)).to.be.false;
+            await expect(await cmAccountManager.isCMAccount(ethers.ZeroAddress)).to.be.false;
             await expect(await cmAccount.getManagerAddress()).to.be.equal(cmAccountManagerAddress);
         });
     });
