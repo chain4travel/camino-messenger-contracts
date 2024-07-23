@@ -118,8 +118,9 @@ describe("CMAccountManager", function () {
                 deployCMAccountManagerWithCMAccountImplFixture,
             );
 
-            await expect(cmAccountManager.connect(signers.otherAccount1).setAccountImplementation(cmAccountImplAddress))
-                .to.be.reverted;
+            await expect(
+                cmAccountManager.connect(signers.otherAccount1).setAccountImplementation(cmAccountImplAddress),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
         });
     });
     describe("Pausable", function () {
@@ -142,7 +143,10 @@ describe("CMAccountManager", function () {
 
             const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
 
-            await expect(cmAccountManager.connect(signers.otherAccount1).pause()).to.be.reverted;
+            await expect(cmAccountManager.connect(signers.otherAccount1).pause()).to.be.revertedWithCustomError(
+                cmAccountManager,
+                "AccessControlUnauthorizedAccount",
+            );
         });
     });
     describe("CMAccount", function () {
