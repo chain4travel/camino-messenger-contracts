@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 //
-// Camino Messenger Account Manager V2 for Testing Upgrades
-
-/**
- * TESTING ONLY - NOT FOR PRODUCTION
- */
+// TEST CONTRACT
 
 pragma solidity ^0.8.24;
 
