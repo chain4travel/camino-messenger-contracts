@@ -82,6 +82,19 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
+     * @dev Cheque verified event. Emitted when a cheque is verified.
+     */
+    event ChequeVerified(
+        address indexed fromCMAccount,
+        address indexed toCMAccount,
+        address fromBot,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 payment
+    );
+
+    /**
      * @dev Cash-in event. Emitted when a cheque is cashed in.
      */
     event ChequeCashedIn(
@@ -145,7 +158,7 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Returns the hash of the `MessengerCheque` encoded with `MESSENGER_CHEQUE_TYPEHASH`.
      */
-    function hashMessengerCheque(MessengerCheque memory cheque) internal pure returns (bytes32) {
+    function hashMessengerCheque(MessengerCheque memory cheque) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -214,6 +227,17 @@ abstract contract ChequeManager is Initializable {
 
         // Everthing is valid. Calculate payment amount.
         paymentAmount = cheque.amount - lastCashIn.amount;
+
+        // Emit event
+        emit ChequeVerified(
+            cheque.fromCMAccount,
+            cheque.toCMAccount,
+            signer, // fromBot
+            cheque.toBot,
+            cheque.counter,
+            cheque.amount,
+            paymentAmount
+        );
 
         return (signer, paymentAmount);
     }
