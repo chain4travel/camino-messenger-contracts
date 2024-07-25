@@ -3,7 +3,7 @@
  */
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 
 // Fixtures
 const {
@@ -17,10 +17,6 @@ const {
 } = require("./utils/fixtures");
 
 describe("CMAccount", function () {
-    beforeEach(async function () {
-        // Set up signers
-        await setupSigners();
-    });
     describe("Upgrade", function () {
         it("should upgrade to new implementation address", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
@@ -56,7 +52,7 @@ describe("CMAccount", function () {
             await cmAccountImplV2.waitForDeployment();
             const newImplementationAddress = await cmAccountImplV2.getAddress();
 
-            // DO NOT set new implementation on the manager
+            // SKIP: DO NOT set new implementation on the manager here
 
             // Try to upgrade the account
             await expect(cmAccount.connect(signers.cmAccountUpgrader).upgradeToAndCall(newImplementationAddress, "0x"))
@@ -134,7 +130,6 @@ describe("CMAccount", function () {
                 .withArgs(anyone.address, depositAmount);
 
             // Check balances
-
             // Depositor balance should be lower than the difference between their initial balance and the deposit
             expect(await ethers.provider.getBalance(anyone.address)).to.be.lt(anyoneInitialBalance - depositAmount);
 
@@ -232,6 +227,23 @@ describe("CMAccount", function () {
             await expect(withdrawTx)
                 .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
                 .withArgs(withdrawer.address, WITHDRAWER_ROLE);
+        });
+    });
+
+    describe("Developer Fee", function () {
+        it("should get the correct developer fee", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Set new fee basis points
+            const newFeeBp = 1337;
+            await cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp);
+
+            // Get fee basis points from manager
+            const managerFeeBp = await cmAccountManager.getDeveloperFeeBp();
+            expect(managerFeeBp).to.equal(newFeeBp);
+
+            // Get fee basis points from account, should be same as manager fee basis points
+            expect(await cmAccount.getDeveloperFeeBp()).to.equal(managerFeeBp);
         });
     });
 });

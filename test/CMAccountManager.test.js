@@ -18,9 +18,6 @@ const {
 describe("CMAccountManager", function () {
     describe("Main", function () {
         it("should deploy correctly with the right state", async function () {
-            // Set up signers
-            await setupSigners();
-
             const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
 
             const DEFAULT_ADMIN_ROLE = await cmAccountManager.DEFAULT_ADMIN_ROLE();
@@ -77,6 +74,8 @@ describe("CMAccountManager", function () {
             await expect(cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp))
                 .to.emit(cmAccountManager, "DeveloperFeeBpUpdated")
                 .withArgs(oldFeeBp, newFeeBp);
+
+            await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(newFeeBp);
         });
     });
     describe("Upgrades", function () {

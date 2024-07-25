@@ -27,7 +27,7 @@ abstract contract ChequeManager is Initializable {
     // Pre-computed hash of the MessengerCheque struct type
     // keccak256("MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)");
     // 0x989d3af2075c5182ec3c5e39cd77d361be8d2bf20f27c1b09ae39483a1385853
-    bytes32 constant MESSENGER_CHEQUE_TYPEHASH =
+    bytes32 public constant MESSENGER_CHEQUE_TYPEHASH =
         keccak256(
             "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)"
         );
@@ -36,7 +36,7 @@ abstract contract ChequeManager is Initializable {
     // Pre-computed hash of the EIP712Domain type
     // keccak256("EIP712Domain(string name,string version,uint256 chainId)");
     // 0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e
-    bytes32 constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
 
     /***************************************************
      *                   STRUCTS                       *
@@ -80,6 +80,19 @@ abstract contract ChequeManager is Initializable {
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
+
+    /**
+     * @dev Cheque verified event. Emitted when a cheque is verified.
+     */
+    event ChequeVerified(
+        address indexed fromCMAccount,
+        address indexed toCMAccount,
+        address fromBot,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 payment
+    );
 
     /**
      * @dev Cash-in event. Emitted when a cheque is cashed in.
@@ -145,7 +158,7 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Returns the hash of the `MessengerCheque` encoded with `MESSENGER_CHEQUE_TYPEHASH`.
      */
-    function hashMessengerCheque(MessengerCheque memory cheque) internal pure returns (bytes32) {
+    function hashMessengerCheque(MessengerCheque memory cheque) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -182,11 +195,12 @@ abstract contract ChequeManager is Initializable {
             revert InvalidCMAccount(cheque.fromCMAccount);
         }
 
-        // Recover the signer from the signature
+        // Recover the signer from the signature. If the signature is invalid, this
+        // will recover different signer address.
         bytes32 digest = hashTypedDataV4(cheque);
         signer = digest.recover(signature);
 
-        // Check if the signer is an allowed bot
+        // Check if the signer is an allowed bot.
         if (!isBotAllowed(signer)) {
             revert NotAllowedToSignCheques(signer);
         }
@@ -214,6 +228,17 @@ abstract contract ChequeManager is Initializable {
 
         // Everthing is valid. Calculate payment amount.
         paymentAmount = cheque.amount - lastCashIn.amount;
+
+        // Emit event
+        emit ChequeVerified(
+            cheque.fromCMAccount,
+            cheque.toCMAccount,
+            signer, // fromBot
+            cheque.toBot,
+            cheque.counter,
+            cheque.amount,
+            paymentAmount
+        );
 
         return (signer, paymentAmount);
     }
@@ -263,8 +288,6 @@ abstract contract ChequeManager is Initializable {
      * @dev Sets `CashIn(uint256 lastCounter, uint256 lastAmount)` for given `fromBot`, `toBot` pair.
      */
     function setLastCashIn(address fromBot, address toBot, uint256 counter, uint256 amount) internal {
-        payable(address(this)).sendValue(amount);
-
         lastCashIns[fromBot][toBot] = LastCashIn(counter, amount);
     }
 
@@ -273,7 +296,7 @@ abstract contract ChequeManager is Initializable {
      *
      * For amounts lower then fee basis point, the developer fee is 0.
      */
-    function calculateDeveloperFee(uint256 amount) internal view returns (uint256) {
+    function calculateDeveloperFee(uint256 amount) public view returns (uint256) {
         return (amount * getDeveloperFeeBp()) / 10000;
     }
 
