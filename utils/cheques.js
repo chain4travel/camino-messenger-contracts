@@ -134,7 +134,7 @@ async function signInvalidMessengerCheque(cheque, signer) {
     const domain = {
         name: DOMAIN_NAME,
         version: DOMAIN_VERSION,
-        chainId: chainId + 2n, // Invalid chainId
+        chainId: chainId + 42n, // Invalid chainId
     };
 
     const signature = await signer.signTypedData(domain, types, cheque);
@@ -155,36 +155,3 @@ module.exports = {
     signInvalidMessengerCheque,
     _signMessengerCheque,
 };
-
-//{generateMessengerChequeTypeHash, generateDomainTypeHash, _generateDomainSeparator, getDomainSeparatorCamino, getDomainSeparatorColumbus, getDomainSeparatorKopernikus, getDomainSeparatorForChain, signMessengerCheque,
-
-// // Get receipt
-// const tx = await verifyResponse;
-// const receipt = await tx.wait();
-
-// // Parse event
-// const event = receipt.logs.find((log) => {
-//     try {
-//         return cmAccount.interface.parseLog(log).name === "ChequeVerified";
-//     } catch (e) {
-//         return false;
-//     }
-// });
-
-// const parsedEvent = cmAccount.interface.parseLog(event);
-
-// const fromCMAccount = parsedEvent.args.fromCMAccount;
-// const toCMAccount = parsedEvent.args.toCMAccount;
-// const fromBot = parsedEvent.args.fromBot;
-// const toBot = parsedEvent.args.toBot;
-// const counter = parsedEvent.args.counter;
-// const amount = parsedEvent.args.amount;
-// const payment = parsedEvent.args.payment;
-
-// console.log("fromCMAccount:", fromCMAccount);
-// console.log("toCMAccount:", toCMAccount);
-// console.log("fromBot:", fromBot);
-// console.log("toBot:", toBot);
-// console.log("counter:", counter);
-// console.log("amount:", amount);
-// console.log("payment:", payment);
