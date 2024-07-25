@@ -13,20 +13,20 @@ Messenger](https://camino.network/camino-messenger-sets-the-global-standard-in-t
 
 ## Quickstart
 
-Clone the repo and change directory into:
+### Clone the repo and change directory into
 
 ```sh
 git clone git@github.com:chain4travel/camino-messenger-contracts.git
 cd camino-messenger-contracts
 ```
 
-Install packages:
+### Install packages
 
 ```sh
 yarn install
 ```
 
-Run tests:
+### Run tests. This will compile the contracts and run the tests:
 
 ```sh
 yarn test
@@ -62,3 +62,36 @@ This is a base contract that is inherited by the `CMAccount` contract.
 ### `KYCUtils`
 
 The `KYCUtils` contract provides utility functions for KYC (Know Your Customer).
+
+### `ERC1967Proxy`
+
+For `CMAccountManager` and `CMAccount` contracts an `ERC1967Proxy` (UUPS) is used.
+
+The **`hardhat-ignition`** module deploys `CMAccountManager` contract and then
+deploys an `ERC1967Proxy` proxy setting the implementation address to the
+`CMAccountManager`'s address. We will call this proxy **managerProxy** or simple
+**manager** in this document.
+
+Then a `CMAccount` contract is deployed. And its address is set by calling
+`managerProxy.setAccountImplementation(CMAccount.getAddress())`. After that the
+manager is ready to create CM Accounts.
+
+Creating `CMAccounts` is handled by the manager. Calling
+`managerProxy.createCMAccount(...)` with necessary arguments creates a
+`ERC1967Proxy` and sets implementation address to the recorded account
+implementation address in the manager. Then this proxy is immediately (same
+transaction) initialized with the given arguments.
+
+```mermaid
+flowchart TD
+    nm{"Manager {ERC1967Proxy}"} --> no{"Implementation {CMAccountManager}"}
+    no o--o n1{"Implementation {CMAccount}<br>"}
+    no --> n4{{"createCMAccoun()"}}
+    n4 --> ns{"<span style="color: rgb(0, 0, 0); background-color: rgb(255, 109, 0);">CMAccount {ERC1967Proxy}</span><br>"}
+    ns --> n1
+    style nm stroke-width:1px,stroke-dasharray: 0,fill:#FF6D00,color:#000000
+    style no fill:#C8E6C9,color:#000000
+    style n1 stroke:#E1BEE7,fill:#FFF9C4,color:#000000
+    style n4 color:#FFFFFF,fill:#2962FF
+    style ns color:#000000,fill:#FF6D00
+```
