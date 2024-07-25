@@ -234,4 +234,21 @@ describe("CMAccount", function () {
                 .withArgs(withdrawer.address, WITHDRAWER_ROLE);
         });
     });
+
+    describe("Developer Fee", function () {
+        it("should get the correct developer fee", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Set new fee basis points
+            const newFeeBp = 1337;
+            await cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp);
+
+            // Get fee basis points from manager
+            const managerFeeBp = await cmAccountManager.getDeveloperFeeBp();
+            expect(managerFeeBp).to.equal(newFeeBp);
+
+            // Get fee basis points from account, should be same as manager fee basis points
+            expect(await cmAccount.getDeveloperFeeBp()).to.equal(managerFeeBp);
+        });
+    });
 });

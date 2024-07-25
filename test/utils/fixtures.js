@@ -149,7 +149,7 @@ async function deployCMAccountWithDepositFixture() {
     await cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true);
     await cmAccount.connect(signers.depositor).deposit({ value: depositAmount });
 
-    return { cmAccount, WITHDRAWER_ROLE };
+    return { cmAccount, cmAccountManager, WITHDRAWER_ROLE };
 }
 
 module.exports = {
