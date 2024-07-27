@@ -41,7 +41,16 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
+
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(
+                        await cmAccountManager.DEVELOPER_WALLET_ADMIN_ROLE(),
+                        signers.developerWalletAdmin.address,
+                    ),
+            ).to.not.reverted;
 
             oldDeveloperWallet = signers.developerWallet.address;
             newDeveloperWallet = signers.otherAccount1.address;
@@ -55,7 +64,16 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
+
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(
+                        await cmAccountManager.DEVELOPER_WALLET_ADMIN_ROLE(),
+                        signers.developerWalletAdmin.address,
+                    ),
+            ).to.not.reverted;
 
             await expect(cmAccountManager.connect(signers.developerWalletAdmin).setDeveloperWallet(ethers.ZeroAddress))
                 .to.be.revertedWithCustomError(cmAccountManager, "InvalidDeveloperWallet")
@@ -66,10 +84,16 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
 
             const oldFeeBp = await cmAccountManager.getDeveloperFeeBp();
             const newFeeBp = 500;
+
+            await expect(
+                await cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(await cmAccountManager.FEE_ADMIN_ROLE(), signers.feeAdmin.address),
+            ).to.not.reverted;
 
             await expect(cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp))
                 .to.emit(cmAccountManager, "DeveloperFeeBpUpdated")
@@ -214,7 +238,6 @@ describe("CMAccountManager", function () {
                     ethers.ZeroAddress,
                     signers.cmAccountPauser,
                     signers.cmAccountUpgrader,
-                    true,
                 ),
             ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidAdmin");
         });
@@ -231,7 +254,6 @@ describe("CMAccountManager", function () {
                     signers.cmAccountAdmin.address,
                     signers.cmAccountPauser,
                     signers.cmAccountUpgrader,
-                    true,
                 ),
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
