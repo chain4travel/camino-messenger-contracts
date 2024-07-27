@@ -110,7 +110,7 @@ describe("CMAccount", function () {
         });
     });
     describe("Deposit", function () {
-        it("should allow anyone to deposit if `anyoneCanDeposit` is true", async function () {
+        it("should allow anyone to send funds", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const anyone = signers.otherAccount1;
@@ -118,19 +118,18 @@ describe("CMAccount", function () {
             const anyoneInitialBalance = await ethers.provider.getBalance(anyone.address);
             const cmAccountInitialBalance = await ethers.provider.getBalance(cmAccount.getAddress());
 
-            // Set anyoneCanDeposit to true
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true)).to.not.reverted;
-            await expect(await cmAccount.getAnyoneCanDeposit()).to.be.true;
-
             const depositAmount = ethers.parseEther("1");
 
-            // Deposit
-            await expect(cmAccount.connect(anyone).deposit({ value: depositAmount }))
-                .to.emit(cmAccount, "Deposit")
-                .withArgs(anyone.address, depositAmount);
+            // Sender
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            await expect(await anyone.sendTransaction(depositTx)).to.not.be.reverted;
 
             // Check balances
-            // Depositor balance should be lower than the difference between their initial balance and the deposit
+            // Sender balance should be lower than the difference between their initial balance and the deposit
             expect(await ethers.provider.getBalance(anyone.address)).to.be.lt(anyoneInitialBalance - depositAmount);
 
             // CMAccount balance should be equal to the sum of the initial balance and the deposit
@@ -138,71 +137,8 @@ describe("CMAccount", function () {
                 cmAccountInitialBalance + depositAmount,
             );
         });
-
-        it("should allow depositor role to deposit", async function () {
-            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
-
-            const depositor = signers.otherAccount1;
-
-            // Grant depositor role
-            const DEPOSITOR_ROLE = await cmAccount.DEPOSITOR_ROLE();
-            await expect(cmAccount.connect(signers.cmAccountAdmin).grantRole(DEPOSITOR_ROLE, depositor.address));
-
-            const depositAmount = ethers.parseEther("1");
-
-            // ANYONE CAN DEPOSIT == TRUE
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true)).to.not.reverted;
-            await expect(await cmAccount.getAnyoneCanDeposit()).to.be.true;
-
-            // Deposit
-            const depositTx1 = cmAccount.connect(depositor).deposit({ value: depositAmount });
-            await expect(depositTx1).to.changeEtherBalances([cmAccount, depositor], [depositAmount, -depositAmount]);
-            await expect(depositTx1).to.emit(cmAccount, "Deposit").withArgs(depositor.address, depositAmount);
-
-            // ANYONE CAN DEPOSIT == FALSE
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(false)).to.not.reverted;
-            await expect(await cmAccount.getAnyoneCanDeposit()).to.be.false;
-
-            // Deposit
-            const depositTx2 = cmAccount.connect(depositor).deposit({ value: depositAmount });
-            await expect(depositTx2).to.changeEtherBalances([cmAccount, depositor], [depositAmount, -depositAmount]);
-            await expect(depositTx2).to.emit(cmAccount, "Deposit").withArgs(depositor.address, depositAmount);
-        });
-
-        it("should revert if `anyoneCanDeposit` is false and non-depositor tries to deposit", async function () {
-            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
-
-            const anyone = signers.otherAccount1;
-
-            // Set anyoneCanDeposit to false
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(false)).to.not.reverted;
-            await expect(await cmAccount.getAnyoneCanDeposit()).to.be.false;
-
-            const depositAmount = ethers.parseEther("1");
-
-            // Try deposit
-            await expect(cmAccount.connect(anyone).deposit({ value: depositAmount }))
-                .to.be.revertedWithCustomError(cmAccount, "DepositorNotAllowed")
-                .withArgs(anyone.address);
-        });
-
-        it("should revert if value is zero", async function () {
-            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
-
-            const anyone = signers.otherAccount1;
-
-            // Set anyoneCanDeposit to true
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true)).to.not.reverted;
-            await expect(await cmAccount.getAnyoneCanDeposit()).to.be.true;
-
-            const depositAmount = ethers.parseEther("0");
-
-            // Try deposit
-            await expect(cmAccount.connect(anyone).deposit({ value: depositAmount }))
-                .to.be.revertedWithCustomError(cmAccount, "ZeroValueDeposit")
-                .withArgs(anyone.address);
-        });
     });
+
     describe("Withdraw", function () {
         it("should allow withdrawer role to withdraw", async function () {
             const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);

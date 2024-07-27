@@ -39,7 +39,6 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
-    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
 
     /***************************************************
@@ -50,12 +49,6 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      * @dev Address of the CMAccountManager
      */
     address private _manager;
-
-    /**
-     * @dev If true, anyone can deposit CAM to this account.
-     * If false only the DEPOSITER_ROLE can deposit.
-     */
-    bool private _anyoneCanDeposit;
 
     /***************************************************
      *                    EVENTS                       *
@@ -101,22 +94,6 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     error ZeroValueDeposit(address sender);
 
     /***************************************************
-     *                   MODIFIERS                     *
-     ***************************************************/
-
-    /**
-     * @dev Modifier to check if deposits are allowed.
-     * If anyoneCanDeposit is true, allows any msg.sender.
-     * If anyoneCanDeposit is false, checks if msg.sender has the DEPOSITER_ROLE.
-     */
-    modifier onlyAllowedDepositer() {
-        if (!_anyoneCanDeposit && !hasRole(DEPOSITOR_ROLE, msg.sender)) {
-            revert DepositorNotAllowed(msg.sender);
-        }
-        _;
-    }
-
-    /***************************************************
      *         CONSTRUCTOR & INITIALIZATION            *
      ***************************************************/
 
@@ -125,13 +102,7 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    function initialize(
-        address manager,
-        address defaultAdmin,
-        address pauser,
-        address upgrader,
-        bool anyoneCanDeposit
-    ) public initializer {
+    function initialize(address manager, address defaultAdmin, address pauser, address upgrader) public initializer {
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -142,8 +113,9 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
-        _anyoneCanDeposit = anyoneCanDeposit;
     }
+
+    receive() external payable {}
 
     function getManagerAddress() public view returns (address) {
         return _manager;
@@ -206,31 +178,6 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     function getDeveloperFeeBp() public view override returns (uint256) {
         uint256 developerFeeBp = ICMAccountManager(_manager).getDeveloperFeeBp();
         return developerFeeBp;
-    }
-
-    /**
-     * @dev Set the anyoneCanDeposit flag.
-     * @param anyoneCanDeposit The new value of the anyoneCanDeposit flag.
-     */
-    function setAnyoneCanDeposit(bool anyoneCanDeposit) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _anyoneCanDeposit = anyoneCanDeposit;
-    }
-
-    /**
-     * @dev Get the anyoneCanDeposit flag.
-     */
-    function getAnyoneCanDeposit() public view returns (bool) {
-        return _anyoneCanDeposit;
-    }
-
-    /**
-     * @dev Deposit CAM to the CMAccount
-     */
-    function deposit() external payable onlyAllowedDepositer {
-        if (msg.value == 0) {
-            revert ZeroValueDeposit(msg.sender);
-        }
-        emit Deposit(msg.sender, msg.value);
     }
 
     /**

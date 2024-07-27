@@ -107,7 +107,6 @@ async function deployAndConfigureAllFixture() {
         signers.cmAccountAdmin.address,
         signers.cmAccountPauser.address,
         signers.cmAccountUpgrader.address,
-        true, // anyOneCanDeposit
     );
 
     const receipt = await tx.wait();
@@ -140,14 +139,15 @@ async function deployCMAccountWithDepositFixture() {
     const WITHDRAWER_ROLE = await cmAccount.WITHDRAWER_ROLE();
     await cmAccount.connect(signers.cmAccountAdmin).grantRole(WITHDRAWER_ROLE, signers.withdrawer.address);
 
-    // Grant depositor role
-    const DEPOSITOR_ROLE = await cmAccount.DEPOSITOR_ROLE();
-    await cmAccount.connect(signers.cmAccountAdmin).grantRole(DEPOSITOR_ROLE, signers.depositor.address);
-
     const depositAmount = ethers.parseEther("1");
 
-    await cmAccount.connect(signers.cmAccountAdmin).setAnyoneCanDeposit(true);
-    await cmAccount.connect(signers.depositor).deposit({ value: depositAmount });
+    const depositTx = {
+        to: cmAccount.getAddress(),
+        value: depositAmount,
+    };
+
+    const txResponse = await signers.depositor.sendTransaction(depositTx);
+    await txResponse.wait();
 
     return { cmAccount, cmAccountManager, WITHDRAWER_ROLE };
 }
