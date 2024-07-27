@@ -117,7 +117,12 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Invalid CM Account. Cheque's `fromCMAccount` has to be for `address(this)`.
      */
-    error InvalidCMAccount(address fromCMAccount);
+    error InvalidFromCMAccount(address fromCMAccount);
+
+    /**
+     * @dev `toCMAccoun` address is not a registered CMAccount on the manager
+     */
+    error InvalidToCMAccount(address toCMAccount);
 
     /**
      * @dev The signer is not allowed to sign cheques
@@ -192,7 +197,12 @@ abstract contract ChequeManager is Initializable {
     ) public returns (address signer, uint256 paymentAmount) {
         // Revert if cheque is not for this contract
         if (cheque.fromCMAccount != address(this)) {
-            revert InvalidCMAccount(cheque.fromCMAccount);
+            revert InvalidFromCMAccount(cheque.fromCMAccount);
+        }
+
+        // Revert if cheque payee is not a CM account
+        if (!isCMAccount(cheque.toCMAccount)) {
+            revert InvalidToCMAccount(cheque.toCMAccount);
         }
 
         // Recover the signer from the signature. If the signature is invalid, this
@@ -272,12 +282,6 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Function that should revert when `msg.sender` is not authorized to cash-in the cheque.
-     * Called by {cashInCheque}.
-     */
-    function _authorizeChequeCashIn(MessengerCheque memory cheque, bytes memory signature) internal virtual {}
-
-    /**
      * @dev Returns `CashIn(uint256 lastCounter, uint256 lastAmount)` for given `fromBot`, `toBot` pair.
      */
     function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory cashIn) {
@@ -305,10 +309,22 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
+     * @dev Function that should revert when `msg.sender` is not authorized to cash-in the cheque.
+     * Called by {cashInCheque}.
+     */
+    function _authorizeChequeCashIn(MessengerCheque memory cheque, bytes memory signature) internal virtual {}
+
+    /**
      * @dev Abstract function to check if a bot is allowed to sign cheques. This must be implemented
      * by the inheriting contract.
      */
     function isBotAllowed(address bot) public view virtual returns (bool);
+
+    /**
+     * @dev Abstract function to check if an address is a Camino Messenger account. This must be
+     * implemented by the inheriting contract.
+     */
+    function isCMAccount(address account) internal view virtual returns (bool);
 
     /**
      * @dev Abstract function to get the developer wallet. This must be implemented by the inheriting
