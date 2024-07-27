@@ -102,6 +102,7 @@ describe("CMAccountManager", function () {
             await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(newFeeBp);
         });
     });
+
     describe("Upgrades", function () {
         it("should upgrade correctly", async function () {
             // Set up signers
@@ -129,6 +130,7 @@ describe("CMAccountManager", function () {
             );
         });
     });
+
     describe("CMAccount Implementation", function () {
         it("should set CMAccount implementation correctly", async function () {
             // Set up signers
@@ -185,6 +187,7 @@ describe("CMAccountManager", function () {
             ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
         });
     });
+
     describe("Pausable", function () {
         it("should pause and unpause the contract", async function () {
             // Set up signers
@@ -211,6 +214,7 @@ describe("CMAccountManager", function () {
             );
         });
     });
+
     describe("CMAccount", function () {
         it("should create CMAccount correctly", async function () {
             // Set up signers

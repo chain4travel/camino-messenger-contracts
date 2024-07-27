@@ -40,7 +40,7 @@ describe("CMAccount", function () {
                 .withArgs(oldImplementationAddress, newImplementationAddress);
         });
 
-        it("should revert to upgrade if implementation address does not match", async function () {
+        it("should revert upgrade if implementation address does not match", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             // Old implementation
@@ -60,7 +60,7 @@ describe("CMAccount", function () {
                 .withArgs(oldImplementationAddress, newImplementationAddress);
         });
 
-        it("should revert to upgrade to an invalid implementation", async function () {
+        it("should revert upgrade if address is not uups upgradeable", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             // Old implementation
@@ -82,7 +82,7 @@ describe("CMAccount", function () {
                 .withArgs(newImplementationAddress);
         });
 
-        it("should revert to upgrade to an implementation address is the same", async function () {
+        it("should revert upgrade if address is same with the current one", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             // Old implementation
@@ -94,6 +94,7 @@ describe("CMAccount", function () {
                 .withArgs(oldImplementationAddress, oldImplementationAddress);
         });
     });
+
     describe("Registering Bots", function () {
         it("should register bots correctly", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
@@ -109,6 +110,7 @@ describe("CMAccount", function () {
             await expect(await cmAccount.isBotAllowed(botAddr)).to.be.true;
         });
     });
+
     describe("Deposit", function () {
         it("should allow anyone to send funds", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);

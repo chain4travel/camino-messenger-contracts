@@ -22,6 +22,8 @@ interface ICMAccountManager {
     function getDeveloperFeeBp() external view returns (uint256);
 
     function getDeveloperWallet() external view returns (address);
+
+    function isCMAccount(address account) external view returns (bool);
 }
 
 /**
@@ -162,6 +164,13 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      */
     function isBotAllowed(address bot) public view override returns (bool) {
         return hasRole(CHEQUE_OPERATOR_ROLE, bot);
+    }
+
+    /**
+     * @dev Return true if address is a registered CMAccount on the CMAccountManager
+     */
+    function isCMAccount(address account) internal view override returns (bool) {
+        return ICMAccountManager(_manager).isCMAccount(account);
     }
 
     /**
