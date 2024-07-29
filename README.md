@@ -286,8 +286,8 @@ function calculateDomainSeparator(domainName, domainVersion, chainId) {
 
 The function below uses **`ethers.signTypedData`** to sign the cheque, which is
 calculating the type hashes and domain separator from the provided data according to
-EIP-712 specification. The functions above are for when you want to calculate the
-hashes separately.
+EIP-712 specification. So, the functions above are for when you want to calculate
+the hashes separately.
 
 ```js
 async function signMessengerCheque(cheque, signer) {
@@ -314,3 +314,32 @@ async function signMessengerCheque(cheque, signer) {
     return signature;
 }
 ```
+
+> [!TIP]
+> All the functions mentioned above can be seen from [`utils/cheques.js`](utils/cheques.js) file.
+
+## Cheques: Verify
+
+Cheque verification is normally done on-chain by the `verifyCheque` function on the CM Account contract of the
+cheque's drawer (the bot who signed the cheque). Signature of the function is like this:
+
+```solidity
+function verifyCheque(
+    MessengerCheque memory cheque,
+    bytes memory signature
+) public returns (address signer, uint256 paymentAmount) {}
+```
+
+This function does not only verify that the signer of the cheque is a registered bot
+on the CM Account, but also other verifications like:
+
+-   If the `fromCMAccount` is the contract itself
+-   Last counter and last amount recorded on the contract are lower then the cheque's
+-   If the address of `toCMAccount` is a registered CM Account on the manager
+-   If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
+
+So, to only verify if cheque's signature is valid, without doing the cheques above (which can only be done on-chain), you can use the examples below.
+
+### Verify Cheque Signature Off-Chain
+
+**TODO:** Coming soon...
