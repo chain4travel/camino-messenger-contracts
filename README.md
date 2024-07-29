@@ -332,6 +332,14 @@ function calculateTypedDataHash(cheque, domainSeparator) {
 > [!TIP]
 > All the functions mentioned above can be seen from [`utils/cheques.js`](utils/cheques.js) file.
 
+> [!NOTE]
+>
+> ##### Signing without `signTypedData`:
+>
+> If you would like to learn how you can sign a cheque without relying ethers.js'
+> `signTypedData`, there is an example script at
+> [`examples/sign_primitive.js`](examples/sign_primitive.js).
+
 ## Cheques: Verify
 
 Cheque verification is normally done on-chain by the `verifyCheque` function on the
@@ -358,5 +366,17 @@ So, to only verify if cheque's signature is valid, without doing the cheques abo
 (which can only be done on-chain), you can use the examples below.
 
 ### Verify Cheque Signature Off-Chain
+
+#### JavaScript
+
+For example code about how to verify signatures off-chain using JavaScript and
+Ethers.js, check out the [`examples/sign_primitive.js`](examples/sign_primitive.js)
+example.
+
+#### Go
+
+**TODO:** Coming soon...
+
+#### Python
 
 **TODO:** Coming soon...

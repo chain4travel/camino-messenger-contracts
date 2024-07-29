@@ -186,6 +186,15 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
+     * @dev Return signer for the given cheque and signature
+     */
+    function recoverSigner(MessengerCheque memory cheque, bytes memory signature) public view returns (address signer) {
+        bytes32 digest = hashTypedDataV4(cheque);
+        signer = digest.recover(signature);
+        return signer;
+    }
+
+    /**
      * @dev Returns signer and payment amount if the signature is valid for the given cheque,
      * the signer is an allowed bot, cheque counter and amounts are valid accrording to last cash ins.
      *
