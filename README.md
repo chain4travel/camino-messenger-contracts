@@ -334,8 +334,10 @@ function calculateTypedDataHash(cheque, domainSeparator) {
 
 ## Cheques: Verify
 
-Cheque verification is normally done on-chain by the `verifyCheque` function on the CM Account contract of the
-cheque's drawer (the bot who signed the cheque). Signature of the function is like this:
+Cheque verification is normally done on-chain by the `verifyCheque` function on the
+CM Account contract of the cheque's drawer (the bot who signed the cheque).
+
+Signature of the function is like this:
 
 ```solidity
 function verifyCheque(
@@ -352,7 +354,8 @@ on the CM Account, but also other verifications like:
 -   If the address of `toCMAccount` is a registered CM Account on the manager
 -   If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
 
-So, to only verify if cheque's signature is valid, without doing the cheques above (which can only be done on-chain), you can use the examples below.
+So, to only verify if cheque's signature is valid, without doing the cheques above
+(which can only be done on-chain), you can use the examples below.
 
 ### Verify Cheque Signature Off-Chain
 
