@@ -155,3 +155,162 @@ yarn hardhat ignition visualize ignition/modules/0_development.js
 ```
 
 This will open a browswer tab with the deployment flow visualized.
+
+## Cheques: Create & Sign
+
+This document provides a detailed guide on creating, signing, and verifying cheques
+using Camino Messenger smart contracts. The guide includes information on the cheque
+structure, type hashes, domain separator, and EIP-712 standard.
+
+### EIP-712 Overview
+
+EIP-712 is a standard for hashing and signing of typed structured data. It is used
+to improve the usability of off-chain message signing for on-chain verification. The
+standard defines a structured format for messages, allowing them to be easily parsed
+and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
+
+#### Cheque Typehash, Domain Typehash, and Domain Separator
+
+-   **Cheque Typehash:** This is the `keccak256` hash of the MessengerCheque struct type.
+
+    ```js
+    function calculateMessengerChequeTypeHash() {
+        const typeHash = ethers.keccak256(
+            ethers.toUtf8Bytes(
+                "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)",
+            ),
+        );
+        return typeHash;
+    }
+    ```
+
+-   **Domain Typehash:** This is the `keccak256` hash of the EIP-712 domain type.
+
+    ```js
+    function calculateDomainTypeHash() {
+        const domainTypeHash = ethers.keccak256(
+            ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId)"),
+        );
+        return domainTypeHash;
+    }
+    ```
+
+-   **Domain Separator:** This is a hash that combines the domain typehash with the
+    name, version, and chain ID of the domain.
+
+    ```js
+    function calculateDomainSeparator(domainName, domainVersion, chainId) {
+        const coder = AbiCoder.defaultAbiCoder();
+        const domainSeparator = ethers.keccak256(
+            coder.encode(
+                ["bytes32", "bytes32", "bytes32", "uint256"],
+                [
+                    calculateDomainTypeHash(),
+                    ethers.keccak256(ethers.toUtf8Bytes(domainName)),
+                    ethers.keccak256(ethers.toUtf8Bytes(domainVersion)),
+                    ethers.toBigInt(chainId),
+                ],
+            ),
+        );
+        return domainSeparator;
+    }
+
+    function calculateDomainSeparatorForChain(_chainId) {
+        const domainName = "CaminoMessenger";
+        const domainVersion = "1";
+        const chainId = _chainId;
+        return calculateDomainSeparator(domainName, domainVersion, chainId);
+    }
+    ```
+
+### Creating Cheques
+
+#### Define a cheque structure
+
+```js
+const cheque = {
+    fromCMAccount: "0xFromCMAccountAddress", // Address of the CM Account of the sending bot (signer)
+    toCMAccount: "0xRecipientCMAccountAddress", // Address of the CM Account of the receiving bot
+    toBot: "0xBotAddress", // Address of the bot receiving the cheque
+    counter: 1, // Counter, needs to be incremented for each cheque
+    amount: ethers.parseUnits("1.0", "ether"), // 1 ETH, amount to pay (after substracting the last paid amount)
+    timestamp: Math.floor(Date.now() / 1000), // Current Unix timestamp, as an example
+};
+```
+
+#### Calculate Type Hashes and Domain Separator
+
+**Messenger Cheque Typehash:**
+
+```js
+function calculateMessengerChequeHash(cheque) {
+    const chequeTypeHash = calculateMessengerChequeTypeHash();
+
+    const coder = ethers.AbiCoder.defaultAbiCoder();
+    const encodedCheque = coder.encode(
+        ["bytes32", "address", "address", "address", "uint256", "uint256", "uint256"],
+        [
+            chequeTypeHash,
+            cheque.fromCMAccount,
+            cheque.toCMAccount,
+            cheque.toBot,
+            cheque.counter,
+            cheque.amount,
+            cheque.timestamp,
+        ],
+    );
+    return ethers.keccak256(encodedCheque);
+```
+
+**Domain Separator:**
+
+```js
+function calculateDomainSeparator(domainName, domainVersion, chainId) {
+    const coder = ethers.AbiCoder.defaultAbiCoder();
+    const domainSeparator = ethers.keccak256(
+        coder.encode(
+            ["bytes32", "bytes32", "bytes32", "uint256"],
+            [
+                calculateDomainTypeHash(),
+                ethers.keccak256(ethers.toUtf8Bytes(domainName)),
+                ethers.keccak256(ethers.toUtf8Bytes(domainVersion)),
+                ethers.toBigInt(chainId),
+            ],
+        ),
+    );
+    return domainSeparator;
+}
+```
+
+#### Sign cheque
+
+The function below uses **`ethers.signTypedData`** to sign the cheque, which is
+calculating the type hashes and domain separator from the provided data according to
+EIP-712 specification. The functions above are for when you want to calculate the
+hashes separately.
+
+```js
+async function signMessengerCheque(cheque, signer) {
+    const chainId = await signer.provider.getNetwork().then((n) => n.chainId);
+
+    const types = {
+        MessengerCheque: [
+            { name: "fromCMAccount", type: "address" },
+            { name: "toCMAccount", type: "address" },
+            { name: "toBot", type: "address" },
+            { name: "counter", type: "uint256" },
+            { name: "amount", type: "uint256" },
+            { name: "timestamp", type: "uint256" },
+        ],
+    };
+
+    const domain = {
+        name: DOMAIN_NAME,
+        version: DOMAIN_VERSION,
+        chainId: chainId,
+    };
+
+    const signature = await signer.signTypedData(domain, types, cheque);
+    return signature;
+}
+```
