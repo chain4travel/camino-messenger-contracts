@@ -1,4 +1,3 @@
-const { getBytes } = require("ethers");
 const { ethers } = require("hardhat");
 
 /**
@@ -19,6 +18,37 @@ const { ethers } = require("hardhat");
  *
  * No you are ready to run this script:
  *  yarn hardhat run examples/sign.js --network localhost
+ *
+ * Example Output:
+ *
+ * ❯ yarn hardhat run examples/sign_primitive.js --network localhost
+ * yarn run v1.22.19
+ * $ /hgst/work/github.com/chain4travel/camino-messenger-contracts/node_modules/.bin/hardhat run examples/sign_primitive.js --network localhost
+ *
+ * ----------------------- creating cheque and signatures (off-chain) -----------------------
+ * Signer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+ * Cheque: {
+ *   fromCMAccount: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+ *   toCMAccount: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+ *   toBot: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+ *   counter: 1,
+ *   amount: 1000000000000000000n,
+ *   timestamp: 1722289891
+ * }
+ * MESSENGER_CHEQUE_TYPEHASH: 0x989d3af2075c5182ec3c5e39cd77d361be8d2bf20f27c1b09ae39483a1385853
+ * DOMAIN_TYPEHASH: 0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e
+ * DOMAIN_SEPARATOR: 0x792acc3adab7297918d2cdaeb59ac5f091943a65aba244c580164ec2ec307451
+ * Cheque Hash: 0x465d6da637f1c58b1a2e6539b06d5344628d651b1999ef2723570244c9a4ab35
+ * Typed Data Hash: 0x7bd3fcbef31a1cd69e886c1f3514700856cdf5a081b5a05eee79ab4b79d59668
+ * Signature: 0xed4a049497f36114f48f59447defbd8dbf9e87e892f69d5fa8a3ba358f5035432c7151001a5913c8f883aab22f4562e12fcb2fae5be1f5fc581c15b27e794d181c
+ * Recovered Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (Should be same as the 'Signer')
+ *
+ * ----------------------- trying with a CMAccount (on-chain) -----------------------
+ * * Getting CMAccountManager and creating a CMAccount...
+ * * Created CMAccount at address: 0x5392A33F7F677f59e833FEBF4016cDDD88fF9E67
+ * * Calling CMAccount.recoverSigner(cheque, signature)...
+ * Recovered (on-chain): 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (Should be same as the 'Signer')
+ * Done in 1.52s.
  */
 
 async function main() {
@@ -125,7 +155,7 @@ async function main() {
     console.log("Signature:", signature.serialized);
 
     // Recover the address from the digest and signature
-    const recoveredAddress = ethers.recoverAddress(getBytes(typedDataHash), signature);
+    const recoveredAddress = ethers.recoverAddress(ethers.getBytes(typedDataHash), signature);
     console.log("Recovered Address:", recoveredAddress, "(Should be same as the 'Signer')");
 
     // Try to recover the same address from the CMAccount's `recoverSigner(cheque,
