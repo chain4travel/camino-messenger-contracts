@@ -229,16 +229,29 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
 
 ```js
 const cheque = {
-    fromCMAccount: "0xFromCMAccountAddress", // Address of the CM Account of the sending bot (signer)
-    toCMAccount: "0xRecipientCMAccountAddress", // Address of the CM Account of the receiving bot
-    toBot: "0xBotAddress", // Address of the bot receiving the cheque
-    counter: 1, // Counter, needs to be incremented for each cheque
+    fromCMAccount: "0x...", // Address of the CM Account of the sending bot (signer)
+    toCMAccount: "0x...", // Address of the CM Account of the receiving bot
+    toBot: "0x...", // Address of the bot receiving the cheque
+    counter: 123, // Counter, needs to be incremented for each cheque
     amount: ethers.parseUnits("1.0", "ether"), // 1 ETH, amount to pay (after substracting the last paid amount)
     timestamp: Math.floor(Date.now() / 1000), // Current Unix timestamp, as an example
 };
 ```
 
-#### Calculate Type Hashes and Domain Separator
+**Example:**
+
+```js
+const cheque = {
+    fromCMAccount: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    toCMAccount: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    toBot: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    counter: 123n,
+    amount: 1000000000000000000n,
+    timestamp: 1722282175n,
+};
+```
+
+#### Calculate Messenger Cheque Hash
 
 **Messenger Cheque Typehash:**
 
@@ -260,26 +273,6 @@ function calculateMessengerChequeHash(cheque) {
         ],
     );
     return ethers.keccak256(encodedCheque);
-```
-
-**Domain Separator:**
-
-```js
-function calculateDomainSeparator(domainName, domainVersion, chainId) {
-    const coder = ethers.AbiCoder.defaultAbiCoder();
-    const domainSeparator = ethers.keccak256(
-        coder.encode(
-            ["bytes32", "bytes32", "bytes32", "uint256"],
-            [
-                calculateDomainTypeHash(),
-                ethers.keccak256(ethers.toUtf8Bytes(domainName)),
-                ethers.keccak256(ethers.toUtf8Bytes(domainVersion)),
-                ethers.toBigInt(chainId),
-            ],
-        ),
-    );
-    return domainSeparator;
-}
 ```
 
 #### Sign cheque
@@ -304,6 +297,9 @@ async function signMessengerCheque(cheque, signer) {
         ],
     };
 
+    const DOMAIN_NAME = "CaminoMessenger";
+    const DOMAIN_VERSION = "1";
+
     const domain = {
         name: DOMAIN_NAME,
         version: DOMAIN_VERSION,
@@ -312,6 +308,24 @@ async function signMessengerCheque(cheque, signer) {
 
     const signature = await signer.signTypedData(domain, types, cheque);
     return signature;
+}
+```
+
+If you would like to calculate the typed data hash yourself and sign it, check out
+the function that is generating the hash on the `CMAccount` contract:
+
+```solidity
+function hashTypedDataV4(MessengerCheque memory cheque) public view returns (bytes32) {
+    return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashMessengerCheque(cheque)));
+}
+```
+
+And also in [`utils/cheques.js`](utils/cheques.js) file (Javascript):
+
+```js
+function calculateTypedDataHash(cheque, domainSeparator) {
+    const chequeHash = calculateMessengerChequeHash(cheque);
+    return ethers.keccak256(ethers.concat([ethers.toUtf8Bytes("\x19\x01"), domainSeparator, chequeHash]));
 }
 ```
 
