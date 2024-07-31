@@ -13,6 +13,19 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721Enumer
 // Access
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
+// Utils
+import "@openzeppelin/contracts/utils/Address.sol";
+
+interface ICMAccountManager {
+    function getAccountImplementation() external view returns (address);
+
+    function getDeveloperFeeBp() external view returns (uint256);
+
+    function getDeveloperWallet() external view returns (address);
+
+    function isCMAccount(address account) external view returns (bool);
+}
+
 contract BookingToken is
     Initializable,
     ERC721Upgradeable,
@@ -21,6 +34,8 @@ contract BookingToken is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
+    using Address for address payable;
+
     /***************************************************
      *                   CONSTANTS                     *
      ***************************************************/
@@ -28,7 +43,6 @@ contract BookingToken is
     /**
      * @dev Roles
      */
-    // Define a role identifier for the minter role
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
@@ -36,40 +50,97 @@ contract BookingToken is
      *                   STORAGE                       *
      ***************************************************/
 
+    // CMAccountManager address
+    address private _manager;
+
     // Counter for generating unique token IDs
     uint256 private _nextTokenId;
 
-    // Mapping to store supplier names
-    mapping(address => string) private _supplierNames;
+    // Mininum allowed expiration timestamp difference
+    uint256 private _minExpirationTimestampDiff;
 
-    // Mapping to store reserved addresses for specific tokens
-    mapping(uint256 => address) private _reservedFor;
+    // Reservation details
+    struct TokenReservation {
+        address reservedFor; // CM Account address that can buy the token
+        address supplier; // CM Account address that minted the token and created the reservation
+        uint256 expirationTimestamp; // Timestamp when the reservation expires
+        uint256 price; // Price of the token, only native for now
+    }
 
-    // Mapping to store suppliers of tokens
-    mapping(uint256 => address) private _tokenSuppliers;
-
-    // Mapping to store expiration timestamps for reservations
-    mapping(uint256 => uint256) private _expirationTimestamps;
+    // Reservation details for each token
+    mapping(uint256 tokenId => TokenReservation tokenReservation) private _reservations;
 
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
 
     // Events for logging significant actions
-    event SupplierRegistered(address indexed supplier, string supplierName);
-    event TokenReservation(address indexed reservedFor, uint256 indexed tokenId, uint256 expirationTimestamp);
+    event TokenReserved(
+        uint256 indexed tokenId,
+        address indexed reservedFor,
+        address indexed supplier,
+        uint256 expirationTimestamp,
+        uint256 price
+    );
+
+    // Reserved token bought
     event TokenBought(uint256 indexed tokenId, address indexed buyer);
 
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
 
+    /**
+     * @dev Error for expiration timestamp too soon. It must be at least
+       {_minExpirationTimestampDiff} seconds in the future
+     */
+    error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff);
+
+    /**
+     * @dev Address is not a CM Account
+     */
+    error NotCMAccount(address account);
+
+    /**
+     * @dev ReservedFor and buyer mismatch
+     */
+    error ReservedForMismatch(address reservedFor, address buyer);
+
+    /**
+     * @dev Reservation expired
+     */
+    error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp);
+
+    /**
+     * @dev Incorrect price
+     */
+    error IncorrectPrice(uint256 price, uint256 reservationPrice);
+
+    /**
+     * @dev Supplier is not the owner
+     */
+    error SupplierIsNotOwner(uint256 tokenId, address supplier);
+
+    /**
+     * @dev Token is reserved and can not be transferred
+     */
+    error TokenIsReserved(uint256 tokenId, address reservedFor);
+
+    /***************************************************
+     *                  MODIFIERS                      *
+     ***************************************************/
+
+    modifier onlyCMAccount(address account) {
+        requireCMAccount(account);
+        _;
+    }
+
     /***************************************************
      *                    FUNCS                        *
      ***************************************************/
 
-    function initialize(address defaultAdmin, address minter, address upgrader) public initializer {
-        __ERC721_init("BookingToken", "BookingToken");
+    function initialize(address manager, address defaultAdmin, address minter, address upgrader) public initializer {
+        __ERC721_init("BookingToken", "TRIP");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __AccessControl_init();
@@ -78,6 +149,9 @@ contract BookingToken is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
         _grantRole(UPGRADER_ROLE, upgrader);
+
+        _manager = manager;
+        _minExpirationTimestampDiff = 60;
     }
 
     // Function to authorize an upgrade for UUPS proxy
@@ -87,61 +161,155 @@ contract BookingToken is
      *             BOOKING-TOKEN LOGIC                 *
      ***************************************************/
 
-    // Function to mint a new token with a reservation for a specific address and expiration timestamp
-    function safeMint(
+    /**
+     * @dev Mints a new token with a reservation for a specific address with an expiration timestamp
+     */
+    function safeMintWithReservation(
         address reservedFor,
         string memory uri,
-        uint256 expirationTimestamp
-    ) public onlyRole(MINTER_ROLE) {
-        require(
-            expirationTimestamp > block.timestamp + 60,
-            "BookingToken: Expiration timestamp must be at least 60 seconds in the future"
-        );
+        uint256 expirationTimestamp,
+        uint256 price
+    ) public onlyCMAccount(msg.sender) {
+        // Require reservedFor to be a CM Account
+        requireCMAccount(reservedFor);
 
+        // Expiration timestamp should be at least _minExpirationTimestampDiff seconds in the future
+        if (!(expirationTimestamp > (block.timestamp + _minExpirationTimestampDiff))) {
+            revert ExpirationTimestampTooSoon(expirationTimestamp, _minExpirationTimestampDiff);
+        }
+
+        // Increment the token id
         uint256 tokenId = _nextTokenId++;
+
+        // Mint the token for the supplier (the caller)
         _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, uri);
-        _reservedFor[tokenId] = reservedFor;
-        _tokenSuppliers[tokenId] = msg.sender;
-        _expirationTimestamps[tokenId] = expirationTimestamp;
 
-        emit TokenReservation(reservedFor, tokenId, expirationTimestamp);
+        // Store the reservation
+        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price);
+
+        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price);
     }
 
-    // Function to register a supplier with a name
-    function registerSupplier(string memory supplierName) public {
-        require(bytes(supplierName).length > 0, "BookingToken: Supplier name cannot be empty");
-        _grantRole(MINTER_ROLE, msg.sender);
-        _supplierNames[msg.sender] = supplierName;
-        emit SupplierRegistered(msg.sender, supplierName);
-    }
+    function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
+        // Get the reservation for the token
+        TokenReservation memory reservation = _reservations[tokenId];
 
-    // Function to allow a reserved address to buy the token
-    function buy(uint256 tokenId) public {
-        require(_reservedFor[tokenId] == msg.sender, "BookingToken: You do not have a reservation for this token");
-        require(block.timestamp < _expirationTimestamps[tokenId], "BookingToken: Token reservation has expired");
+        // Check reservationedFor and msg.sender match
+        if (reservation.reservedFor != msg.sender) {
+            revert ReservedForMismatch(reservation.reservedFor, msg.sender);
+        }
+
+        // Check expiration timestamp
+        if (block.timestamp > reservation.expirationTimestamp) {
+            revert ReservationExpired(tokenId, reservation.expirationTimestamp);
+        }
+
+        // Check if supplier is still the owner
         address owner = ownerOf(tokenId);
-        _transfer(owner, msg.sender, tokenId);
-        delete _reservedFor[tokenId];
-        delete _expirationTimestamps[tokenId];
+        if (owner != reservation.supplier) {
+            revert SupplierIsNotOwner(tokenId, reservation.supplier);
+        }
+
+        // Check if we receive the right price
+        if (msg.value != reservation.price) {
+            revert IncorrectPrice(msg.value, reservation.price);
+        }
+
+        // Transfer payment to the supplier
+        payable(reservation.supplier).sendValue(msg.value);
+
+        // Transfer the token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Delete the reservation
+        delete _reservations[tokenId];
+
+        // Emit event
         emit TokenBought(tokenId, msg.sender);
     }
 
-    // Function to get the supplier name of a given address
-    function getSupplierName(address supplier) public view returns (string memory) {
-        return _supplierNames[supplier];
+    /**
+     * @dev Reserve a token for a specific address with an expiration timestamp
+     */
+    function _reserve(
+        uint256 tokenId,
+        address reservedFor,
+        address supplier,
+        uint256 expirationTimestamp,
+        uint256 price
+    ) internal {
+        _reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price);
     }
 
-    // Function to get the supplier of a given token ID
-    function getTokenSupplier(uint256 tokenId) public view returns (address) {
-        return _tokenSuppliers[tokenId];
+    /**
+     * @dev Check if the token is transferable
+     */
+    function checkTransferable(uint256 tokenId) internal {
+        TokenReservation memory reservation = _reservations[tokenId];
+
+        // If expiration time is in the past, token is transferable. Because it can
+        // not be bought after expired.
+        //
+        // This is also true if expirationTimestamp is 0. Which means there is no
+        // reservation and token is transferable. No need to check for the
+        // reservedFor address.
+        if (block.timestamp <= reservation.expirationTimestamp) {
+            // Token is not transferable
+            revert TokenIsReserved(tokenId, reservation.reservedFor);
+        } else if (reservation.reservedFor != address(0)) {
+            delete _reservations[tokenId];
+        }
+    }
+
+    /**
+     * @dev Check if an address is a CM Account
+     */
+    function isCMAccount(address account) public view returns (bool) {
+        return ICMAccountManager(_manager).isCMAccount(account);
+    }
+
+    /**
+     * @dev Check if the address is a CM Account and revert if not
+     */
+    function requireCMAccount(address account) internal view {
+        if (!isCMAccount(account)) {
+            revert NotCMAccount(account);
+        }
+    }
+
+    // TODO: setter and getter for _manager
+    // TODO: setter and getter for _minExpirationTimestampDiff
+
+    /***************************************************
+     *              TRANSFER OVERRIDES                 *
+     ***************************************************/
+
+    /**
+     * @dev Override transferFrom to check if token is reserved
+     */
+    function transferFrom(address from, address to, uint256 tokenId) public override(ERC721Upgradeable, IERC721) {
+        // Verify that the token is transferable (i.e. not reserved)
+        checkTransferable(tokenId);
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public override(ERC721Upgradeable, IERC721) {
+        // Verify that the token is transferable (i.e. not reserved)
+        checkTransferable(tokenId);
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 
     /***************************************************
      *            END BOOKING-TOKEN LOGIC              *
      ***************************************************/
 
-    // The following functions are overrides required by Solidity.
+    // Overrides required by Solidity.
 
     function _update(
         address to,
