@@ -336,6 +336,10 @@ describe("ChequeManager", function () {
             // Sanity checks: should set lastCashIns
             const lastCashIn = await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot);
             expect(lastCashIn).to.be.deep.equal([cheque.counter, cheque.amount]);
+            // Check total cheque payments
+            // Total cheque payments should be equal to the last cheque amount
+            // because we use same from/to CM accounts
+            expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque.amount);
 
             /**
              * Second cheque
@@ -384,6 +388,16 @@ describe("ChequeManager", function () {
                     cheque2.amount,
                     developerFee2,
                 );
+
+            // Sanity checks: should set lastCashIns
+            expect(await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot)).to.be.deep.equal([
+                cheque2.counter,
+                cheque2.amount,
+            ]);
+            // Check total cheque payments
+            // Total cheque payments should be equal to the last cheque amount
+            // because we use same from/to CM accounts
+            expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque2.amount);
         });
     });
 });

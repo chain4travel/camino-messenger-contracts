@@ -22,6 +22,7 @@ interface ICMAccount {
     function initialize(
         address manager,
         address bookingToken,
+        uint256 prefundAmount,
         address owner,
         address pauser,
         address upgrader
@@ -288,9 +289,11 @@ contract CMAccountManager is
             revert CMAccountInvalidAdmin(admin);
         }
 
+        uint256 prefundAmount = _prefundAmount;
+
         // Check pre-fund amount
-        if (msg.value != _prefundAmount) {
-            revert IncorrectPrefundAmount(_prefundAmount, msg.value);
+        if (msg.value != prefundAmount) {
+            revert IncorrectPrefundAmount(prefundAmount, msg.value);
         }
 
         // Create CMAccount Proxy and set the implementation address
@@ -300,7 +303,14 @@ contract CMAccountManager is
         cmAccountInfo[address(cmAccountProxy)] = CMAccountInfo({ isCMAccount: true, creator: msg.sender });
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, admin, pauser, upgrader);
+        ICMAccount(address(cmAccountProxy)).initialize(
+            address(this),
+            _bookingToken,
+            prefundAmount,
+            admin,
+            pauser,
+            upgrader
+        );
 
         // Send the pre fund to the CMAccount
         payable(cmAccountProxy).sendValue(msg.value);
