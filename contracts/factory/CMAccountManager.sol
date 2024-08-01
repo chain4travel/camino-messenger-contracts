@@ -118,7 +118,7 @@ contract CMAccountManager is
     /**
      * @dev Invalid booking token address
      */
-    error BookingTokenAddressInvalid(address bookingToken);
+    error InvalidBookingTokenAddress(address bookingToken);
 
     /***************************************************
      *                    FUNCS                        *
@@ -187,7 +187,7 @@ contract CMAccountManager is
      */
     function setBookingToken(address token) public onlyRole(VERSIONER_ROLE) {
         if (token.code.length == 0) {
-            revert BookingTokenAddressInvalid(token);
+            revert InvalidBookingTokenAddress(token);
         }
         emit BookingTokenAddressUpdated(_bookingToken, token);
         _bookingToken = token;
@@ -222,7 +222,7 @@ contract CMAccountManager is
             revert CMAccountInvalidImplementation(latestAccountImplementation);
         }
         if (_bookingToken.code.length == 0) {
-            revert BookingTokenAddressInvalid(_bookingToken);
+            revert InvalidBookingTokenAddress(_bookingToken);
         }
         if (admin == address(0)) {
             revert CMAccountInvalidAdmin(admin);
