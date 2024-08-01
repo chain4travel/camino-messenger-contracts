@@ -235,7 +235,7 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
 
             await expect(
                 cmAccountManager.createCMAccount(
@@ -250,7 +250,7 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
 
             await cmAccountManager.connect(signers.managerPauser).pause();
             await expect(

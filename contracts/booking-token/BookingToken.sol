@@ -43,8 +43,8 @@ contract BookingToken is
     /**
      * @dev Roles
      */
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant MIN_EXPIRATION_ADMIN_ROLE = keccak256("MIN_EXPIRATION_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -104,7 +104,7 @@ contract BookingToken is
     /**
      * @dev ReservedFor and buyer mismatch
      */
-    error ReservedForMismatch(address reservedFor, address buyer);
+    error ReservationMismatch(address reservedFor, address buyer);
 
     /**
      * @dev Reservation expired
@@ -139,7 +139,7 @@ contract BookingToken is
      *                    FUNCS                        *
      ***************************************************/
 
-    function initialize(address manager, address defaultAdmin, address minter, address upgrader) public initializer {
+    function initialize(address manager, address defaultAdmin, address upgrader) public initializer {
         __ERC721_init("BookingToken", "TRIP");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -147,7 +147,6 @@ contract BookingToken is
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(MINTER_ROLE, minter);
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
@@ -197,7 +196,7 @@ contract BookingToken is
 
         // Check reservationedFor and msg.sender match
         if (reservation.reservedFor != msg.sender) {
-            revert ReservedForMismatch(reservation.reservedFor, msg.sender);
+            revert ReservationMismatch(reservation.reservedFor, msg.sender);
         }
 
         // Check expiration timestamp
@@ -278,8 +277,42 @@ contract BookingToken is
         }
     }
 
-    // TODO: setter and getter for _manager
-    // TODO: setter and getter for _minExpirationTimestampDiff
+    /**
+     * @dev Setter for _manager
+     */
+    function setManagerAddress(address manager) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _manager = manager;
+    }
+
+    /**
+     * @dev Getter for _manager
+     */
+    function getManagerAddress() public view returns (address) {
+        return _manager;
+    }
+
+    /**
+     * @dev Setter for _minExpirationTimestampDiff
+     */
+    function setMinExpirationTimestampDiff(
+        uint256 minExpirationTimestampDiff
+    ) public onlyRole(MIN_EXPIRATION_ADMIN_ROLE) {
+        _minExpirationTimestampDiff = minExpirationTimestampDiff;
+    }
+
+    /**
+     * @dev Getter for _minExpirationTimestampDiff
+     */
+    function getMinExpirationTimestampDiff() public view returns (uint256) {
+        return _minExpirationTimestampDiff;
+    }
+
+    /**
+     * @dev Get token reservation price for a specific token
+     */
+    function getReservationPrice(uint256 tokenId) public view returns (uint256) {
+        return _reservations[tokenId].price;
+    }
 
     /***************************************************
      *              TRANSFER OVERRIDES                 *

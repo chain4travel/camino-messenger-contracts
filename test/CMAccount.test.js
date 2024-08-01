@@ -155,10 +155,12 @@ describe("CMAccount", function () {
         });
 
         it("should revert if not withdrawer role", async function () {
-            const { cmAccount, WITHDRAWER_ROLE } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             const withdrawer = signers.otherAccount1;
             const withdrawAmount = ethers.parseEther("0.5");
+
+            const WITHDRAWER_ROLE = await cmAccount.WITHDRAWER_ROLE();
 
             // Withdraw
             const withdrawTx = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount);
