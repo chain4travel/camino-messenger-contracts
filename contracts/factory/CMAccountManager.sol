@@ -14,6 +14,9 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+// Utils
+import "@openzeppelin/contracts/utils/Address.sol";
+
 // ABI of the CMAccount implementation contract
 interface ICMAccount {
     function initialize(
@@ -33,6 +36,8 @@ contract CMAccountManager is
     UUPSUpgradeable,
     ReentrancyGuardUpgradeable
 {
+    using Address for address payable;
+
     /**
      * @dev Roles
      */
@@ -41,6 +46,7 @@ contract CMAccountManager is
     bytes32 public constant VERSIONER_ROLE = keccak256("VERSIONER_ROLE");
     bytes32 public constant FEE_ADMIN_ROLE = keccak256("FEE_ADMIN_ROLE");
     bytes32 public constant DEVELOPER_WALLET_ADMIN_ROLE = keccak256("DEVELOPER_WALLET_ADMIN_ROLE");
+    bytes32 public constant PREFUND_ADMIN_ROLE = keccak256("PREFUND_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -52,9 +58,30 @@ contract CMAccountManager is
      */
     address internal _latestAccountImplementation;
 
+    /**
+     * @dev Prefund amount
+     */
+    uint256 private _prefundAmount;
+
+    /**
+     * @dev Developer wallet address. CMAccount sends the developer fee to this address.
+     */
     address private _developerWallet;
+
+    /**
+     * @dev Developer fee basis points
+     *
+     * A basis point (bp) is one hundredth of 1 percentage point.
+     *
+     * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
+     * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
+     * 100 bp = 1%, ⁠1/100⁠, or 0.01.
+     */
     uint256 private _developerFeeBp;
 
+    /**
+     * @dev BookingToken address
+     */
     address private _bookingToken;
 
     /**
@@ -120,6 +147,11 @@ contract CMAccountManager is
      */
     error InvalidBookingTokenAddress(address bookingToken);
 
+    /**
+     * @dev Incorrect pre fund amount
+     */
+    error IncorrectPrefundAmount(uint256 expected, uint256 sended);
+
     /***************************************************
      *                    FUNCS                        *
      ***************************************************/
@@ -148,6 +180,9 @@ contract CMAccountManager is
 
         _developerWallet = developerWallet;
         _developerFeeBp = developerFeeBp;
+
+        // Set initial prefund amount
+        _prefundAmount = 100 ether;
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -201,6 +236,20 @@ contract CMAccountManager is
     }
 
     /**
+     * @dev Set pre fund amount
+     */
+    function setPrefundAmount(uint256 newPrefundAmount) public onlyRole(PREFUND_ADMIN_ROLE) {
+        _prefundAmount = newPrefundAmount;
+    }
+
+    /**
+     * @dev Get pre fund amount
+     */
+    function getPrefundAmount() public view returns (uint256) {
+        return _prefundAmount;
+    }
+
+    /**
      * @dev Creates CMAccount by deploying a ERC1967Proxy with the CMAccount implementation from the manager.
      *
      * Because this function is deploying a contract, it reverts if the caller is not KYC or KYB verified.
@@ -211,10 +260,13 @@ contract CMAccountManager is
         address admin,
         address pauser,
         address upgrader
-    ) external nonReentrant whenNotPaused returns (address) {
+    ) external payable nonReentrant whenNotPaused returns (address) {
         return _createCMAccount(admin, pauser, upgrader);
     }
 
+    /**
+     * @dev Private function to create CMAccount
+     */
     function _createCMAccount(address admin, address pauser, address upgrader) private returns (address) {
         // Checks
         address latestAccountImplementation = _latestAccountImplementation;
@@ -228,15 +280,24 @@ contract CMAccountManager is
             revert CMAccountInvalidAdmin(admin);
         }
 
+        // Check pre-fund amount
+        if (msg.value != _prefundAmount) {
+            revert IncorrectPrefundAmount(_prefundAmount, msg.value);
+        }
+
         // Create CMAccount Proxy and set the implementation address
         ERC1967Proxy cmAccountProxy = new ERC1967Proxy(latestAccountImplementation, "");
-        emit CMAccountCreated(address(cmAccountProxy));
 
         // Add to the known CMAccounts
         cmAccounts[address(cmAccountProxy)] = true;
 
         // Initialize the CMAccount
         ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, admin, pauser, upgrader);
+
+        // Send the pre fund to the CMAccount
+        payable(cmAccountProxy).sendValue(msg.value);
+
+        emit CMAccountCreated(address(cmAccountProxy));
 
         return address(cmAccountProxy);
     }
@@ -281,7 +342,7 @@ contract CMAccountManager is
      *
      * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
      * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
-     * 100 bp = 1%, 10−2, ⁠1/100⁠, or 0.01.
+     * 100 bp = 1%, ⁠1/100⁠, or 0.01.
      */
     function setDeveloperFeeBp(uint256 bp) public onlyRole(FEE_ADMIN_ROLE) {
         emit DeveloperFeeBpUpdated(_developerFeeBp, bp);

@@ -108,13 +108,14 @@ describe("ChequeManager", function () {
 
     describe("Cheque Operations", function () {
         it("Should verify a cheque with a valid signature", async function () {
-            const { cmAccount, cmAccountManager } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
                 signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
             );
 
             const receipt = await tx.wait();
@@ -171,13 +172,14 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify a cheque with an invalid signature", async function () {
-            const { cmAccount, cmAccountManager } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
                 signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
             );
 
             const receipt = await tx.wait();
@@ -221,13 +223,14 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify a cheque with non-allowed signer", async function () {
-            const { cmAccount, cmAccountManager } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
                 signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
             );
 
             const receipt = await tx.wait();
@@ -268,13 +271,14 @@ describe("ChequeManager", function () {
         });
 
         it("Should cash-in multiple cheques correctly", async function () {
-            const { cmAccount, cmAccountManager } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
                 signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
             );
 
             const receipt = await tx.wait();

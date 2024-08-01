@@ -26,15 +26,16 @@ describe("CMAccountManager", function () {
             const VERSIONER_ROLE = await cmAccountManager.VERSIONER_ROLE();
 
             // Check roles
-            await expect(await cmAccountManager.hasRole(DEFAULT_ADMIN_ROLE, signers.managerAdmin.address)).to.be.true;
-            await expect(await cmAccountManager.hasRole(PAUSER_ROLE, signers.managerPauser.address)).to.be.true;
-            await expect(await cmAccountManager.hasRole(UPGRADER_ROLE, signers.managerUpgrader.address)).to.be.true;
-            await expect(await cmAccountManager.hasRole(VERSIONER_ROLE, signers.managerVersioner.address)).to.be.true;
+            expect(await cmAccountManager.hasRole(DEFAULT_ADMIN_ROLE, signers.managerAdmin.address)).to.be.true;
+            expect(await cmAccountManager.hasRole(PAUSER_ROLE, signers.managerPauser.address)).to.be.true;
+            expect(await cmAccountManager.hasRole(UPGRADER_ROLE, signers.managerUpgrader.address)).to.be.true;
+            expect(await cmAccountManager.hasRole(VERSIONER_ROLE, signers.managerVersioner.address)).to.be.true;
 
             // Check state
-            await expect(await cmAccountManager.getDeveloperWallet()).to.be.equal(signers.developerWallet.address);
-            await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(developerFeeBp);
-            await expect(await cmAccountManager.paused()).to.be.false;
+            expect(await cmAccountManager.getDeveloperWallet()).to.be.equal(signers.developerWallet.address);
+            expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(developerFeeBp);
+            expect(await cmAccountManager.paused()).to.be.false;
+            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(ethers.parseEther("100"));
         });
 
         it("should set developer wallet and roles correctly", async function () {
@@ -220,28 +221,32 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, cmAccount, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
             const cmAccountManagerAddress = await cmAccountManager.getAddress();
             const cmAccountAddress = await cmAccount.getAddress();
 
-            await expect(await cmAccountManager.isCMAccount(cmAccountAddress)).to.be.true;
-            await expect(await cmAccountManager.isCMAccount(signers.otherAccount1.address)).to.be.false;
-            await expect(await cmAccountManager.isCMAccount(ethers.ZeroAddress)).to.be.false;
-            await expect(await cmAccount.getManagerAddress()).to.be.equal(cmAccountManagerAddress);
+            expect(await cmAccountManager.isCMAccount(cmAccountAddress)).to.be.true;
+            expect(await cmAccountManager.isCMAccount(signers.otherAccount1.address)).to.be.false;
+            expect(await cmAccountManager.isCMAccount(ethers.ZeroAddress)).to.be.false;
+            expect(await cmAccount.getManagerAddress()).to.be.equal(cmAccountManagerAddress);
+
+            // Check balance for prefund
+            expect(await ethers.provider.getBalance(cmAccountAddress)).to.be.equal(prefundAmount);
         });
 
         it("should fail if admin is zero address", async function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
             await expect(
                 cmAccountManager.createCMAccount(
                     ethers.ZeroAddress,
                     signers.cmAccountPauser,
                     signers.cmAccountUpgrader,
+                    { value: prefundAmount },
                 ),
             ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidAdmin");
         });
@@ -250,7 +255,7 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
             await cmAccountManager.connect(signers.managerPauser).pause();
             await expect(
@@ -258,8 +263,49 @@ describe("CMAccountManager", function () {
                     signers.cmAccountAdmin.address,
                     signers.cmAccountPauser,
                     signers.cmAccountUpgrader,
+                    { value: prefundAmount },
                 ),
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
+        });
+
+        it("should fail if the prefund amount is incorrect", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            await expect(
+                cmAccountManager.createCMAccount(
+                    signers.cmAccountAdmin.address,
+                    signers.cmAccountPauser,
+                    signers.cmAccountUpgrader,
+                    { value: prefundAmount - 1n },
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
+                .withArgs(prefundAmount, prefundAmount - 1n);
+        });
+
+        it("should set and get correct prefund amount", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            newPrefundAmount = prefundAmount + ethers.parseEther("100");
+
+            // Grant the role
+            const PREFUND_ADMIN_ROLE = await cmAccountManager.PREFUND_ADMIN_ROLE();
+            await cmAccountManager
+                .connect(signers.managerAdmin)
+                .grantRole(PREFUND_ADMIN_ROLE, signers.otherAccount3.address);
+
+            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(prefundAmount);
+
+            expect(await cmAccountManager.connect(signers.otherAccount3).setPrefundAmount(newPrefundAmount)).to.be.not
+                .reverted;
+
+            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(newPrefundAmount);
         });
     });
 });
