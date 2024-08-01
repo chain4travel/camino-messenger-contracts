@@ -21,6 +21,8 @@ async function setupSigners() {
         chequeOperator,
         depositor,
         withdrawer,
+        btAdmin,
+        btUpgrader,
         otherAccount1,
         otherAccount2,
         otherAccount3,
@@ -40,6 +42,8 @@ async function setupSigners() {
         chequeOperator,
         depositor,
         withdrawer,
+        btAdmin,
+        btUpgrader,
         otherAccount1,
         otherAccount2,
         otherAccount3,
@@ -103,6 +107,17 @@ async function deployAndConfigureAllFixture() {
     );
     await cmAccountManager.grantRole(await cmAccountManager.FEE_ADMIN_ROLE(), signers.feeAdmin.address);
 
+    // Deploy BookingToken
+    const BookingToken = await ethers.getContractFactory("BookingToken");
+    const bookingToken = await upgrades.deployProxy(
+        BookingToken,
+        [await cmAccountManager.getAddress(), signers.btAdmin.address, signers.btUpgrader.address],
+        { kind: "uups" },
+    );
+
+    // Set BookingToken address on the manager
+    await cmAccountManager.connect(signers.managerVersioner).setBookingToken(bookingToken.getAddress());
+
     const tx = await cmAccountManager.createCMAccount(
         signers.cmAccountAdmin.address,
         signers.cmAccountPauser.address,
@@ -126,14 +141,14 @@ async function deployAndConfigureAllFixture() {
     // Get the CMAccount instance at the address
     const cmAccount = await ethers.getContractAt("CMAccount", cmAccountAddress);
 
-    return { cmAccountManager, cmAccount };
+    return { cmAccountManager, cmAccount, bookingToken };
 }
 
 async function deployCMAccountWithDepositFixture() {
     // Set up signers
     await setupSigners();
 
-    const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+    const { cmAccountManager, cmAccount, bookingToken } = await loadFixture(deployAndConfigureAllFixture);
 
     // Grant withdrawer role
     const WITHDRAWER_ROLE = await cmAccount.WITHDRAWER_ROLE();
@@ -149,7 +164,52 @@ async function deployCMAccountWithDepositFixture() {
     const txResponse = await signers.depositor.sendTransaction(depositTx);
     await txResponse.wait();
 
-    return { cmAccount, cmAccountManager, WITHDRAWER_ROLE };
+    return { cmAccountManager, cmAccount, bookingToken };
+}
+
+async function deployBookingTokenFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const { cmAccountManager, cmAccount, bookingToken } = await loadFixture(deployCMAccountWithDepositFixture);
+
+    // Supplier CMAccount with deposit
+    const supplierCMAccount = cmAccount;
+
+    // Create distributor CMAccount
+    const tx = await cmAccountManager.createCMAccount(
+        signers.cmAccountAdmin.address,
+        signers.cmAccountPauser.address,
+        signers.cmAccountUpgrader.address,
+    );
+
+    const receipt = await tx.wait();
+
+    // Parse event to get the CMAccount address (this is the UUPS proxy address)
+    const event = receipt.logs.find((log) => {
+        try {
+            return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+        } catch (e) {
+            return false;
+        }
+    });
+
+    const parsedEvent = cmAccountManager.interface.parseLog(event);
+    const distributorCMAccountAddress = parsedEvent.args.account;
+
+    // Get the CMAccount instance at the address
+    const distributorCMAccount = await ethers.getContractAt("CMAccount", distributorCMAccountAddress);
+
+    // Deposit funds to distributor CMAccount
+    const depositAmount = ethers.parseEther("1");
+    const depositTx = {
+        to: distributorCMAccount.getAddress(),
+        value: depositAmount,
+    };
+    const txResponse = await signers.depositor.sendTransaction(depositTx);
+    await txResponse.wait();
+
+    return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken };
 }
 
 module.exports = {
@@ -160,4 +220,5 @@ module.exports = {
     deployCMAccountManagerWithCMAccountImplFixture,
     deployAndConfigureAllFixture,
     deployCMAccountWithDepositFixture,
+    deployBookingTokenFixture,
 };

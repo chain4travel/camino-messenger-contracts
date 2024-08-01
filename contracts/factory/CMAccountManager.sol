@@ -16,7 +16,13 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 
 // ABI of the CMAccount implementation contract
 interface ICMAccount {
-    function initialize(address manager, address owner, address pauser, address upgrader) external;
+    function initialize(
+        address manager,
+        address bookingToken,
+        address owner,
+        address pauser,
+        address upgrader
+    ) external;
 }
 
 /// @custom:security-contact https://r.xyz/program/camino-network
@@ -48,6 +54,8 @@ contract CMAccountManager is
 
     address private _developerWallet;
     uint256 private _developerFeeBp;
+
+    address private _bookingToken;
 
     /**
      * @dev CM Accounts mapping
@@ -81,6 +89,11 @@ contract CMAccountManager is
      */
     event DeveloperFeeBpUpdated(uint256 indexed oldDeveloperFeeBp, uint256 indexed newDeveloperFeeBp);
 
+    /**
+     * @dev Booking token address updated
+     */
+    event BookingTokenAddressUpdated(address indexed oldBookingToken, address indexed newBookingToken);
+
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
@@ -101,6 +114,11 @@ contract CMAccountManager is
      * @dev Invalid developer address
      */
     error InvalidDeveloperWallet(address developerWallet);
+
+    /**
+     * @dev Invalid booking token address
+     */
+    error InvalidBookingTokenAddress(address bookingToken);
 
     /***************************************************
      *                    FUNCS                        *
@@ -165,6 +183,24 @@ contract CMAccountManager is
     }
 
     /**
+     * @dev Set booking token address
+     */
+    function setBookingToken(address token) public onlyRole(VERSIONER_ROLE) {
+        if (token.code.length == 0) {
+            revert InvalidBookingTokenAddress(token);
+        }
+        emit BookingTokenAddressUpdated(_bookingToken, token);
+        _bookingToken = token;
+    }
+
+    /**
+     * @dev Get booking token address
+     */
+    function getBookingToken() public view returns (address) {
+        return _bookingToken;
+    }
+
+    /**
      * @dev Creates CMAccount by deploying a ERC1967Proxy with the CMAccount implementation from the manager.
      *
      * Because this function is deploying a contract, it reverts if the caller is not KYC or KYB verified.
@@ -185,6 +221,9 @@ contract CMAccountManager is
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
         }
+        if (_bookingToken.code.length == 0) {
+            revert InvalidBookingTokenAddress(_bookingToken);
+        }
         if (admin == address(0)) {
             revert CMAccountInvalidAdmin(admin);
         }
@@ -197,7 +236,7 @@ contract CMAccountManager is
         cmAccounts[address(cmAccountProxy)] = true;
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), admin, pauser, upgrader);
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, admin, pauser, upgrader);
 
         return address(cmAccountProxy);
     }

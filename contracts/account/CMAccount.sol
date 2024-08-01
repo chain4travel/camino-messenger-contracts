@@ -16,6 +16,10 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 // Cheques
 import "./ChequeManager.sol";
 
+// Booking Token
+import "../booking-token/BookingTokenOperator.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
 interface ICMAccountManager {
     function getAccountImplementation() external view returns (address);
 
@@ -31,7 +35,15 @@ interface ICMAccountManager {
  *
  * This account holds funds that will be paid to the cheque beneficiaries.
  */
-contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable, ChequeManager {
+contract CMAccount is
+    Initializable,
+    PausableUpgradeable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    IERC721Receiver,
+    ChequeManager,
+    BookingTokenOperator
+{
     using Address for address payable;
 
     /***************************************************
@@ -42,6 +54,7 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+    bytes32 public constant BOOKING_OPERATOR_ROLE = keccak256("BOOKING_OPERATOR_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -51,6 +64,11 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
      * @dev Address of the CMAccountManager
      */
     address private _manager;
+
+    /**
+     * @dev Address of the CMAccountManager
+     */
+    address private _bookingToken;
 
     /***************************************************
      *                    EVENTS                       *
@@ -104,7 +122,13 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    function initialize(address manager, address defaultAdmin, address pauser, address upgrader) public initializer {
+    function initialize(
+        address manager,
+        address bookingToken,
+        address defaultAdmin,
+        address pauser,
+        address upgrader
+    ) public initializer {
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -115,6 +139,7 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
+        _bookingToken = bookingToken;
     }
 
     receive() external payable {}
@@ -195,5 +220,48 @@ contract CMAccount is Initializable, PausableUpgradeable, AccessControlUpgradeab
     function withdraw(address payable recipient, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
         emit Withdraw(recipient, amount);
         recipient.sendValue(amount);
+    }
+
+    /***************************************************
+     *                 BOOKING TOKEN                   *
+     ***************************************************/
+
+    // TODO: Make sure the contract is able to use its booking tokens with
+    // {IERC721-safeTransferFrom}, {IERC721-approve} or {IERC721-setApprovalForAll}.
+
+    /**
+     * @dev Mint booking token
+     */
+    function mintBookingToken(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price
+    ) public override onlyRole(BOOKING_OPERATOR_ROLE) {
+        // Mint the token
+        _mintBookingToken(_bookingToken, reservedFor, uri, expirationTimestamp, price);
+    }
+
+    /**
+     * @dev Buy booking token
+     */
+    function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
+        _buyBookingToken(_bookingToken, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(address, address, uint256, bytes memory) public virtual returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    /**
+     * @dev Get the price of a booking token
+     */
+    function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
+        return _getTokenReservationPrice(_bookingToken, tokenId);
     }
 }
