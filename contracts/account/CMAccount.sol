@@ -227,7 +227,7 @@ contract CMAccount is
     }
 
     /**
-     * @dev Verifies if the amount is withdrawable by checking if prefund is spen
+     * @dev Verifies if the amount is withdrawable by checking if prefund is spent
      */
     function checkPrefundSpent(uint256 amount) public view {
         uint256 prefundAmount = _prefundAmount;
