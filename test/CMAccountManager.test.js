@@ -102,6 +102,28 @@ describe("CMAccountManager", function () {
 
             await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(newFeeBp);
         });
+
+        it("should set and get correct prefund amount", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            newPrefundAmount = prefundAmount + ethers.parseEther("100");
+
+            // Grant the role
+            const PREFUND_ADMIN_ROLE = await cmAccountManager.PREFUND_ADMIN_ROLE();
+            await cmAccountManager
+                .connect(signers.managerAdmin)
+                .grantRole(PREFUND_ADMIN_ROLE, signers.otherAccount3.address);
+
+            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(prefundAmount);
+
+            expect(await cmAccountManager.connect(signers.otherAccount3).setPrefundAmount(newPrefundAmount)).to.be.not
+                .reverted;
+
+            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(newPrefundAmount);
+        });
     });
 
     describe("Upgrades", function () {
@@ -286,7 +308,7 @@ describe("CMAccountManager", function () {
                 .withArgs(prefundAmount, prefundAmount - 1n);
         });
 
-        it("should set and get correct prefund amount", async function () {
+        it("should set and get correct account creator", async function () {
             // Set up signers
             await setupSigners();
 
@@ -294,18 +316,30 @@ describe("CMAccountManager", function () {
 
             newPrefundAmount = prefundAmount + ethers.parseEther("100");
 
-            // Grant the role
-            const PREFUND_ADMIN_ROLE = await cmAccountManager.PREFUND_ADMIN_ROLE();
-            await cmAccountManager
-                .connect(signers.managerAdmin)
-                .grantRole(PREFUND_ADMIN_ROLE, signers.otherAccount3.address);
+            // Create distributor CMAccount
+            // This is called with managerAdmin as the signer
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountPauser.address,
+                signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
+            );
 
-            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(prefundAmount);
+            const receipt = await tx.wait();
 
-            expect(await cmAccountManager.connect(signers.otherAccount3).setPrefundAmount(newPrefundAmount)).to.be.not
-                .reverted;
+            // Parse event to get the CMAccount address (this is the UUPS proxy address)
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
 
-            expect(await cmAccountManager.getPrefundAmount()).to.be.equal(newPrefundAmount);
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const newCMAccountAddress = parsedEvent.args.account;
+
+            expect(await cmAccountManager.getCreator(newCMAccountAddress)).to.be.equal(signers.managerAdmin.address);
         });
     });
 });

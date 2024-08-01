@@ -85,9 +85,17 @@ contract CMAccountManager is
     address private _bookingToken;
 
     /**
-     * @dev CM Accounts mapping
+     * @dev CMAccount info
      */
-    mapping(address account => bool isCMAccount) internal cmAccounts;
+    struct CMAccountInfo {
+        bool isCMAccount;
+        address creator;
+    }
+
+    /**
+     * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators
+     */
+    mapping(address account => CMAccountInfo) internal cmAccountInfo;
 
     /***************************************************
      *                    EVENTS                       *
@@ -288,8 +296,8 @@ contract CMAccountManager is
         // Create CMAccount Proxy and set the implementation address
         ERC1967Proxy cmAccountProxy = new ERC1967Proxy(latestAccountImplementation, "");
 
-        // Add to the known CMAccounts
-        cmAccounts[address(cmAccountProxy)] = true;
+        // Set the isCMAccount and creator
+        cmAccountInfo[address(cmAccountProxy)] = CMAccountInfo({ isCMAccount: true, creator: msg.sender });
 
         // Initialize the CMAccount
         ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, admin, pauser, upgrader);
@@ -307,7 +315,14 @@ contract CMAccountManager is
      * @param account The account address to check
      */
     function isCMAccount(address account) public view returns (bool) {
-        return cmAccounts[account];
+        return cmAccountInfo[account].isCMAccount;
+    }
+
+    /**
+     * @dev Return account's creator
+     */
+    function getCreator(address account) public view returns (address) {
+        return cmAccountInfo[account].creator;
     }
 
     /**
