@@ -77,6 +77,11 @@ abstract contract ChequeManager is Initializable {
      */
     bytes32 public DOMAIN_SEPARATOR;
 
+    /**
+     * @dev Total amount of cheques that have been cashed in.
+     */
+    uint256 internal _totalChequePayments;
+
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
@@ -286,6 +291,11 @@ abstract contract ChequeManager is Initializable {
         uint256 developerFee = calculateDeveloperFee(paymentAmount);
         payable(getDeveloperWallet()).sendValue(developerFee);
 
+        // Update total cheque payments excluding cheques to the same account
+        if (cheque.fromCMAccount != cheque.toCMAccount) {
+            _totalChequePayments += paymentAmount;
+        }
+
         // Emit cash-in event
         emit ChequeCashedIn(signer, cheque.toBot, cheque.counter, cheque.amount, developerFee);
     }
@@ -311,6 +321,10 @@ abstract contract ChequeManager is Initializable {
      */
     function calculateDeveloperFee(uint256 amount) public view returns (uint256) {
         return (amount * getDeveloperFeeBp()) / 10000;
+    }
+
+    function getTotalChequePayments() public view returns (uint256) {
+        return _totalChequePayments;
     }
 
     /***************************************************

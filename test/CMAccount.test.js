@@ -168,6 +168,37 @@ describe("CMAccount", function () {
                 .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
                 .withArgs(withdrawer.address, WITHDRAWER_ROLE);
         });
+
+        it("should revert if prefund not spent yet", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const withdrawer = signers.withdrawer;
+            // Try to withdraw more than prefundLeft. cmAccount has 100 CAM prefund and 1 CAM deposit initially
+            const withdrawAmount = ethers.parseEther("50");
+
+            // Try withdraw
+            // PrefundNotSpentYet(withdrawableAmount, prefundLeft, amount);
+            const withdrawTx = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount);
+            await expect(withdrawTx)
+                .to.be.revertedWithCustomError(cmAccount, "PrefundNotSpentYet")
+                .withArgs(ethers.parseEther("1"), ethers.parseEther("100"), ethers.parseEther("50"));
+        });
+
+        it("should withdraw amount if it's not violating the prefund spent", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const withdrawer = signers.withdrawer;
+            // Try to withdraw allowed amount. cmAccount has 100 CAM prefund and 1
+            // CAM deposit initially. So max 1 cam is withdrawable.
+            const withdrawAmount = ethers.parseEther("1");
+
+            // Try withdraw
+            const withdrawTx = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount);
+            await expect(withdrawTx).to.be.not.reverted;
+
+            // Check balances
+            await expect(withdrawTx).to.changeEtherBalances([cmAccount, withdrawer], [-withdrawAmount, withdrawAmount]);
+        });
     });
 
     describe("Developer Fee", function () {

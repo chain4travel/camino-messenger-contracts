@@ -118,10 +118,14 @@ async function deployAndConfigureAllFixture() {
     // Set BookingToken address on the manager
     await cmAccountManager.connect(signers.managerVersioner).setBookingToken(bookingToken.getAddress());
 
+    // Get pre fund amount
+    const prefundAmount = await cmAccountManager.getPrefundAmount();
+
     const tx = await cmAccountManager.createCMAccount(
         signers.cmAccountAdmin.address,
         signers.cmAccountPauser.address,
         signers.cmAccountUpgrader.address,
+        { value: prefundAmount },
     );
 
     const receipt = await tx.wait();
@@ -141,14 +145,15 @@ async function deployAndConfigureAllFixture() {
     // Get the CMAccount instance at the address
     const cmAccount = await ethers.getContractAt("CMAccount", cmAccountAddress);
 
-    return { cmAccountManager, cmAccount, bookingToken };
+    return { cmAccountManager, cmAccount, bookingToken, prefundAmount };
 }
 
 async function deployCMAccountWithDepositFixture() {
     // Set up signers
     await setupSigners();
 
-    const { cmAccountManager, cmAccount, bookingToken } = await loadFixture(deployAndConfigureAllFixture);
+    const { cmAccountManager, cmAccount, bookingToken, prefundAmount } =
+        await loadFixture(deployAndConfigureAllFixture);
 
     // Grant withdrawer role
     const WITHDRAWER_ROLE = await cmAccount.WITHDRAWER_ROLE();
@@ -164,14 +169,16 @@ async function deployCMAccountWithDepositFixture() {
     const txResponse = await signers.depositor.sendTransaction(depositTx);
     await txResponse.wait();
 
-    return { cmAccountManager, cmAccount, bookingToken };
+    return { cmAccountManager, cmAccount, bookingToken, prefundAmount };
 }
 
 async function deployBookingTokenFixture() {
     // Set up signers
     await setupSigners();
 
-    const { cmAccountManager, cmAccount, bookingToken } = await loadFixture(deployCMAccountWithDepositFixture);
+    const { cmAccountManager, cmAccount, bookingToken, prefundAmount } = await loadFixture(
+        deployCMAccountWithDepositFixture,
+    );
 
     // Supplier CMAccount with deposit
     const supplierCMAccount = cmAccount;
@@ -181,6 +188,7 @@ async function deployBookingTokenFixture() {
         signers.cmAccountAdmin.address,
         signers.cmAccountPauser.address,
         signers.cmAccountUpgrader.address,
+        { value: prefundAmount },
     );
 
     const receipt = await tx.wait();
@@ -209,7 +217,7 @@ async function deployBookingTokenFixture() {
     const txResponse = await signers.depositor.sendTransaction(depositTx);
     await txResponse.wait();
 
-    return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken };
+    return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount };
 }
 
 module.exports = {

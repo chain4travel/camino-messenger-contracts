@@ -70,6 +70,11 @@ contract CMAccount is
      */
     address private _bookingToken;
 
+    /**
+     * @dev Prefund amount
+     */
+    uint256 private _prefundAmount;
+
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
@@ -113,6 +118,11 @@ contract CMAccount is
      */
     error ZeroValueDeposit(address sender);
 
+    /**
+     * @dev Error to revert with if the prefund is not spent yet
+     */
+    error PrefundNotSpentYet(uint256 withdrawableAmount, uint256 prefundLeft, uint256 amount);
+
     /***************************************************
      *         CONSTRUCTOR & INITIALIZATION            *
      ***************************************************/
@@ -125,6 +135,7 @@ contract CMAccount is
     function initialize(
         address manager,
         address bookingToken,
+        uint256 prefundAmount,
         address defaultAdmin,
         address pauser,
         address upgrader
@@ -140,6 +151,7 @@ contract CMAccount is
 
         _manager = manager;
         _bookingToken = bookingToken;
+        _prefundAmount = prefundAmount;
     }
 
     receive() external payable {}
@@ -215,11 +227,42 @@ contract CMAccount is
     }
 
     /**
+     * @dev Verifies if the amount is withdrawable by checking if prefund is spent
+     */
+    function checkPrefundSpent(uint256 amount) public view {
+        uint256 prefundAmount = _prefundAmount;
+        uint256 totalChequePayments = _totalChequePayments;
+
+        // Check if prefund is spent. If total cheque payments is bigger or equal to
+        // prefund amount it's ok to withdraw any amount
+        if (totalChequePayments < prefundAmount) {
+            // Balance should be bigger or equal to the { prefundLeft } because the
+            // total sum of prefund is not yet spent. So, we substact that
+            // (prefundLeft) from the balance to find the withdrawable amount.
+            uint256 prefundLeft = prefundAmount - totalChequePayments;
+            uint256 withdrawableAmount = address(this).balance - prefundLeft;
+
+            // If amount is bigger than withdrawable amount, revert.
+            // Otherwise, it's ok to withdraw the amount.
+            if (amount > withdrawableAmount) {
+                revert PrefundNotSpentYet(withdrawableAmount, prefundLeft, amount);
+            }
+        }
+    }
+
+    /**
      * @dev Withdraw CAM from the CMAccount
+     *
+     * This function reverts if the amount is bigger then the prefund left to spend. This is to prevent
+     * spam by forcing user to spend the full prefund for cheques, so they can not just create an account
+     * and withdraw the prefund.
      */
     function withdraw(address payable recipient, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
-        emit Withdraw(recipient, amount);
+        // Check if amount is withdrawable according to the prefund spent amount
+        checkPrefundSpent(amount);
+
         recipient.sendValue(amount);
+        emit Withdraw(recipient, amount);
     }
 
     /***************************************************
