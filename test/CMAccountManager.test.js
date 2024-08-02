@@ -264,12 +264,9 @@ describe("CMAccountManager", function () {
             const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
             await expect(
-                cmAccountManager.createCMAccount(
-                    ethers.ZeroAddress,
-                    signers.cmAccountPauser,
-                    signers.cmAccountUpgrader,
-                    { value: prefundAmount },
-                ),
+                cmAccountManager.createCMAccount(ethers.ZeroAddress, signers.cmAccountUpgrader, {
+                    value: prefundAmount,
+                }),
             ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidAdmin");
         });
 
@@ -281,12 +278,9 @@ describe("CMAccountManager", function () {
 
             await cmAccountManager.connect(signers.managerPauser).pause();
             await expect(
-                cmAccountManager.createCMAccount(
-                    signers.cmAccountAdmin.address,
-                    signers.cmAccountPauser,
-                    signers.cmAccountUpgrader,
-                    { value: prefundAmount },
-                ),
+                cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader, {
+                    value: prefundAmount,
+                }),
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
 
@@ -297,12 +291,9 @@ describe("CMAccountManager", function () {
             const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
             await expect(
-                cmAccountManager.createCMAccount(
-                    signers.cmAccountAdmin.address,
-                    signers.cmAccountPauser,
-                    signers.cmAccountUpgrader,
-                    { value: prefundAmount - 1n },
-                ),
+                cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader, {
+                    value: prefundAmount - 1n,
+                }),
             )
                 .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
                 .withArgs(prefundAmount, prefundAmount - 1n);
@@ -320,7 +311,6 @@ describe("CMAccountManager", function () {
             // This is called with managerAdmin as the signer
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );
