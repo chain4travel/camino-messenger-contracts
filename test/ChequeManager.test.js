@@ -396,8 +396,41 @@ describe("ChequeManager", function () {
             ]);
             // Check total cheque payments
             // Total cheque payments should be equal to the last cheque amount
-            // because we use same from/to CM accounts
+            // because we use same from/to CM account pairs for cheques above
             expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque2.amount);
+        });
+
+        it("Should not update total cheque payments for same account", async function () {
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            // Define cheque
+            const cheque = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: await cmAccount.getAddress(),
+                toBot: signers.otherAccount2.address,
+                counter: 1,
+                amount: ethers.parseEther("0.1"),
+                timestamp: 1721777321,
+            };
+
+            // Grant CHEQUE_OPERATOR_ROLE
+            await cmAccount
+                .connect(signers.cmAccountAdmin)
+                .grantRole(await cmAccount.CHEQUE_OPERATOR_ROLE(), signers.chequeOperator.address);
+
+            // Sign Cheque
+            const signature = await signMessengerCheque(cheque, signers.chequeOperator);
+
+            // Initial total cheque payments should be zero
+            expect(await cmAccount.getTotalChequePayments()).to.be.equal(0n);
+
+            // Cash-in cheque
+            const cashInResponse = await cmAccount.cashInCheque(cheque, signature);
+            await expect(cashInResponse).to.be.not.reverted;
+
+            // After cash-in total cheque payments should still be zero because the
+            // cheque is from the same account (fromCMAccount === toCMAccount)
+            expect(await cmAccount.getTotalChequePayments()).to.be.equal(0n);
         });
     });
 });

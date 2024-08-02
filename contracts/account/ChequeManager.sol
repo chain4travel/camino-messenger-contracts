@@ -291,8 +291,10 @@ abstract contract ChequeManager is Initializable {
         uint256 developerFee = calculateDeveloperFee(paymentAmount);
         payable(getDeveloperWallet()).sendValue(developerFee);
 
-        // Update total cheque payments
-        _totalChequePayments += paymentAmount;
+        // Update total cheque payments excluding cheques to the same account
+        if (cheque.fromCMAccount != cheque.toCMAccount) {
+            _totalChequePayments += paymentAmount;
+        }
 
         // Emit cash-in event
         emit ChequeCashedIn(signer, cheque.toBot, cheque.counter, cheque.amount, developerFee);
