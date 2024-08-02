@@ -28,6 +28,7 @@ const {
     signInvalidMessengerCheque,
     _signMessengerCheque,
 } = require("../utils/cheques.js");
+const { create } = require("domain");
 
 describe("ChequeManager", function () {
     describe("Main", function () {
@@ -67,7 +68,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             const calculatedHash = calculateMessengerChequeHash(cheque);
@@ -88,7 +90,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             // Calculate domain separator
@@ -139,7 +142,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -163,7 +167,7 @@ describe("ChequeManager", function () {
                     cheque.toBot,
                     cheque.counter,
                     cheque.amount,
-                    cheque.amount,
+                    cheque.amount, // payment
                 );
 
             // Sanity checks: balances should not change
@@ -203,7 +207,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -254,7 +259,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             // Be sure that the signer does not have the CHEQUE_OPERATOR_ROLE role
@@ -268,6 +274,59 @@ describe("ChequeManager", function () {
             await expect(cmAccount.verifyCheque(cheque, signature))
                 .to.be.revertedWithCustomError(cmAccount, "NotAllowedToSignCheques")
                 .withArgs(signers.chequeOperator.address);
+        });
+
+        it("Should not verify an expired cheque", async function () {
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            // Create receiving account (toCMAccount)
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountPauser.address,
+                signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
+            );
+
+            const receipt = await tx.wait();
+
+            // Parse event to get the CMAccount address
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const toCMAccountAddress = parsedEvent.args.account;
+
+            const createdAt = ethers.toBigInt(Math.floor(Date.now() / 1000)) - 10000n; // Go back in time
+            const expiresAt = createdAt + 120n; // Expiration in 2 minutes, but still in the past
+
+            // Define cheque
+            const cheque = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: 1,
+                amount: ethers.parseEther("1"),
+                createdAt: createdAt,
+                expiresAt: expiresAt,
+            };
+
+            // Grant CHEQUE_OPERATOR_ROLE
+            await cmAccount
+                .connect(signers.cmAccountAdmin)
+                .grantRole(await cmAccount.CHEQUE_OPERATOR_ROLE(), signers.chequeOperator.address);
+
+            // Sign the cheque
+            const signature = await signMessengerCheque(cheque, signers.chequeOperator);
+
+            // Verify cheque, should revert with ChequeExpired
+            await expect(cmAccount.verifyCheque(cheque, signature))
+                .to.be.revertedWithCustomError(cmAccount, "ChequeExpired")
+                .withArgs(expiresAt);
         });
 
         it("Should cash-in multiple cheques correctly", async function () {
@@ -295,6 +354,8 @@ describe("ChequeManager", function () {
             const parsedEvent = cmAccountManager.interface.parseLog(event);
             const toCMAccountAddress = parsedEvent.args.account;
 
+            const createdAt = ethers.toBigInt(Math.floor(Date.now() / 1000));
+
             // Define cheque
             const cheque = {
                 fromCMAccount: await cmAccount.getAddress(),
@@ -302,7 +363,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("0.1"),
-                timestamp: 1721777321,
+                createdAt: createdAt,
+                expiresAt: createdAt + 300n,
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -335,7 +397,7 @@ describe("ChequeManager", function () {
 
             // Sanity checks: should set lastCashIns
             const lastCashIn = await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot);
-            expect(lastCashIn).to.be.deep.equal([cheque.counter, cheque.amount]);
+            expect(lastCashIn).to.be.deep.equal([cheque.counter, cheque.amount, createdAt, createdAt + 300n]);
             // Check total cheque payments
             // Total cheque payments should be equal to the last cheque amount
             // because we use same from/to CM accounts
@@ -345,6 +407,8 @@ describe("ChequeManager", function () {
              * Second cheque
              */
 
+            const createdAt2 = ethers.toBigInt(Math.floor(Date.now() / 1000));
+
             // New cheque with a higher counter and amount
             const cheque2 = {
                 fromCMAccount: await cmAccount.getAddress(),
@@ -352,7 +416,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 100,
                 amount: ethers.parseEther("0.234"),
-                timestamp: 1721777322,
+                createdAt: createdAt2,
+                expiresAt: createdAt2 + 300n,
             };
 
             // Sign Cheque
@@ -393,6 +458,8 @@ describe("ChequeManager", function () {
             expect(await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot)).to.be.deep.equal([
                 cheque2.counter,
                 cheque2.amount,
+                createdAt2,
+                createdAt2 + 300n,
             ]);
             // Check total cheque payments
             // Total cheque payments should be equal to the last cheque amount
@@ -410,7 +477,8 @@ describe("ChequeManager", function () {
                 toBot: signers.otherAccount2.address,
                 counter: 1,
                 amount: ethers.parseEther("0.1"),
-                timestamp: 1721777321,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
