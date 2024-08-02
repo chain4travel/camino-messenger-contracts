@@ -1,12 +1,20 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 const { vars } = require("hardhat/config");
 
-const proxyModule = buildModule("ProxyModule", (m) => {
+const managerProxyModule = buildModule("ManagerProxyModule", (m) => {
     const cmAccountManager = m.contract("CMAccountManager");
 
-    const proxy = m.contract("ERC1967Proxy", [cmAccountManager, "0x"], { id: "CMAccountManagerProxy" });
+    const ManagerProxy = m.contract("ERC1967Proxy", [cmAccountManager, "0x"]);
 
-    return { proxy };
+    return { ManagerProxy };
+});
+
+const bookingTokenProxyModule = buildModule("BookingTokenProxyModule", (m) => {
+    const bookingToken = m.contract("BookingToken");
+
+    const BookingTokenProxy = m.contract("ERC1967Proxy", [bookingToken, "0x"]);
+
+    return { BookingTokenProxy };
 });
 
 const CMAccountManagerModule = buildModule("CMAccountManagerModule", (m) => {
@@ -23,10 +31,10 @@ const CMAccountManagerModule = buildModule("CMAccountManagerModule", (m) => {
     const developerFeeBp = m.getParameter("developerFeeBp", 100);
 
     // Take the proxy contract from the proxy module
-    const { proxy } = m.useModule(proxyModule);
+    const { ManagerProxy } = m.useModule(managerProxyModule);
 
     // Create instance of the proxy contract with the CMAccountManager ABI
-    const managerProxy = m.contractAt("CMAccountManager", proxy, { id: "CMAccountManagerProxy" });
+    const managerProxy = m.contractAt("CMAccountManager", ManagerProxy);
 
     // Initialize the manager
     m.call(managerProxy, "initialize", [admin, pauser, upgrader, versioner, developerWallet, developerFeeBp]);
@@ -36,6 +44,18 @@ const CMAccountManagerModule = buildModule("CMAccountManagerModule", (m) => {
 
     // Set the CMAccount implementation
     m.call(managerProxy, "setAccountImplementation", [CMAccountImpl]);
+
+    // BookingToken
+    const { BookingTokenProxy } = m.useModule(bookingTokenProxyModule);
+
+    // Create instance of the proxy contract with the BookingToken ABI
+    const bookingTokenProxy = m.contractAt("BookingToken", BookingTokenProxy);
+
+    // Initialize the booking token
+    m.call(bookingTokenProxy, "initialize", [managerProxy.address, admin, upgrader]);
+
+    // Set the booking token address in the manager
+    m.call(managerProxy, "setBookingToken", [bookingTokenProxy.address]);
 
     return { managerProxy };
 });
