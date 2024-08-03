@@ -4,7 +4,7 @@ const DOMAIN_VERSION = "1";
 function calculateMessengerChequeTypeHash() {
     const typeHash = ethers.keccak256(
         ethers.toUtf8Bytes(
-            "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)",
+            "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)",
         ),
     );
     return typeHash;
@@ -62,7 +62,7 @@ function calculateMessengerChequeHash(cheque) {
 
     const coder = ethers.AbiCoder.defaultAbiCoder();
     const encodedCheque = coder.encode(
-        ["bytes32", "address", "address", "address", "uint256", "uint256", "uint256"],
+        ["bytes32", "address", "address", "address", "uint256", "uint256", "uint256", "uint256"],
         [
             chequeTypeHash,
             cheque.fromCMAccount,
@@ -70,13 +70,14 @@ function calculateMessengerChequeHash(cheque) {
             cheque.toBot,
             cheque.counter,
             cheque.amount,
-            cheque.timestamp,
+            cheque.createdAt,
+            cheque.expiresAt,
         ],
     );
     return ethers.keccak256(encodedCheque);
 }
 
-async function _signMessengerCheque(fromCMAccount, toCMAccount, toBot, counter, amount, timestamp, signer) {
+async function _signMessengerCheque(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt, signer) {
     const chainId = await signer.provider.getNetwork().then((n) => n.chainId);
 
     const cheque = {
@@ -85,7 +86,8 @@ async function _signMessengerCheque(fromCMAccount, toCMAccount, toBot, counter, 
         toBot: toBot,
         counter: counter,
         amount: amount,
-        timestamp: timestamp,
+        createdAt: createdAt,
+        expiresAt: expiresAt,
     };
 
     const signature = await signMessengerCheque(cheque, signer);
@@ -103,7 +105,8 @@ async function signMessengerCheque(cheque, signer) {
             { name: "toBot", type: "address" },
             { name: "counter", type: "uint256" },
             { name: "amount", type: "uint256" },
-            { name: "timestamp", type: "uint256" },
+            { name: "createdAt", type: "uint256" },
+            { name: "expiresAt", type: "uint256" },
         ],
     };
 
@@ -127,7 +130,8 @@ async function signInvalidMessengerCheque(cheque, signer) {
             { name: "toBot", type: "address" },
             { name: "counter", type: "uint256" },
             { name: "amount", type: "uint256" },
-            { name: "timestamp", type: "uint256" },
+            { name: "createdAt", type: "uint256" },
+            { name: "expiresAt", type: "uint256" },
         ],
     };
 

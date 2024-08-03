@@ -25,17 +25,17 @@ abstract contract ChequeManager is Initializable {
 
     // FIXME: Use pre-computed hash
     // Pre-computed hash of the MessengerCheque struct type
-    // keccak256("MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)");
-    // 0x989d3af2075c5182ec3c5e39cd77d361be8d2bf20f27c1b09ae39483a1385853
+    // > ethers.keccak256(ethers.toUtf8Bytes("MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)"))
+    // '0x87b38f131334165ac2b361f08966c9fcff3a953fa7d9d9c2861b7f0b50445bcb'
     bytes32 public constant MESSENGER_CHEQUE_TYPEHASH =
         keccak256(
-            "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)"
+            "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)"
         );
 
     // FIXME: Use pre-computed hash
     // Pre-computed hash of the EIP712Domain type
-    // keccak256("EIP712Domain(string name,string version,uint256 chainId)");
-    // 0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e
+    // > ethers.keccak256(ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId)"))
+    // '0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e'
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
 
     /***************************************************
@@ -51,7 +51,8 @@ abstract contract ChequeManager is Initializable {
         address toBot; // The address of the bot that receives the cheque
         uint256 counter; // This should be increased with every cheque
         uint256 amount; // The amount to be transferred
-        uint256 timestamp; // The timestamp of the cheque
+        uint256 createdAt; // Creation timestamp of the cheque
+        uint256 expiresAt; // Expiration timestamp of the cheque
     }
 
     /**
@@ -60,6 +61,8 @@ abstract contract ChequeManager is Initializable {
     struct LastCashIn {
         uint256 counter;
         uint256 amount;
+        uint256 createdAt;
+        uint256 expiresAt;
     }
 
     /***************************************************
@@ -145,6 +148,11 @@ abstract contract ChequeManager is Initializable {
      */
     error InvalidAmount(uint256 chequeAmount, uint256 lastAmount);
 
+    /**
+     * @dev The cheque is expired at the given timestamp
+     */
+    error ChequeExpired(uint256 expiresAt);
+
     /***************************************************
      *                    FUNCS                        *
      ***************************************************/
@@ -178,7 +186,8 @@ abstract contract ChequeManager is Initializable {
                     cheque.toBot,
                     cheque.counter,
                     cheque.amount,
-                    cheque.timestamp
+                    cheque.createdAt,
+                    cheque.expiresAt
                 )
             );
     }
@@ -217,6 +226,11 @@ abstract contract ChequeManager is Initializable {
         // Revert if cheque payee is not a CM account
         if (!isCMAccount(cheque.toCMAccount)) {
             revert InvalidToCMAccount(cheque.toCMAccount);
+        }
+
+        // Revert if the cheque is expired
+        if (block.timestamp >= cheque.expiresAt) {
+            revert ChequeExpired(cheque.expiresAt);
         }
 
         // Recover the signer from the signature. If the signature is invalid, this
@@ -282,7 +296,7 @@ abstract contract ChequeManager is Initializable {
 
         // If we didn't revert in the verifyCheque above, the cheque is valid.
         // Update the last cash ins.
-        setLastCashIn(signer, cheque.toBot, cheque.counter, cheque.amount);
+        setLastCashIn(signer, cheque.toBot, cheque.counter, cheque.amount, cheque.createdAt, cheque.expiresAt);
 
         // Transfer the amount to the `toCMAccount` using sendValue
         payable(cheque.toCMAccount).sendValue(paymentAmount);
@@ -301,17 +315,24 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns `CashIn(uint256 lastCounter, uint256 lastAmount)` for given `fromBot`, `toBot` pair.
+     * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
      */
     function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory cashIn) {
         return lastCashIns[fromBot][toBot];
     }
 
     /**
-     * @dev Sets `CashIn(uint256 lastCounter, uint256 lastAmount)` for given `fromBot`, `toBot` pair.
+     * @dev Sets last cash-in for given `fromBot`, `toBot` pair.
      */
-    function setLastCashIn(address fromBot, address toBot, uint256 counter, uint256 amount) internal {
-        lastCashIns[fromBot][toBot] = LastCashIn(counter, amount);
+    function setLastCashIn(
+        address fromBot,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt
+    ) internal {
+        lastCashIns[fromBot][toBot] = LastCashIn(counter, amount, createdAt, expiresAt);
     }
 
     /**

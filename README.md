@@ -115,34 +115,42 @@ yarn hardhat ignition deploy ignition/modules/0_development.js --network localho
 
 ```
 yarn run v1.22.19
-$ /work/github.com/chain4travel/camino-messenger-contracts/node_modules/.bin/hardhat ignition deploy ignition/modules/0_development.js --network localhost
+$ /hgst/work/github.com/chain4travel/camino-messenger-contracts/node_modules/.bin/hardhat ignition deploy ignition/modules/0_development.js --network localhost
 Hardhat Ignition 🚀
 
 Deploying [ CMAccountManagerModule ]
 
 Batch #1
+  Executed BookingTokenProxyModule#BookingToken
   Executed CMAccountManagerModule#CMAccount
-  Executed ProxyModule#CMAccountManager
+  Executed ManagerProxyModule#CMAccountManager
 
 Batch #2
-  Executed ProxyModule#CMAccountManagerProxy
+  Executed BookingTokenProxyModule#ERC1967Proxy
+  Executed ManagerProxyModule#ERC1967Proxy
 
 Batch #3
-  Executed CMAccountManagerModule#CMAccountManagerProxy
+  Executed CMAccountManagerModule#BookingToken
+  Executed CMAccountManagerModule#CMAccountManager
 
 Batch #4
-  Executed CMAccountManagerModule#CMAccountManagerProxy.initialize
-  Executed CMAccountManagerModule#CMAccountManagerProxy.setAccountImplementation
+  Executed CMAccountManagerModule#BookingToken.initialize
+  Executed CMAccountManagerModule#CMAccountManager.initialize
+  Executed CMAccountManagerModule#CMAccountManager.setAccountImplementation
+  Executed CMAccountManagerModule#CMAccountManager.setBookingToken
 
 [ CMAccountManagerModule ] successfully deployed 🚀
 
 Deployed Addresses
 
-CMAccountManagerModule#CMAccount - 0x5FbDB2315678afecb367f032d93F642f64180aa3
-ProxyModule#CMAccountManager - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-ProxyModule#CMAccountManagerProxy - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-CMAccountManagerModule#CMAccountManagerProxy - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-Done in 1.73s.
+BookingTokenProxyModule#BookingToken - 0x5FbDB2315678afecb367f032d93F642f64180aa3
+CMAccountManagerModule#CMAccount - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+ManagerProxyModule#CMAccountManager - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+BookingTokenProxyModule#ERC1967Proxy - 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+ManagerProxyModule#ERC1967Proxy - 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+CMAccountManagerModule#BookingToken - 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+CMAccountManagerModule#CMAccountManager - 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+Done in 2.79s.
 ```
 
 You can also see your deployed contract addresses in the
@@ -177,7 +185,7 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
     function calculateMessengerChequeTypeHash() {
         const typeHash = ethers.keccak256(
             ethers.toUtf8Bytes(
-                "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 timestamp)",
+                "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)",
             ),
         );
         return typeHash;
@@ -234,7 +242,8 @@ const cheque = {
     toBot: "0x...", // Address of the bot receiving the cheque
     counter: 123, // Counter, needs to be incremented for each cheque
     amount: ethers.parseUnits("1.0", "ether"), // 1 ETH, amount to pay (after substracting the last paid amount)
-    timestamp: Math.floor(Date.now() / 1000), // Current Unix timestamp, as an example
+    createdAt: Math.floor(Date.now() / 1000), // Current Unix timestamp, as an example
+    expiresAt: Math.floor(Date.now() / 1000) + 86400, // Expiration timestamp
 };
 ```
 
@@ -247,7 +256,8 @@ const cheque = {
     toBot: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
     counter: 123n,
     amount: 1000000000000000000n,
-    timestamp: 1722282175n,
+    createdAt: 1722282175n,
+    expiresAt: 1722652561n,
 };
 ```
 
@@ -261,7 +271,7 @@ function calculateMessengerChequeHash(cheque) {
 
     const coder = ethers.AbiCoder.defaultAbiCoder();
     const encodedCheque = coder.encode(
-        ["bytes32", "address", "address", "address", "uint256", "uint256", "uint256"],
+        ["bytes32", "address", "address", "address", "uint256", "uint256", "uint256", "uint256"],
         [
             chequeTypeHash,
             cheque.fromCMAccount,
@@ -269,7 +279,8 @@ function calculateMessengerChequeHash(cheque) {
             cheque.toBot,
             cheque.counter,
             cheque.amount,
-            cheque.timestamp,
+            cheque.createdAt,
+            cheque.expiresAt,
         ],
     );
     return ethers.keccak256(encodedCheque);
@@ -293,7 +304,8 @@ async function signMessengerCheque(cheque, signer) {
             { name: "toBot", type: "address" },
             { name: "counter", type: "uint256" },
             { name: "amount", type: "uint256" },
-            { name: "timestamp", type: "uint256" },
+            { name: "createdAt", type: "uint256" },
+            { name: "expiresAt", type: "uint256" },
         ],
     };
 
@@ -350,8 +362,9 @@ This function does not only verify that the signer of the cheque is a registered
 on the CM Account, but also other verifications like:
 
 -   If the `fromCMAccount` is the contract itself
--   Last counter and last amount recorded on the contract are lower then the cheque's
 -   If the address of `toCMAccount` is a registered CM Account on the manager
+-   If `expiresAt` timestamp is bigger then `block.timestamp`
+-   Last counter and last amount recorded on the contract are lower then the cheque's
 -   If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
 
 So, to only verify if cheque's signature is valid, without doing the verifications
@@ -369,7 +382,7 @@ Ethers.js, check out the [`test/ChequeManager.test.js`](test/ChequeManager.test.
 > **Signing without `signTypedData`:**
 >
 > If you would like to learn how you can sign a cheque without relying `ethers.js`'s
-> `signTypedData`, there is an example script at
+> `signTypedData` (EIP712), there is an example script at
 > [`examples/sign_primitive.js`](examples/sign_primitive.js).
 
 #### Go
