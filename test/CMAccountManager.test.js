@@ -38,6 +38,37 @@ describe("CMAccountManager", function () {
             expect(await cmAccountManager.getPrefundAmount()).to.be.equal(ethers.parseEther("100"));
         });
 
+        it("should get role counts correctly", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
+
+            const DEFAULT_ADMIN_ROLE = await cmAccountManager.DEFAULT_ADMIN_ROLE();
+            const PAUSER_ROLE = await cmAccountManager.PAUSER_ROLE();
+            const UPGRADER_ROLE = await cmAccountManager.UPGRADER_ROLE();
+            const VERSIONER_ROLE = await cmAccountManager.VERSIONER_ROLE();
+            const DEVELOPER_WALLET_ADMIN_ROLE = await cmAccountManager.DEVELOPER_WALLET_ADMIN_ROLE();
+
+            expect(await cmAccountManager.getRoleMemberCount(DEFAULT_ADMIN_ROLE)).to.be.equal(1);
+            expect(await cmAccountManager.getRoleMemberCount(PAUSER_ROLE)).to.be.equal(1);
+            expect(await cmAccountManager.getRoleMemberCount(UPGRADER_ROLE)).to.be.equal(1);
+            expect(await cmAccountManager.getRoleMemberCount(VERSIONER_ROLE)).to.be.equal(1);
+
+            // Developer wallet admin role is not granted by default
+            expect(await cmAccountManager.getRoleMemberCount(DEVELOPER_WALLET_ADMIN_ROLE)).to.be.equal(0);
+
+            // Grant developer wallet role
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(await cmAccountManager.DEVELOPER_WALLET_ADMIN_ROLE(), signers.otherAccount1.address),
+            ).to.not.reverted;
+
+            // Developer wallet admin role is granted, count should be 1
+            expect(await cmAccountManager.getRoleMemberCount(DEVELOPER_WALLET_ADMIN_ROLE)).to.be.equal(1);
+        });
+
         it("should set developer wallet and roles correctly", async function () {
             // Set up signers
             await setupSigners();

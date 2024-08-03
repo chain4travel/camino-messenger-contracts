@@ -217,4 +217,30 @@ describe("CMAccount", function () {
             expect(await cmAccount.getDeveloperFeeBp()).to.equal(managerFeeBp);
         });
     });
+
+    describe("Enumerable", function () {
+        it("should get role counts correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const DEFAULT_ADMIN_ROLE = await cmAccount.DEFAULT_ADMIN_ROLE();
+            const UPGRADER_ROLE = await cmAccount.UPGRADER_ROLE();
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+
+            expect(await cmAccount.getRoleMemberCount(DEFAULT_ADMIN_ROLE)).to.be.equal(1);
+            expect(await cmAccount.getRoleMemberCount(UPGRADER_ROLE)).to.be.equal(1);
+
+            // Booking operator role is not granted by default
+            expect(await cmAccount.getRoleMemberCount(BOOKING_OPERATOR_ROLE)).to.be.equal(0);
+
+            // Grant booking operator role
+            await expect(
+                cmAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(await cmAccount.BOOKING_OPERATOR_ROLE(), signers.otherAccount1.address),
+            ).to.not.reverted;
+
+            // Booking operator role is granted, count should be 1
+            expect(await cmAccount.getRoleMemberCount(BOOKING_OPERATOR_ROLE)).to.be.equal(1);
+        });
+    });
 });

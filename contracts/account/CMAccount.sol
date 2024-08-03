@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Access
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 // Cheques
 import "./ChequeManager.sol";
@@ -36,7 +36,7 @@ interface ICMAccountManager {
  */
 contract CMAccount is
     Initializable,
-    AccessControlUpgradeable,
+    AccessControlEnumerableUpgradeable,
     UUPSUpgradeable,
     IERC721Receiver,
     ChequeManager,
