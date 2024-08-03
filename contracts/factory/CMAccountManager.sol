@@ -24,7 +24,6 @@ interface ICMAccount {
         address bookingToken,
         uint256 prefundAmount,
         address owner,
-        address pauser,
         address upgrader
     ) external;
 }
@@ -267,16 +266,15 @@ contract CMAccountManager is
      */
     function createCMAccount(
         address admin,
-        address pauser,
         address upgrader
     ) external payable nonReentrant whenNotPaused returns (address) {
-        return _createCMAccount(admin, pauser, upgrader);
+        return _createCMAccount(admin, upgrader);
     }
 
     /**
      * @dev Private function to create CMAccount
      */
-    function _createCMAccount(address admin, address pauser, address upgrader) private returns (address) {
+    function _createCMAccount(address admin, address upgrader) private returns (address) {
         // Checks
         address latestAccountImplementation = _latestAccountImplementation;
         if (latestAccountImplementation.code.length == 0) {
@@ -303,14 +301,7 @@ contract CMAccountManager is
         cmAccountInfo[address(cmAccountProxy)] = CMAccountInfo({ isCMAccount: true, creator: msg.sender });
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(
-            address(this),
-            _bookingToken,
-            prefundAmount,
-            admin,
-            pauser,
-            upgrader
-        );
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, prefundAmount, admin, upgrader);
 
         // Send the pre fund to the CMAccount
         payable(cmAccountProxy).sendValue(msg.value);

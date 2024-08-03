@@ -116,7 +116,6 @@ describe("ChequeManager", function () {
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );
@@ -181,7 +180,6 @@ describe("ChequeManager", function () {
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );
@@ -233,7 +231,6 @@ describe("ChequeManager", function () {
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );
@@ -282,7 +279,6 @@ describe("ChequeManager", function () {
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );
@@ -335,7 +331,6 @@ describe("ChequeManager", function () {
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
-                signers.cmAccountPauser.address,
                 signers.cmAccountUpgrader.address,
                 { value: prefundAmount },
             );

@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Access
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 // Cheques
@@ -37,7 +36,6 @@ interface ICMAccountManager {
  */
 contract CMAccount is
     Initializable,
-    PausableUpgradeable,
     AccessControlUpgradeable,
     UUPSUpgradeable,
     IERC721Receiver,
@@ -50,7 +48,6 @@ contract CMAccount is
      *                    ROLES                        *
      ***************************************************/
 
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
@@ -137,16 +134,13 @@ contract CMAccount is
         address bookingToken,
         uint256 prefundAmount,
         address defaultAdmin,
-        address pauser,
         address upgrader
     ) public initializer {
-        __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __ChequeManager_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(PAUSER_ROLE, pauser);
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
@@ -158,14 +152,6 @@ contract CMAccount is
 
     function getManagerAddress() public view returns (address) {
         return _manager;
-    }
-
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
     }
 
     /**

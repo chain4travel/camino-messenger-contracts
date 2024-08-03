@@ -13,7 +13,6 @@ async function setupSigners() {
         managerUpgrader,
         managerVersioner,
         cmAccountAdmin,
-        cmAccountPauser,
         cmAccountUpgrader,
         developerWallet,
         developerWalletAdmin,
@@ -34,7 +33,6 @@ async function setupSigners() {
         managerUpgrader,
         managerVersioner,
         cmAccountAdmin,
-        cmAccountPauser,
         cmAccountUpgrader,
         developerWallet,
         developerWalletAdmin,
@@ -123,7 +121,6 @@ async function deployAndConfigureAllFixture() {
 
     const tx = await cmAccountManager.createCMAccount(
         signers.cmAccountAdmin.address,
-        signers.cmAccountPauser.address,
         signers.cmAccountUpgrader.address,
         { value: prefundAmount },
     );
@@ -186,7 +183,6 @@ async function deployBookingTokenFixture() {
     // Create distributor CMAccount
     const tx = await cmAccountManager.createCMAccount(
         signers.cmAccountAdmin.address,
-        signers.cmAccountPauser.address,
         signers.cmAccountUpgrader.address,
         { value: prefundAmount },
     );
