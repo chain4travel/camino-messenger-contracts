@@ -6,16 +6,18 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-// TODO: Tidy up. Check CMAccount contracts.
-
 abstract contract PartnerConfiguration is Initializable {
+    /***************************************************
+     *                   STORAGE                       *
+     ***************************************************/
+
     struct Capability {
         string _desc; // TODO: We need explanation and examples here
         string _value; // TODO: We need explanation and examples here
     }
 
     struct Service {
-        uint _fee;
+        uint256 _fee;
         Capability[] _capabilities;
     }
 
@@ -39,9 +41,29 @@ abstract contract PartnerConfiguration is Initializable {
         }
     }
 
+    /***************************************************
+     *                    ERRORS                       *
+     ***************************************************/
+
+    // TODO: Errors here
+
+    /***************************************************
+     *                    EVENTS                       *
+     ***************************************************/
+
+    // TODO: Events here
+
+    /***************************************************
+     *                 INITIALIZATION                  *
+     ***************************************************/
+
     function __PartnerConfiguration_init() internal onlyInitializing {}
 
     function __PartnerConfiguration_init_unchained() internal onlyInitializing {}
+
+    /***************************************************
+     *                    FUNCS                        *
+     ***************************************************/
 
     function getService(bytes32 serviceHash) public view virtual returns (Service memory service) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -55,7 +77,7 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash]._capabilities;
     }
 
-    function getServiceFee(bytes32 serviceHash) public view virtual returns (uint fee) {
+    function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         return $._supportedServices[serviceHash]._fee;
     }

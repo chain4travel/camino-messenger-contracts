@@ -6,20 +6,16 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-// TODO: Tidy up. Check CMAccount contracts.
-
 contract ServiceRegistry is Initializable {
+    /***************************************************
+     *                   STORAGE                       *
+     ***************************************************/
+
     /// @custom:storage-location erc7201:camino.messenger.storage.ServiceRegistry
     struct ServiceRegistryStorage {
         mapping(bytes32 serviceHash => string serviceName) _serviceNameByHash;
         mapping(string serviceName => bytes32 serviceHash) _hashByServiceName;
     }
-
-    event ServiceNameAdded(string serviceName, bytes32 serviceHash);
-    event ServiceNameRemoved(string serviceName, bytes32 serviceHash);
-
-    error ServiceAlreadyExists(string serviceName);
-    error ServiceDoesNotExist(string serviceName);
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ServiceRegistry")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 private constant ServiceRegistryStorageLocation =
@@ -31,7 +27,39 @@ contract ServiceRegistry is Initializable {
         }
     }
 
-    function addServiceName(string memory serviceName) internal virtual {
+    /***************************************************
+     *                    EVENTS                       *
+     ***************************************************/
+
+    event ServiceNameAdded(string serviceName, bytes32 serviceHash);
+    event ServiceNameRemoved(string serviceName, bytes32 serviceHash);
+
+    /***************************************************
+     *                    ERRORS                       *
+     ***************************************************/
+
+    error ServiceAlreadyExists(string serviceName);
+    error ServiceDoesNotExist(string serviceName);
+
+    /***************************************************
+     *                 INITIALIZATION                  *
+     ***************************************************/
+
+    function __ServiceRegistry_init() internal onlyInitializing {}
+
+    function __ServiceRegistry_init_unchained() internal onlyInitializing {}
+
+    /***************************************************
+     *                    FUNCS                        *
+     ***************************************************/
+
+    /**
+     * @dev Add a new service by its name. This function calculates the hash of the
+     * service name and adds it to the registry
+     *
+     * @param serviceName Name of the service
+     */
+    function _addServiceName(string memory serviceName) internal virtual {
         bytes32 serviceHash = keccak256(abi.encodePacked(serviceName));
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -46,7 +74,13 @@ contract ServiceRegistry is Initializable {
         emit ServiceNameAdded(serviceName, serviceHash);
     }
 
-    function removeServiceName(string memory serviceName) internal virtual {
+    /**
+     * @dev Remove a service by its name. This function calculates the hash of the
+     * service name and removes it from the registry
+     *
+     * @param serviceName Name of the service
+     */
+    function _removeServiceName(string memory serviceName) internal virtual {
         bytes32 serviceHash = keccak256(abi.encodePacked(serviceName));
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -61,11 +95,21 @@ contract ServiceRegistry is Initializable {
         emit ServiceNameRemoved(serviceName, serviceHash);
     }
 
+    /**
+     * @dev Get the name of a service by its hash
+     *
+     * @param serviceHash Hash of the service
+     */
     function getServiceName(bytes32 serviceHash) public view returns (string memory) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
         return $._serviceNameByHash[serviceHash];
     }
 
+    /**
+     * @dev Get the hash of a service by its name
+     *
+     * @param serviceName Name of the service
+     */
     function getServiceHash(string memory serviceName) public view returns (bytes32) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
         return $._hashByServiceName[serviceName];
