@@ -372,7 +372,11 @@ contract CMAccountManager is
 
     // ServiceRegistry
 
-    function addService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
-        _addServiceName(serviceName);
+    function registerService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
+        _registerServiceName(serviceName);
+    }
+
+    function unregisterService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
+        _unregisterServiceName(serviceName);
     }
 }

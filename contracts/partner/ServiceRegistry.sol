@@ -35,15 +35,15 @@ abstract contract ServiceRegistry is Initializable {
      *                    EVENTS                       *
      ***************************************************/
 
-    event ServiceNameAdded(string serviceName, bytes32 serviceHash);
-    event ServiceNameRemoved(string serviceName, bytes32 serviceHash);
+    event ServiceRegistered(string serviceName, bytes32 serviceHash);
+    event ServiceUnregistered(string serviceName, bytes32 serviceHash);
 
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
 
-    error ServiceAlreadyExists(string serviceName);
-    error ServiceDoesNotExist(string serviceName);
+    error ServiceAlreadyRegistered(string serviceName);
+    error ServiceIsNotRegistered();
 
     /***************************************************
      *                 INITIALIZATION                  *
@@ -63,7 +63,7 @@ abstract contract ServiceRegistry is Initializable {
      *
      * @param serviceName Name of the service
      */
-    function _addServiceName(string memory serviceName) internal virtual {
+    function _registerServiceName(string memory serviceName) internal virtual {
         bytes32 serviceHash = keccak256(abi.encodePacked(serviceName));
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -72,13 +72,13 @@ abstract contract ServiceRegistry is Initializable {
         bool added = $._servicesHashSet.add(serviceHash);
 
         if (!added) {
-            revert ServiceAlreadyExists(serviceName);
+            revert ServiceAlreadyRegistered(serviceName);
         }
 
         $._serviceNameByHash[serviceHash] = serviceName;
         $._hashByServiceName[serviceName] = serviceHash;
 
-        emit ServiceNameAdded(serviceName, serviceHash);
+        emit ServiceRegistered(serviceName, serviceHash);
     }
 
     /**
@@ -87,7 +87,7 @@ abstract contract ServiceRegistry is Initializable {
      *
      * @param serviceName Name of the service
      */
-    function _removeServiceName(string memory serviceName) internal virtual {
+    function _unregisterServiceName(string memory serviceName) internal virtual {
         bytes32 serviceHash = keccak256(abi.encodePacked(serviceName));
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -96,13 +96,13 @@ abstract contract ServiceRegistry is Initializable {
         bool removed = $._servicesHashSet.remove(serviceHash);
 
         if (!removed) {
-            revert ServiceDoesNotExist(serviceName);
+            revert ServiceIsNotRegistered();
         }
 
         delete $._serviceNameByHash[serviceHash];
         delete $._hashByServiceName[serviceName];
 
-        emit ServiceNameRemoved(serviceName, serviceHash);
+        emit ServiceUnregistered(serviceName, serviceHash);
     }
 
     /**
@@ -110,8 +110,13 @@ abstract contract ServiceRegistry is Initializable {
      *
      * @param serviceHash Hash of the service
      */
-    function getServiceName(bytes32 serviceHash) public view returns (string memory) {
+    function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string memory serviceName) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
+
+        // Check if the service is registered
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceIsNotRegistered();
+        }
         return $._serviceNameByHash[serviceHash];
     }
 
@@ -120,8 +125,14 @@ abstract contract ServiceRegistry is Initializable {
      *
      * @param serviceName Name of the service
      */
-    function getServiceHash(string memory serviceName) public view returns (bytes32) {
+    function getRegisteredServiceHashByName(string memory serviceName) public view returns (bytes32 serviceHash) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
+
+        // Check if the service is registered
+        if (!$._servicesHashSet.contains(keccak256(abi.encodePacked(serviceName)))) {
+            revert ServiceIsNotRegistered();
+        }
+
         return $._hashByServiceName[serviceName];
     }
 }
