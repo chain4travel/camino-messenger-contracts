@@ -61,6 +61,11 @@ abstract contract ServiceRegistry is Initializable {
      * @dev Add a new service by its name. This function calculates the hash of the
      * service name and adds it to the registry
      *
+     * {serviceName} is the pkg + service name as:
+     *
+     *  ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+     * "cmp.services.accommodation.v1alpha.AccommodationSearchService"
+     *
      * @param serviceName Name of the service
      */
     function _registerServiceName(string memory serviceName) internal virtual {
@@ -135,4 +140,6 @@ abstract contract ServiceRegistry is Initializable {
 
         return $._hashByServiceName[serviceName];
     }
+
+    // TODO: Add getter for all services
 }

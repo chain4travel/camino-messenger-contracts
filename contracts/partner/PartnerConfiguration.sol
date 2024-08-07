@@ -195,7 +195,7 @@ abstract contract PartnerConfiguration is Initializable {
      *
      * {serviceHash} is keccak256 hash of the pkg + service name as:
      *
-     *            |-------------- pkg -------------| |----- service name -----|
+     *            ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
      * keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")
      */
     function getService(bytes32 serviceHash) public view virtual returns (Service memory service) {
@@ -208,6 +208,8 @@ abstract contract PartnerConfiguration is Initializable {
 
         return $._supportedServices[serviceHash];
     }
+
+    // TODO: Add getter for all services
 
     function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
