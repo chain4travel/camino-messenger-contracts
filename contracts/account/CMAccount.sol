@@ -306,7 +306,7 @@ contract CMAccount is
      *                PARTNER CONFIG                   *
      ***************************************************/
 
-    function addSupportedService(
+    function addService(
         string memory serviceName,
         uint256 fee,
         string[] memory capabilities

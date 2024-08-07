@@ -1,5 +1,5 @@
 /**
- * @dev CMAccountManager tests
+ * @dev ServiceRegistry tests
  */
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect } = require("chai");
