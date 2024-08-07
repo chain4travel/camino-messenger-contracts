@@ -19,6 +19,9 @@ import "./ChequeManager.sol";
 import "../booking-token/BookingTokenOperator.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+// Partner Config
+import "../partner/PartnerConfiguration.sol";
+
 interface ICMAccountManager {
     function getAccountImplementation() external view returns (address);
 
@@ -40,7 +43,8 @@ contract CMAccount is
     UUPSUpgradeable,
     IERC721Receiver,
     ChequeManager,
-    BookingTokenOperator
+    BookingTokenOperator,
+    PartnerConfiguration
 {
     using Address for address payable;
 

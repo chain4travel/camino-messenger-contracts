@@ -6,7 +6,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract ServiceRegistry is Initializable {
+abstract contract ServiceRegistry is Initializable {
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/

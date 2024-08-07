@@ -17,6 +17,9 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
 
+// Service Registry
+import "../partner/ServiceRegistry.sol";
+
 // ABI of the CMAccount implementation contract
 interface ICMAccount {
     function initialize(
@@ -34,7 +37,8 @@ contract CMAccountManager is
     PausableUpgradeable,
     AccessControlEnumerableUpgradeable,
     UUPSUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    ServiceRegistry
 {
     using Address for address payable;
 
