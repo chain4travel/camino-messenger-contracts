@@ -78,7 +78,7 @@ abstract contract PartnerConfiguration is Initializable {
      * @param serviceHash Hash of the service
      * @param service Service object
      */
-    function _addService(bytes32 serviceHash, Service memory service) internal {
+    function _addService(bytes32 serviceHash, Service memory service) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Try to add the service to the services hash set
@@ -96,7 +96,7 @@ abstract contract PartnerConfiguration is Initializable {
      *
      * @param serviceHash Hash of the service
      */
-    function _removeService(bytes32 serviceHash) internal {
+    function _removeService(bytes32 serviceHash) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Try to remove the service
@@ -116,7 +116,7 @@ abstract contract PartnerConfiguration is Initializable {
      * @param serviceHash Hash of the service
      * @param fee Fee
      */
-    function _setServiceFee(bytes32 serviceHash, uint256 fee) internal {
+    function _setServiceFee(bytes32 serviceHash, uint256 fee) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
@@ -135,7 +135,7 @@ abstract contract PartnerConfiguration is Initializable {
      * @param serviceHash Hash of the service
      * @param capabilities Capabilities
      */
-    function _setServiceCapabilities(bytes32 serviceHash, string[] memory capabilities) internal {
+    function _setServiceCapabilities(bytes32 serviceHash, string[] memory capabilities) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
@@ -152,7 +152,7 @@ abstract contract PartnerConfiguration is Initializable {
      * @param serviceHash Hash of the service
      * @param capability Capability
      */
-    function _addServiceCapability(bytes32 serviceHash, string memory capability) internal {
+    function _addServiceCapability(bytes32 serviceHash, string memory capability) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
@@ -171,7 +171,7 @@ abstract contract PartnerConfiguration is Initializable {
      * @param serviceHash Hash of the service
      * @param capability Capability
      */
-    function _removeServiceCapability(bytes32 serviceHash, string memory capability) internal {
+    function _removeServiceCapability(bytes32 serviceHash, string memory capability) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
@@ -209,7 +209,7 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash];
     }
 
-    // TODO: Add getter for all services
+    // TODO: Add getter for "all services"
 
     function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();

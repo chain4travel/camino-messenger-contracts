@@ -30,6 +30,8 @@ interface ICMAccountManager {
     function getDeveloperWallet() external view returns (address);
 
     function isCMAccount(address account) external view returns (bool);
+
+    function getRegisteredServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
 }
 
 /**
@@ -56,6 +58,7 @@ contract CMAccount is
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
     bytes32 public constant BOOKING_OPERATOR_ROLE = keccak256("BOOKING_OPERATOR_ROLE");
+    bytes32 public constant SERVICE_ADMIN_ROLE = keccak256("SERVICE_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -145,6 +148,7 @@ contract CMAccount is
         __ChequeManager_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        _grantRole(SERVICE_ADMIN_ROLE, defaultAdmin);
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
@@ -296,5 +300,67 @@ contract CMAccount is
      */
     function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
         return _getTokenReservationPrice(_bookingToken, tokenId);
+    }
+
+    /***************************************************
+     *                PARTNER CONFIG                   *
+     ***************************************************/
+
+    function addSupportedService(
+        string memory serviceName,
+        uint256 fee,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        // Check if the service is registered. This function reverts if the service is not registered
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+
+        // Create the service object
+        Service memory service = Service({ _fee: fee, _capabilities: capabilities });
+
+        _addService(serviceHash, service);
+    }
+
+    function removeService(bytes32 serviceHash) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeService(serviceHash);
+    }
+
+    function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _removeService(serviceHash);
+    }
+
+    function setServiceFee(bytes32 serviceHash, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setServiceFee(serviceHash, fee);
+    }
+
+    function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _setServiceFee(serviceHash, fee);
+    }
+
+    function setServiceCapabilities(
+        bytes32 serviceHash,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setServiceCapabilities(serviceHash, capabilities);
+    }
+
+    function setServiceCapabilities(
+        string memory serviceName,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _setServiceCapabilities(serviceHash, capabilities);
+    }
+
+    function addServiceCapability(bytes32 serviceHash, string memory capability) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addServiceCapability(serviceHash, capability);
+    }
+
+    function removeServiceCapability(
+        bytes32 serviceHash,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeServiceCapability(serviceHash, capability);
     }
 }
