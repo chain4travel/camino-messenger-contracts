@@ -51,6 +51,7 @@ contract CMAccountManager is
     bytes32 public constant FEE_ADMIN_ROLE = keccak256("FEE_ADMIN_ROLE");
     bytes32 public constant DEVELOPER_WALLET_ADMIN_ROLE = keccak256("DEVELOPER_WALLET_ADMIN_ROLE");
     bytes32 public constant PREFUND_ADMIN_ROLE = keccak256("PREFUND_ADMIN_ROLE");
+    bytes32 public constant SERVICE_REGISTRY_ADMIN_ROLE = keccak256("SERVICE_REGISTRY_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -367,5 +368,11 @@ contract CMAccountManager is
     function setDeveloperFeeBp(uint256 bp) public onlyRole(FEE_ADMIN_ROLE) {
         emit DeveloperFeeBpUpdated(_developerFeeBp, bp);
         _developerFeeBp = bp;
+    }
+
+    // ServiceRegistry
+
+    function addService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
+        _addServiceName(serviceName);
     }
 }

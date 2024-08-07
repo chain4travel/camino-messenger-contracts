@@ -5,14 +5,18 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 abstract contract ServiceRegistry is Initializable {
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     /// @custom:storage-location erc7201:camino.messenger.storage.ServiceRegistry
     struct ServiceRegistryStorage {
+        EnumerableSet.Bytes32Set _servicesHashSet; // set of service hashes
         mapping(bytes32 serviceHash => string serviceName) _serviceNameByHash;
         mapping(string serviceName => bytes32 serviceHash) _hashByServiceName;
     }
@@ -64,7 +68,10 @@ abstract contract ServiceRegistry is Initializable {
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
 
-        if (bytes($._serviceNameByHash[serviceHash]).length != 0) {
+        // Try to add the hash to the service set
+        bool added = $._servicesHashSet.add(serviceHash);
+
+        if (!added) {
             revert ServiceAlreadyExists(serviceName);
         }
 
@@ -85,7 +92,10 @@ abstract contract ServiceRegistry is Initializable {
 
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
 
-        if ($._hashByServiceName[serviceName] == bytes32(0)) {
+        // Try to remove the hash to the service set
+        bool removed = $._servicesHashSet.remove(serviceHash);
+
+        if (!removed) {
             revert ServiceDoesNotExist(serviceName);
         }
 
