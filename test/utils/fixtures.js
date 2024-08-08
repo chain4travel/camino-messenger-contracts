@@ -14,6 +14,7 @@ async function setupSigners() {
         managerVersioner,
         cmAccountAdmin,
         cmAccountUpgrader,
+        cmServiceAdmin,
         developerWallet,
         developerWalletAdmin,
         feeAdmin,
@@ -22,6 +23,7 @@ async function setupSigners() {
         withdrawer,
         btAdmin,
         btUpgrader,
+        registryAdmin,
         otherAccount1,
         otherAccount2,
         otherAccount3,
@@ -34,6 +36,7 @@ async function setupSigners() {
         managerVersioner,
         cmAccountAdmin,
         cmAccountUpgrader,
+        cmServiceAdmin,
         developerWallet,
         developerWalletAdmin,
         feeAdmin,
@@ -42,6 +45,7 @@ async function setupSigners() {
         withdrawer,
         btAdmin,
         btUpgrader,
+        registryAdmin,
         otherAccount1,
         otherAccount2,
         otherAccount3,
@@ -216,6 +220,51 @@ async function deployBookingTokenFixture() {
     return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount };
 }
 
+async function deployAndConfigureAllWithRegisteredServicesFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+    // Grant SERVICE_REGISTRY_ADMIN_ROLE
+    const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+    cmAccountManager
+        .connect(signers.managerAdmin)
+        .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.registryAdmin.address);
+
+    // Services to register
+    const serviceName1 = "cmp.service.accommodation.v1.AccommodationSearchService";
+    const serviceHash1 = ethers.keccak256(ethers.toUtf8Bytes(serviceName1));
+
+    const serviceName2 = "cmp.service.accommodation.v2.AccommodationSearchService";
+    const serviceHash2 = ethers.keccak256(ethers.toUtf8Bytes(serviceName2));
+
+    const serviceName3 = "cmp.service.accommodation.v3.AccommodationSearchService";
+    const serviceHash3 = ethers.keccak256(ethers.toUtf8Bytes(serviceName3));
+
+    const services = {
+        serviceName1,
+        serviceHash1,
+        serviceName2,
+        serviceHash2,
+        serviceName3,
+        serviceHash3,
+    };
+
+    // Register services
+    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName1);
+    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName2);
+    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName3);
+
+    // Get the SERVICE_ADMIN_ROLE
+    const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+    // Grant SERVICE_ADMIN_ROLE to otherAccount1
+    cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.cmServiceAdmin.address);
+
+    return { cmAccountManager, cmAccount, services };
+}
+
 module.exports = {
     setupSigners,
     developerFeeBp,
@@ -225,4 +274,5 @@ module.exports = {
     deployAndConfigureAllFixture,
     deployCMAccountWithDepositFixture,
     deployBookingTokenFixture,
+    deployAndConfigureAllWithRegisteredServicesFixture,
 };
