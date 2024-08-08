@@ -144,7 +144,7 @@ abstract contract ServiceRegistry is Initializable {
     /**
      * @dev Get all registered service hashes
      */
-    function getRegisteredServiceHashes() public view returns (bytes32[] memory services) {
+    function getAllRegisteredServiceHashes() public view returns (bytes32[] memory services) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
         return $._servicesHashSet.values();
     }
@@ -152,7 +152,7 @@ abstract contract ServiceRegistry is Initializable {
     /**
      * @dev Get all registered service names
      */
-    function getRegisteredServiceNames() public view returns (string[] memory services) {
+    function getAllRegisteredServiceNames() public view returns (string[] memory services) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
 
         // Get all hashes and create a list with predefined length
@@ -170,7 +170,7 @@ abstract contract ServiceRegistry is Initializable {
     /**
      * @dev Get all registered services as a string list
      */
-    function getRegisteredServices() public view returns (string[] memory services) {
-        return getRegisteredServiceNames();
+    function getAllRegisteredServices() public view returns (string[] memory services) {
+        return getAllRegisteredServiceNames();
     }
 }

@@ -73,7 +73,7 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Adds a Service object for a given hash.
+     * @dev Adds a supported Service object for a given hash.
      *
      * @param serviceHash Hash of the service
      * @param service Service object
@@ -92,7 +92,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Removes a Service object for a given hash.
+     * @dev Removes a supported Service object for a given hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -191,7 +191,15 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the Service object for a given hash.
+     * @dev Returns all supported service hashes
+     */
+    function getAllServiceHashes() public view returns (bytes32[] memory serviceHashes) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._servicesHashSet.values();
+    }
+
+    /**
+     * @dev Returns the Service object for a given hash. Service object contains fee and capabilities.
      *
      * {serviceHash} is keccak256 hash of the pkg + service name as:
      *

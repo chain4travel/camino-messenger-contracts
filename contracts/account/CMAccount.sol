@@ -32,6 +32,8 @@ interface ICMAccountManager {
     function isCMAccount(address account) external view returns (bool);
 
     function getRegisteredServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
+
+    function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string memory serviceName);
 }
 
 /**
@@ -306,6 +308,18 @@ contract CMAccount is
      *                PARTNER CONFIG                   *
      ***************************************************/
 
+    /**
+     * @dev Add a service to the account
+     *
+     * {serviceName} is defined as pkg + service name in protobuf. For example:
+     *
+     *  ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+     * "cmp.services.accommodation.v1alpha.AccommodationSearchService")
+     *
+     * @param serviceName Service name to add to the account as a supported service
+     * @param fee Fee of the service in aCAM (wei in ETH terminology)
+     * @param capabilities Capabilities of the service (if any, optional)
+     */
     function addService(
         string memory serviceName,
         uint256 fee,
@@ -320,24 +334,43 @@ contract CMAccount is
         _addService(serviceHash, service);
     }
 
+    /**
+     * @dev Remove a service from the account by its hash
+     */
     function removeService(bytes32 serviceHash) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeService(serviceHash);
     }
 
+    /**
+     * @dev Remove a service from the account by its name
+     */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
         bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
         _removeService(serviceHash);
     }
 
+    // FEE
+
+    /**
+     * @dev Set the fee of a service by hash
+     */
     function setServiceFee(bytes32 serviceHash, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setServiceFee(serviceHash, fee);
     }
 
+    /**
+     * @dev Set the fee of a service by name
+     */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
         bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
         _setServiceFee(serviceHash, fee);
     }
 
+    // ALL CAPABILITIES
+
+    /**
+     * @dev Set all capabilities for a service by hash
+     */
     function setServiceCapabilities(
         bytes32 serviceHash,
         string[] memory capabilities
@@ -345,6 +378,9 @@ contract CMAccount is
         _setServiceCapabilities(serviceHash, capabilities);
     }
 
+    /**
+     * @dev Set all capabilities for a service by name
+     */
     function setServiceCapabilities(
         string memory serviceName,
         string[] memory capabilities
@@ -353,14 +389,63 @@ contract CMAccount is
         _setServiceCapabilities(serviceHash, capabilities);
     }
 
+    // SINGLE CAPABILITY
+
+    /**
+     * @dev Add a single capability to the service by hash
+     */
     function addServiceCapability(bytes32 serviceHash, string memory capability) public onlyRole(SERVICE_ADMIN_ROLE) {
         _addServiceCapability(serviceHash, capability);
     }
 
+    /**
+     * @dev Add a single capability to the service by name
+     */
+    function addServiceCapability(
+        string memory serviceName,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _addServiceCapability(serviceHash, capability);
+    }
+
+    /**
+     * @dev Remove a single capability from the service by hash
+     */
     function removeServiceCapability(
         bytes32 serviceHash,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeServiceCapability(serviceHash, capability);
+    }
+
+    /**
+     * @dev Remove a single capability from the service by name
+     */
+    function removeServiceCapability(
+        string memory serviceName,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _removeServiceCapability(serviceHash, capability);
+    }
+
+    // QUERY SERVICES
+
+    /**
+     * @dev Get all supported services. Return a list of service names and a list of service objects.
+     */
+    function getSupportedServices() public view returns (string[] memory serviceNames, Service[] memory services) {
+        // Get all hashes and create a list with predefined length
+        bytes32[] memory _serviceHashes = getAllServiceHashes();
+        string[] memory _serviceNames = new string[](_serviceHashes.length);
+        Service[] memory _allSupportedServicesList = new Service[](_serviceHashes.length);
+
+        for (uint256 i = 0; i < _serviceHashes.length; i++) {
+            _serviceNames[i] = ICMAccountManager(_manager).getRegisteredServiceNameByHash(_serviceHashes[i]);
+            _allSupportedServicesList[i] = getService(_serviceHashes[i]);
+        }
+
+        return (_serviceNames, _allSupportedServicesList);
     }
 }
