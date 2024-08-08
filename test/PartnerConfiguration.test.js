@@ -17,7 +17,7 @@ const {
 } = require("./utils/fixtures");
 
 describe("PartnerConfiguration", function () {
-    describe("Main", function () {
+    describe("Services", function () {
         it("should add a supported service correctly", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
@@ -138,6 +138,81 @@ describe("PartnerConfiguration", function () {
                     [fee3, capabilities3],
                 ],
             ]);
+
+            // Get specific fee from a service name
+            expect(await cmAccount.getServiceFeeByName(services.serviceName1)).to.be.equal(fee1);
+            expect(await cmAccount.getServiceFeeByName(services.serviceName2)).to.be.equal(fee2);
+            expect(await cmAccount.getServiceFeeByName(services.serviceName3)).to.be.equal(fee3);
+
+            // Get specific capabilities from a service name
+            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName1)).to.be.deep.equal(capabilities1);
+            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName2)).to.be.deep.equal(capabilities2);
+            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName3)).to.be.deep.equal(capabilities3);
+        });
+
+        it("should revert if the service is not registered", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Non registered service
+            const serviceName = "cmp.service.accommodation.v0.AccommodationSearchService";
+
+            const fee = 1000n;
+            const capabilities = [];
+
+            await expect(
+                cmAccount.connect(signers.cmServiceAdmin).addService(serviceName, fee, capabilities),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+        });
+    });
+
+    describe("Payment", function () {
+        it("should set and remove payment info correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Get off chain payment supported expecting false
+            expect(await cmAccount.offChainPaymentSupported()).to.be.equal(false);
+
+            // Set off chain payment supported
+            await expect(cmAccount.connect(signers.cmAccountAdmin).setOffChainPaymentSupported(true))
+                .to.emit(cmAccount, "OffChainPaymentSupportUpdated")
+                .withArgs(true);
+
+            // Get off chain payment supported expecting true
+            expect(await cmAccount.offChainPaymentSupported()).to.be.equal(true);
+
+            // Set supported tokens
+            const supportedToken1 = "0x0000000000000000000000000000000000000001";
+            const supportedToken2 = "0x0000000000000000000000000000000000000002";
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addSupportedToken(supportedToken1))
+                .to.emit(cmAccount, "PaymentTokenAdded")
+                .withArgs(supportedToken1);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addSupportedToken(supportedToken2))
+                .to.emit(cmAccount, "PaymentTokenAdded")
+                .withArgs(supportedToken2);
+
+            // Get supported tokens
+            const supportedTokens = await cmAccount.getSupportedTokens();
+            expect(supportedTokens).to.be.deep.equal([supportedToken1, supportedToken2]);
+
+            // Revert if token is already supported
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addSupportedToken(supportedToken1))
+                .to.be.revertedWithCustomError(cmAccount, "PaymentTokenAlreadyExists")
+                .withArgs(supportedToken1);
+
+            // Remove supported token
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removeSupportedToken(supportedToken1))
+                .to.emit(cmAccount, "PaymentTokenRemoved")
+                .withArgs(supportedToken1);
+
+            // Get supported tokens, should only return supportedToken2
+            const supportedTokensAfterRemoval = await cmAccount.getSupportedTokens();
+            expect(supportedTokensAfterRemoval).to.be.deep.equal([supportedToken2]);
         });
     });
 });

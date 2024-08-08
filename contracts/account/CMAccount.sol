@@ -430,7 +430,7 @@ contract CMAccount is
         _removeServiceCapability(serviceHash, capability);
     }
 
-    // QUERY SERVICES
+    // SERVICES WITH RESOLVED NAMES
 
     /**
      * @dev Get all supported services. Return a list of service names and a list of service objects.
@@ -447,5 +447,39 @@ contract CMAccount is
         }
 
         return (_serviceNames, _allSupportedServicesList);
+    }
+
+    /**
+     * @dev Get service fee by name. Overloading the getServiceFee function.
+     */
+    function getServiceFeeByName(string memory serviceName) public view returns (uint256 fee) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        return getServiceFee(serviceHash);
+    }
+
+    /**
+     * @dev Get service capabilities by name. Overloading the getServiceCapabilities function.
+     */
+    function getServiceCapabilitiesByName(
+        string memory serviceName
+    ) public view returns (string[] memory capabilities) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        return getServiceCapabilities(serviceHash);
+    }
+
+    /***************************************************
+     *                   PAYMENT                       *
+     ***************************************************/
+
+    function setOffChainPaymentSupported(bool _isSupported) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setOffChainPaymentSupported(_isSupported);
+    }
+
+    function addSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addSupportedToken(_supportedToken);
+    }
+
+    function removeSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeSupportedToken(_supportedToken);
     }
 }

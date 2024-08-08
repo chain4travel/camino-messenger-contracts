@@ -49,6 +49,9 @@ abstract contract PartnerConfiguration is Initializable {
     error ServiceAlreadyExists(bytes32 serviceHash);
     error ServiceDoesNotExist(bytes32 serviceHash);
 
+    error PaymentTokenAlreadyExists(address token);
+    error PaymentTokenDoesNotExist(address token);
+
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
@@ -60,6 +63,11 @@ abstract contract PartnerConfiguration is Initializable {
     event ServiceCapabilityAdded(bytes32 serviceHash, string capability);
     event ServiceCapabilityRemoved(bytes32 serviceHash, string capability);
 
+    event PaymentTokenAdded(address token);
+    event PaymentTokenRemoved(address token);
+
+    event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
+
     /***************************************************
      *                 INITIALIZATION                  *
      ***************************************************/
@@ -69,7 +77,7 @@ abstract contract PartnerConfiguration is Initializable {
     function __PartnerConfiguration_init_unchained() internal onlyInitializing {}
 
     /***************************************************
-     *                    FUNCS                        *
+     *                   SERVICE                       *
      ***************************************************/
 
     /**
@@ -217,8 +225,6 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash];
     }
 
-    // TODO: Add getter for "all services"
-
     function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -239,5 +245,57 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         return $._supportedServices[serviceHash]._fee;
+    }
+
+    /***************************************************
+     *                   PAYMENT                       *
+     ***************************************************/
+
+    // PAYMENT INFO: SUPPORTED TOKENS
+
+    function _addSupportedToken(address _token) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        bool added = $._paymentInfo._supportedTokens.add(_token);
+
+        if (!added) {
+            revert PaymentTokenAlreadyExists(_token);
+        }
+
+        emit PaymentTokenAdded(_token);
+    }
+
+    function _removeSupportedToken(address _token) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        bool removed = $._paymentInfo._supportedTokens.remove(_token);
+
+        if (!removed) {
+            revert PaymentTokenDoesNotExist(_token);
+        }
+
+        emit PaymentTokenRemoved(_token);
+    }
+
+    /**
+     * @dev Return supported tokens
+     */
+    function getSupportedTokens() public view virtual returns (address[] memory tokens) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._paymentInfo._supportedTokens.values();
+    }
+
+    // PAYMENT INFO: OFF-CHAIN PAYMENT SUPPORT
+
+    function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        $._paymentInfo._supportsOffChainPayment = _supportsOffChainPayment;
+        emit OffChainPaymentSupportUpdated(_supportsOffChainPayment);
+    }
+
+    /**
+     * @dev Return true if off-chain payment is supported for the given service
+     */
+    function offChainPaymentSupported() public view virtual returns (bool) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._paymentInfo._supportsOffChainPayment;
     }
 }

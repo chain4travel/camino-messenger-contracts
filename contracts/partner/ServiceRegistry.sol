@@ -43,7 +43,7 @@ abstract contract ServiceRegistry is Initializable {
      ***************************************************/
 
     error ServiceAlreadyRegistered(string serviceName);
-    error ServiceIsNotRegistered();
+    error ServiceNotRegistered();
 
     /***************************************************
      *                 INITIALIZATION                  *
@@ -101,7 +101,7 @@ abstract contract ServiceRegistry is Initializable {
         bool removed = $._servicesHashSet.remove(serviceHash);
 
         if (!removed) {
-            revert ServiceIsNotRegistered();
+            revert ServiceNotRegistered();
         }
 
         delete $._serviceNameByHash[serviceHash];
@@ -120,7 +120,7 @@ abstract contract ServiceRegistry is Initializable {
 
         // Check if the service is registered
         if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceIsNotRegistered();
+            revert ServiceNotRegistered();
         }
         return $._serviceNameByHash[serviceHash];
     }
@@ -135,7 +135,7 @@ abstract contract ServiceRegistry is Initializable {
 
         // Check if the service is registered
         if (!$._servicesHashSet.contains(keccak256(abi.encodePacked(serviceName)))) {
-            revert ServiceIsNotRegistered();
+            revert ServiceNotRegistered();
         }
 
         return $._hashByServiceName[serviceName];

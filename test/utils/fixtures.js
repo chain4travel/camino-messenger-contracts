@@ -228,7 +228,7 @@ async function deployAndConfigureAllWithRegisteredServicesFixture() {
 
     // Grant SERVICE_REGISTRY_ADMIN_ROLE
     const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
-    cmAccountManager
+    await cmAccountManager
         .connect(signers.managerAdmin)
         .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.registryAdmin.address);
 
@@ -252,15 +252,15 @@ async function deployAndConfigureAllWithRegisteredServicesFixture() {
     };
 
     // Register services
-    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName1);
-    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName2);
-    cmAccountManager.connect(signers.registryAdmin).registerService(serviceName3);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName1);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName2);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName3);
 
     // Get the SERVICE_ADMIN_ROLE
     const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
 
     // Grant SERVICE_ADMIN_ROLE to otherAccount1
-    cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.cmServiceAdmin.address);
+    await cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.cmServiceAdmin.address);
 
     return { cmAccountManager, cmAccount, services };
 }
