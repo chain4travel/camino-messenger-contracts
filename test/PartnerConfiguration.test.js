@@ -215,4 +215,102 @@ describe("PartnerConfiguration", function () {
             expect(supportedTokensAfterRemoval).to.be.deep.equal([supportedToken2]);
         });
     });
+    describe("PublicKeys", function () {
+        it("should add a public keys correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Pubkey
+            const pubkey =
+                "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
+            // Address of the public key
+            const addr = ethers.computeAddress(pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+                .to.emit(cmAccount, "PublicKeyAdded")
+                .withArgs(addr, pubkey);
+
+            // Get public keys and check if they are correct, should include only addr and pubkey
+            const publicKeys = await cmAccount.getPublicKeys();
+            expect(publicKeys).to.be.deep.equal([[addr], [pubkey]]);
+        });
+
+        it("should remove a public key correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Pubkey
+            const pubkey =
+                "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
+            // Address of the public key
+            const addr = ethers.computeAddress(pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+                .to.emit(cmAccount, "PublicKeyAdded")
+                .withArgs(addr, pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removePublicKey(addr))
+                .to.emit(cmAccount, "PublicKeyRemoved")
+                .withArgs(addr);
+
+            // Get public keys, it should be a array of two empty arrays
+            const publicKeys = await cmAccount.getPublicKeys();
+            expect(publicKeys).to.be.deep.equal([[], []]);
+        });
+
+        it("should get public keys correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Pubkey 1
+            const pubkey1 =
+                "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
+            // Address of the public key
+            const addr1 = ethers.computeAddress(pubkey1);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr1, pubkey1))
+                .to.emit(cmAccount, "PublicKeyAdded")
+                .withArgs(addr1, pubkey1);
+
+            // Pubkey 2
+            const pubkey2 =
+                "0x0407960fdb1ac968edc84eefe2aa4c5edc5b37ea0886eb4efecfd81c5993f9b00c77fc97dd94dc258fcf3c420f8a0601a8cb76030f2ffce68d104e7d83888083e5";
+            // Address of the public key
+            const addr2 = ethers.computeAddress(pubkey2);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr2, pubkey2))
+                .to.emit(cmAccount, "PublicKeyAdded")
+                .withArgs(addr2, pubkey2);
+
+            // Get public keys
+            const publicKeys = await cmAccount.getPublicKeys();
+            expect(publicKeys).to.be.deep.equal([
+                [addr1, addr2],
+                [pubkey1, pubkey2],
+            ]);
+        });
+
+        it("should revert when adding the same public key", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            // Pubkey
+            const pubkey =
+                "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
+            // Address of the public key
+            const addr = ethers.computeAddress(pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+                .to.emit(cmAccount, "PublicKeyAdded")
+                .withArgs(addr, pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+                .to.be.revertedWithCustomError(cmAccount, "PublicKeyAlreadyExists")
+                .withArgs(addr);
+        });
+    });
 });

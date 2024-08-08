@@ -30,6 +30,8 @@ abstract contract PartnerConfiguration is Initializable {
         EnumerableSet.Bytes32Set _servicesHashSet;
         mapping(bytes32 _serviceHash => Service _service) _supportedServices;
         PaymentInfo _paymentInfo;
+        EnumerableSet.AddressSet _publicKeyAddressesSet; // Keep a enumerable list of pubkey addresses
+        mapping(address pubkeyAddress => bytes pubkey) _publicKeys; // Public keys for ecrypting private data for Booking Token
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.PartnerConfiguration")) - 1)) & ~bytes32(uint256(0xff));
@@ -52,6 +54,9 @@ abstract contract PartnerConfiguration is Initializable {
     error PaymentTokenAlreadyExists(address token);
     error PaymentTokenDoesNotExist(address token);
 
+    error PublicKeyAlreadyExists(address pubKeyAddress);
+    error PublicKeyDoesNotExist(address pubKeyAddress);
+
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
@@ -67,6 +72,9 @@ abstract contract PartnerConfiguration is Initializable {
     event PaymentTokenRemoved(address token);
 
     event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
+
+    event PublicKeyAdded(address indexed pubKeyAddress, bytes pubkey);
+    event PublicKeyRemoved(address indexed pubKeyAddress);
 
     /***************************************************
      *                 INITIALIZATION                  *
@@ -297,5 +305,59 @@ abstract contract PartnerConfiguration is Initializable {
     function offChainPaymentSupported() public view virtual returns (bool) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         return $._paymentInfo._supportsOffChainPayment;
+    }
+
+    /***************************************************
+     *                 PUBLIC KEYS                     *
+     ***************************************************/
+
+    /**
+     * @dev Add public key with an address
+     */
+    function _addPublicKey(address pubKeyAddress, bytes memory publicKey) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        bool added = $._publicKeyAddressesSet.add(pubKeyAddress);
+
+        if (!added) {
+            revert PublicKeyAlreadyExists(pubKeyAddress);
+        }
+
+        $._publicKeys[pubKeyAddress] = publicKey;
+
+        emit PublicKeyAdded(pubKeyAddress, publicKey);
+    }
+
+    /**
+     * @dev Remove public key by address
+     */
+    function _removePublicKey(address pubKeyAddress) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        bool removed = $._publicKeyAddressesSet.remove(pubKeyAddress);
+
+        if (!removed) {
+            revert PublicKeyDoesNotExist(pubKeyAddress);
+        }
+
+        delete $._publicKeys[pubKeyAddress];
+        emit PublicKeyRemoved(pubKeyAddress);
+    }
+
+    /**
+     * @dev Return all public keys
+     */
+    function getPublicKeys() public view virtual returns (address[] memory pubKeyAddresses, bytes[] memory publicKeys) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
+
+        bytes[] memory _publicKeys = new bytes[](_pubKeyAddresses.length);
+        for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
+            _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
+        }
+
+        // return addresses and public keys
+        return (_pubKeyAddresses, _publicKeys);
     }
 }

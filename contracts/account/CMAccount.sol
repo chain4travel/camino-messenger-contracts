@@ -482,4 +482,24 @@ contract CMAccount is
     function removeSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeSupportedToken(_supportedToken);
     }
+
+    /***************************************************
+     *                  PUBLIC KEY                     *
+     ***************************************************/
+
+    /**
+     * @dev Add public key with address
+     *
+     * These public keys are intended to be used with for off-chain encryption of private booking data.
+     */
+    function addPublicKey(address pubKeyAddress, bytes memory publicKey) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addPublicKey(pubKeyAddress, publicKey);
+    }
+
+    /**
+     * @dev Remove public key by address
+     */
+    function removePublicKey(address pubKeyAddress) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removePublicKey(pubKeyAddress);
+    }
 }
