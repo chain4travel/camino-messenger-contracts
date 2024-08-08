@@ -141,5 +141,36 @@ abstract contract ServiceRegistry is Initializable {
         return $._hashByServiceName[serviceName];
     }
 
-    // TODO: Add getter for all services
+    /**
+     * @dev Get all registered service hashes
+     */
+    function getRegisteredServiceHashes() public view returns (bytes32[] memory services) {
+        ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
+        return $._servicesHashSet.values();
+    }
+
+    /**
+     * @dev Get all registered service names
+     */
+    function getRegisteredServiceNames() public view returns (string[] memory services) {
+        ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
+
+        // Get all hashes and create a list with predefined length
+        bytes32[] memory serviceHashes = $._servicesHashSet.values();
+        string[] memory serviceNames = new string[](serviceHashes.length);
+
+        // Get all names for the hashes
+        for (uint256 i = 0; i < serviceHashes.length; i++) {
+            serviceNames[i] = $._serviceNameByHash[serviceHashes[i]];
+        }
+
+        return serviceNames;
+    }
+
+    /**
+     * @dev Get all registered services as a string list
+     */
+    function getRegisteredServices() public view returns (string[] memory services) {
+        return getRegisteredServiceNames();
+    }
 }
