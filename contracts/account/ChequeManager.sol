@@ -324,9 +324,8 @@ abstract contract ChequeManager is Initializable {
         payable(getDeveloperWallet()).sendValue(developerFee);
 
         // Update total cheque payments excluding cheques to the same account
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
         if (cheque.fromCMAccount != cheque.toCMAccount) {
-            $._totalChequePayments += paymentAmount;
+            addToTotalChequePayments(paymentAmount);
         }
 
         // Emit cash-in event
@@ -368,6 +367,16 @@ abstract contract ChequeManager is Initializable {
     function getTotalChequePayments() public view returns (uint256) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         return $._totalChequePayments;
+    }
+
+    function setTotalChequePayments(uint256 totalChequePayments) internal {
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        $._totalChequePayments = totalChequePayments;
+    }
+
+    function addToTotalChequePayments(uint256 amount) internal {
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        $._totalChequePayments += amount;
     }
 
     /***************************************************
