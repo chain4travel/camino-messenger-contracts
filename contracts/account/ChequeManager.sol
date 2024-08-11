@@ -68,22 +68,32 @@ abstract contract ChequeManager is Initializable {
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
+    /// @custom:storage-location erc7201:camino.messenger.storage.ChequeManager
+    struct ChequeManagerStorage {
+        /**
+         * @dev Mapping to track the cash-in details for each pair of fromBot and toBot addresses.
+         */
+        mapping(address fromBot => mapping(address toBot => LastCashIn)) _lastCashIns;
+        /**
+         * @dev Total amount of cheques that have been cashed in.
+         */
+        uint256 _totalChequePayments;
+        /**
+         * @dev EIP712 Domain Separator used for signature verification. This variable includes
+         * dynamic chain ID, hence it is not a constant.
+         */
+        bytes32 DOMAIN_SEPARATOR;
+    }
 
-    /**
-     * @dev Mapping to track the cash-in details for each pair of fromBot and toBot addresses.
-     */
-    mapping(address fromBot => mapping(address toBot => LastCashIn)) private lastCashIns;
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ChequeManager")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant ChequeManagerStorageLocation =
+        0xef218a4a5f185af75e5c4a613a68d29d8c51972f4296cd19c79ba98890a22a00;
 
-    /**
-     * @dev EIP712 Domain Separator used for signature verification. This variable includes
-     * dynamic chain ID, hence it is not a constant.
-     */
-    bytes32 public DOMAIN_SEPARATOR;
-
-    /**
-     * @dev Total amount of cheques that have been cashed in.
-     */
-    uint256 internal _totalChequePayments;
+    function _getChequeManagerStorage() private pure returns (ChequeManagerStorage storage $) {
+        assembly {
+            $.slot := ChequeManagerStorageLocation
+        }
+    }
 
     /***************************************************
      *                    EVENTS                       *
@@ -168,9 +178,16 @@ abstract contract ChequeManager is Initializable {
      * }
      */
     function __ChequeManager_init() internal onlyInitializing {
-        DOMAIN_SEPARATOR = keccak256(
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+
+        $.DOMAIN_SEPARATOR = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
         );
+    }
+
+    function getDomainSeparator() public view returns (bytes32) {
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        return $.DOMAIN_SEPARATOR;
     }
 
     /**
@@ -196,6 +213,7 @@ abstract contract ChequeManager is Initializable {
      * @dev Return hash of the typed data with prefix and domain separator.
      */
     function hashTypedDataV4(MessengerCheque memory cheque) public view returns (bytes32) {
+        bytes32 DOMAIN_SEPARATOR = getDomainSeparator();
         return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashMessengerCheque(cheque)));
     }
 
@@ -306,8 +324,9 @@ abstract contract ChequeManager is Initializable {
         payable(getDeveloperWallet()).sendValue(developerFee);
 
         // Update total cheque payments excluding cheques to the same account
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
         if (cheque.fromCMAccount != cheque.toCMAccount) {
-            _totalChequePayments += paymentAmount;
+            $._totalChequePayments += paymentAmount;
         }
 
         // Emit cash-in event
@@ -318,7 +337,8 @@ abstract contract ChequeManager is Initializable {
      * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
      */
     function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory cashIn) {
-        return lastCashIns[fromBot][toBot];
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        return $._lastCashIns[fromBot][toBot];
     }
 
     /**
@@ -332,7 +352,8 @@ abstract contract ChequeManager is Initializable {
         uint256 createdAt,
         uint256 expiresAt
     ) internal {
-        lastCashIns[fromBot][toBot] = LastCashIn(counter, amount, createdAt, expiresAt);
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        $._lastCashIns[fromBot][toBot] = LastCashIn(counter, amount, createdAt, expiresAt);
     }
 
     /**
@@ -345,7 +366,8 @@ abstract contract ChequeManager is Initializable {
     }
 
     function getTotalChequePayments() public view returns (uint256) {
-        return _totalChequePayments;
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        return $._totalChequePayments;
     }
 
     /***************************************************

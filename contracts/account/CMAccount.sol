@@ -227,7 +227,7 @@ contract CMAccount is
      */
     function checkPrefundSpent(uint256 amount) public view {
         uint256 prefundAmount = _prefundAmount;
-        uint256 totalChequePayments = _totalChequePayments;
+        uint256 totalChequePayments = getTotalChequePayments();
 
         // Check if prefund is spent. If total cheque payments is bigger or equal to
         // prefund amount it's ok to withdraw any amount
