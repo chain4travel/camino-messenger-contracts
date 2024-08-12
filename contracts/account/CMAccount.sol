@@ -66,20 +66,30 @@ contract CMAccount is
      *                   STORAGE                       *
      ***************************************************/
 
-    /**
-     * @dev Address of the CMAccountManager
-     */
-    address private _manager;
+    struct CMAccountStorage {
+        /**
+         * @dev Address of the CMAccountManager
+         */
+        address _manager;
+        /**
+         * @dev Address of the BookingToken contract
+         */
+        address _bookingToken;
+        /**
+         * @dev Prefund amount
+         */
+        uint256 _prefundAmount;
+    }
 
-    /**
-     * @dev Address of the CMAccountManager
-     */
-    address private _bookingToken;
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.CMAccount")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant CMAccountStorageLocation =
+        0x0c7b73796c7cc89b9f849b9056a93200eba741881e57a1b03b9bedb2c0e07100;
 
-    /**
-     * @dev Prefund amount
-     */
-    uint256 private _prefundAmount;
+    function _getCMAccountStorage() private pure returns (CMAccountStorage storage $) {
+        assembly {
+            $.slot := CMAccountStorageLocation
+        }
+    }
 
     /***************************************************
      *                    EVENTS                       *
@@ -153,16 +163,37 @@ contract CMAccount is
         _grantRole(SERVICE_ADMIN_ROLE, defaultAdmin);
         _grantRole(UPGRADER_ROLE, upgrader);
 
-        _manager = manager;
-        _bookingToken = bookingToken;
-        _prefundAmount = prefundAmount;
+        CMAccountStorage storage $ = _getCMAccountStorage();
+
+        $._manager = manager;
+        $._bookingToken = bookingToken;
+        $._prefundAmount = prefundAmount;
     }
 
     receive() external payable {}
 
+    /***************************************************
+     *                    Getters                      *
+     ***************************************************/
+
     function getManagerAddress() public view returns (address) {
-        return _manager;
+        CMAccountStorage storage $ = _getCMAccountStorage();
+        return $._manager;
     }
+
+    function getBookingTokenAddress() public view returns (address) {
+        CMAccountStorage storage $ = _getCMAccountStorage();
+        return $._bookingToken;
+    }
+
+    function getPrefundAmount() public view returns (uint256) {
+        CMAccountStorage storage $ = _getCMAccountStorage();
+        return $._prefundAmount;
+    }
+
+    /***************************************************
+     *                    Account                      *
+     ***************************************************/
 
     /**
      * @dev Upgrades the CMAccount implementation.
@@ -176,7 +207,7 @@ contract CMAccount is
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
         // Get the implementation address from the manager
-        address managerImplementation = ICMAccountManager(_manager).getAccountImplementation();
+        address managerImplementation = ICMAccountManager(getManagerAddress()).getAccountImplementation();
         address oldImplementation = ERC1967Utils.getImplementation();
 
         // Revert if the new implementation is the same as the old one
@@ -203,14 +234,14 @@ contract CMAccount is
      * @dev Return true if address is a registered CMAccount on the CMAccountManager
      */
     function isCMAccount(address account) internal view override returns (bool) {
-        return ICMAccountManager(_manager).isCMAccount(account);
+        return ICMAccountManager(getManagerAddress()).isCMAccount(account);
     }
 
     /**
      * @dev Return developer wallet address
      */
     function getDeveloperWallet() public view override returns (address) {
-        address developerWallet = ICMAccountManager(_manager).getDeveloperWallet();
+        address developerWallet = ICMAccountManager(getManagerAddress()).getDeveloperWallet();
         return developerWallet;
     }
 
@@ -218,7 +249,7 @@ contract CMAccount is
      * @dev Return developer fee in basis points
      */
     function getDeveloperFeeBp() public view override returns (uint256) {
-        uint256 developerFeeBp = ICMAccountManager(_manager).getDeveloperFeeBp();
+        uint256 developerFeeBp = ICMAccountManager(getManagerAddress()).getDeveloperFeeBp();
         return developerFeeBp;
     }
 
@@ -226,7 +257,7 @@ contract CMAccount is
      * @dev Verifies if the amount is withdrawable by checking if prefund is spent
      */
     function checkPrefundSpent(uint256 amount) public view {
-        uint256 prefundAmount = _prefundAmount;
+        uint256 prefundAmount = getPrefundAmount();
         uint256 totalChequePayments = getTotalChequePayments();
 
         // Check if prefund is spent. If total cheque payments is bigger or equal to
@@ -278,14 +309,14 @@ contract CMAccount is
         uint256 price
     ) public override onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        _mintBookingToken(_bookingToken, reservedFor, uri, expirationTimestamp, price);
+        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price);
     }
 
     /**
      * @dev Buy booking token
      */
     function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
-        _buyBookingToken(_bookingToken, tokenId);
+        _buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
     /**
@@ -301,7 +332,7 @@ contract CMAccount is
      * @dev Get the price of a booking token
      */
     function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
-        return _getTokenReservationPrice(_bookingToken, tokenId);
+        return _getTokenReservationPrice(getBookingTokenAddress(), tokenId);
     }
 
     /***************************************************
@@ -326,7 +357,7 @@ contract CMAccount is
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         // Check if the service is registered. This function reverts if the service is not registered
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
 
         // Create the service object
         Service memory service = Service({ _fee: fee, _capabilities: capabilities });
@@ -345,7 +376,7 @@ contract CMAccount is
      * @dev Remove a service from the account by its name
      */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _removeService(serviceHash);
     }
 
@@ -362,7 +393,7 @@ contract CMAccount is
      * @dev Set the fee of a service by name
      */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _setServiceFee(serviceHash, fee);
     }
 
@@ -385,7 +416,7 @@ contract CMAccount is
         string memory serviceName,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _setServiceCapabilities(serviceHash, capabilities);
     }
 
@@ -405,7 +436,7 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _addServiceCapability(serviceHash, capability);
     }
 
@@ -426,7 +457,7 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _removeServiceCapability(serviceHash, capability);
     }
 
@@ -442,7 +473,7 @@ contract CMAccount is
         Service[] memory _allSupportedServicesList = new Service[](_serviceHashes.length);
 
         for (uint256 i = 0; i < _serviceHashes.length; i++) {
-            _serviceNames[i] = ICMAccountManager(_manager).getRegisteredServiceNameByHash(_serviceHashes[i]);
+            _serviceNames[i] = ICMAccountManager(getManagerAddress()).getRegisteredServiceNameByHash(_serviceHashes[i]);
             _allSupportedServicesList[i] = getService(_serviceHashes[i]);
         }
 
@@ -453,7 +484,7 @@ contract CMAccount is
      * @dev Get service fee by name. Overloading the getServiceFee function.
      */
     function getServiceFeeByName(string memory serviceName) public view returns (uint256 fee) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         return getServiceFee(serviceHash);
     }
 
@@ -463,7 +494,7 @@ contract CMAccount is
     function getServiceCapabilitiesByName(
         string memory serviceName
     ) public view returns (string[] memory capabilities) {
-        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         return getServiceCapabilities(serviceHash);
     }
 
