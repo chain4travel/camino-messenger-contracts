@@ -87,7 +87,7 @@ abstract contract ChequeManager is Initializable {
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ChequeManager")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 private constant ChequeManagerStorageLocation =
-        0xef218a4a5f185af75e5c4a613a68d29d8c51972f4296cd19c79ba98890a22a00;
+        0x175f7e400d42af44d9ebd24e9efee8a2c4ed78ddf46a83e51a493ae382c87600;
 
     function _getChequeManagerStorage() private pure returns (ChequeManagerStorage storage $) {
         assembly {
