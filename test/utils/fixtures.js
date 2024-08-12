@@ -118,7 +118,7 @@ async function deployAndConfigureAllFixture() {
     );
 
     // Set BookingToken address on the manager
-    await cmAccountManager.connect(signers.managerVersioner).setBookingToken(bookingToken.getAddress());
+    await cmAccountManager.connect(signers.managerVersioner).setBookingTokenAddress(bookingToken.getAddress());
 
     // Get pre fund amount
     const prefundAmount = await cmAccountManager.getPrefundAmount();

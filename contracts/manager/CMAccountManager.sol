@@ -58,49 +58,56 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev CM Account implementation address to be used by the CMAccount contract to resctrict
-     * the implementation address for the UUPS proxies.
-     */
-    address internal _latestAccountImplementation;
-
-    /**
-     * @dev Prefund amount
-     */
-    uint256 private _prefundAmount;
-
-    /**
-     * @dev Developer wallet address. CMAccount sends the developer fee to this address.
-     */
-    address private _developerWallet;
-
-    /**
-     * @dev Developer fee basis points
-     *
-     * A basis point (bp) is one hundredth of 1 percentage point.
-     *
-     * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
-     * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
-     * 100 bp = 1%, ⁠1/100⁠, or 0.01.
-     */
-    uint256 private _developerFeeBp;
-
-    /**
-     * @dev BookingToken address
-     */
-    address private _bookingToken;
-
-    /**
-     * @dev CMAccount info
+     * @dev CMAccount info struct
      */
     struct CMAccountInfo {
         bool isCMAccount;
         address creator;
     }
 
-    /**
-     * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators
-     */
-    mapping(address account => CMAccountInfo) internal cmAccountInfo;
+    struct CMAccountManagerStorage {
+        /**
+         * @dev CM Account implementation address to be used by the CMAccount contract to resctrict
+         * the implementation address for the UUPS proxies.
+         */
+        address _latestAccountImplementation;
+        /**
+         * @dev Prefund amount
+         */
+        uint256 _prefundAmount;
+        /**
+         * @dev Developer wallet address. CMAccount sends the developer fee to this address.
+         */
+        address _developerWallet;
+        /**
+         * @dev Developer fee basis points
+         *
+         * A basis point (bp) is one hundredth of 1 percentage point.
+         *
+         * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
+         * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
+         * 100 bp = 1%, ⁠1/100⁠, or 0.01.
+         */
+        uint256 _developerFeeBp;
+        /**
+         * @dev BookingToken address
+         */
+        address _bookingToken;
+        /**
+         * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators
+         */
+        mapping(address account => CMAccountInfo) _cmAccountInfo;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.CMAccountManager")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant CMAccountManagerStorageLocation =
+        0x2b421af391835920c41e77b6810f6e715f5b713c17bc590f55de6a7d3912e800;
+
+    function _getCMAccountManagerStorage() private pure returns (CMAccountManagerStorage storage $) {
+        assembly {
+            $.slot := CMAccountManagerStorageLocation
+        }
+    }
 
     /***************************************************
      *                    EVENTS                       *
@@ -191,11 +198,13 @@ contract CMAccountManager is
         _grantRole(UPGRADER_ROLE, upgrader);
         _grantRole(VERSIONER_ROLE, versioner);
 
-        _developerWallet = developerWallet;
-        _developerFeeBp = developerFeeBp;
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
 
-        // Set initial prefund amount
-        _prefundAmount = 100 ether;
+        $._developerWallet = developerWallet;
+        $._developerFeeBp = developerFeeBp;
+
+        // Set initial prefund amount to 100 CAM
+        $._prefundAmount = 100 ether;
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -211,56 +220,9 @@ contract CMAccountManager is
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 
-    /**
-     * @dev Set a new CMAccount implementation address
-     */
-    function setAccountImplementation(address newImplementation) public onlyRole(VERSIONER_ROLE) {
-        if (newImplementation.code.length == 0) {
-            revert CMAccountInvalidImplementation(newImplementation);
-        }
-
-        emit CMAccountImplementationUpdated(_latestAccountImplementation, newImplementation);
-        _latestAccountImplementation = newImplementation;
-    }
-
-    /**
-     * @dev Get the CMAccount implementation address
-     */
-    function getAccountImplementation() public view returns (address) {
-        return _latestAccountImplementation;
-    }
-
-    /**
-     * @dev Set booking token address
-     */
-    function setBookingToken(address token) public onlyRole(VERSIONER_ROLE) {
-        if (token.code.length == 0) {
-            revert InvalidBookingTokenAddress(token);
-        }
-        emit BookingTokenAddressUpdated(_bookingToken, token);
-        _bookingToken = token;
-    }
-
-    /**
-     * @dev Get booking token address
-     */
-    function getBookingToken() public view returns (address) {
-        return _bookingToken;
-    }
-
-    /**
-     * @dev Set pre fund amount
-     */
-    function setPrefundAmount(uint256 newPrefundAmount) public onlyRole(PREFUND_ADMIN_ROLE) {
-        _prefundAmount = newPrefundAmount;
-    }
-
-    /**
-     * @dev Get pre fund amount
-     */
-    function getPrefundAmount() public view returns (uint256) {
-        return _prefundAmount;
-    }
+    /***************************************************
+     *                    ACCOUNT                      *
+     ***************************************************/
 
     /**
      * @dev Creates CMAccount by deploying a ERC1967Proxy with the CMAccount implementation from the manager.
@@ -281,18 +243,21 @@ contract CMAccountManager is
      */
     function _createCMAccount(address admin, address upgrader) private returns (address) {
         // Checks
-        address latestAccountImplementation = _latestAccountImplementation;
+        address latestAccountImplementation = getAccountImplementation();
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
         }
-        if (_bookingToken.code.length == 0) {
-            revert InvalidBookingTokenAddress(_bookingToken);
+
+        address bookingToken = getBookingTokenAddress();
+        if (bookingToken.code.length == 0) {
+            revert InvalidBookingTokenAddress(bookingToken);
         }
+
         if (admin == address(0)) {
             revert CMAccountInvalidAdmin(admin);
         }
 
-        uint256 prefundAmount = _prefundAmount;
+        uint256 prefundAmount = getPrefundAmount();
 
         // Check pre-fund amount
         if (msg.value != prefundAmount) {
@@ -303,10 +268,10 @@ contract CMAccountManager is
         ERC1967Proxy cmAccountProxy = new ERC1967Proxy(latestAccountImplementation, "");
 
         // Set the isCMAccount and creator
-        cmAccountInfo[address(cmAccountProxy)] = CMAccountInfo({ isCMAccount: true, creator: msg.sender });
+        _setCMAccountInfo(address(cmAccountProxy), CMAccountInfo({ isCMAccount: true, creator: msg.sender }));
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), _bookingToken, prefundAmount, admin, upgrader);
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), bookingToken, prefundAmount, admin, upgrader);
 
         // Send the pre fund to the CMAccount
         payable(cmAccountProxy).sendValue(msg.value);
@@ -316,26 +281,118 @@ contract CMAccountManager is
         return address(cmAccountProxy);
     }
 
-    /**
-     * @dev Check if an address is CMAccount created by the manager
-     * @param account The account address to check
-     */
-    function isCMAccount(address account) public view returns (bool) {
-        return cmAccountInfo[account].isCMAccount;
+    function _setCMAccountInfo(address account, CMAccountInfo memory info) internal {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._cmAccountInfo[account] = info;
     }
 
     /**
      * @dev Return account's creator
      */
     function getCreator(address account) public view returns (address) {
-        return cmAccountInfo[account].creator;
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._cmAccountInfo[account].creator;
     }
+
+    /**
+     * @dev Check if an address is CMAccount created by the manager
+     * @param account The account address to check
+     */
+    function isCMAccount(address account) public view returns (bool) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._cmAccountInfo[account].isCMAccount;
+    }
+
+    /***************************************************
+     *             ACCOUNT IMPLEMENTATION              *
+     ***************************************************/
+
+    /**
+     * @dev Get the CMAccount implementation address
+     */
+    function getAccountImplementation() public view returns (address) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._latestAccountImplementation;
+    }
+
+    /**
+     * @dev Set a new CMAccount implementation address
+     */
+    function setAccountImplementation(address newImplementation) public onlyRole(VERSIONER_ROLE) {
+        if (newImplementation.code.length == 0) {
+            revert CMAccountInvalidImplementation(newImplementation);
+        }
+
+        address oldImplementation = getAccountImplementation();
+        _setAccountImplementation(newImplementation);
+        emit CMAccountImplementationUpdated(oldImplementation, newImplementation);
+    }
+
+    function _setAccountImplementation(address newImplementation) internal {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._latestAccountImplementation = newImplementation;
+    }
+
+    /***************************************************
+     *                    PREFUND                      *
+     ***************************************************/
+
+    /**
+     * @dev Get prefund amount
+     */
+    function getPrefundAmount() public view returns (uint256) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._prefundAmount;
+    }
+
+    /**
+     * @dev Set pre fund amount
+     */
+    function setPrefundAmount(uint256 newPrefundAmount) public onlyRole(PREFUND_ADMIN_ROLE) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._prefundAmount = newPrefundAmount;
+    }
+
+    /***************************************************
+     *                  BOOKING TOKEN                  *
+     ***************************************************/
+
+    /**
+     * @dev Get booking token address
+     */
+    function getBookingTokenAddress() public view returns (address) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._bookingToken;
+    }
+
+    /**
+     * @dev Set booking token address
+     */
+    function setBookingTokenAddress(address token) public onlyRole(VERSIONER_ROLE) {
+        if (token.code.length == 0) {
+            revert InvalidBookingTokenAddress(token);
+        }
+
+        address oldToken = getBookingTokenAddress();
+        _setBookingTokenAddress(token);
+        emit BookingTokenAddressUpdated(oldToken, token);
+    }
+
+    function _setBookingTokenAddress(address token) internal {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._bookingToken = token;
+    }
+
+    /***************************************************
+     *            DEVELOPER WALLET & FEE               *
+     ***************************************************/
 
     /**
      * @dev Return developer wallet address
      */
     function getDeveloperWallet() public view returns (address developerWallet) {
-        return _developerWallet;
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._developerWallet;
     }
 
     /**
@@ -345,15 +402,23 @@ contract CMAccountManager is
         if (developerWallet == address(0)) {
             revert InvalidDeveloperWallet(developerWallet);
         }
-        emit DeveloperWalletUpdated(_developerWallet, developerWallet);
-        _developerWallet = developerWallet;
+
+        address oldDeveloperWallet = getDeveloperWallet();
+        _setDeveloperWallet(developerWallet);
+        emit DeveloperWalletUpdated(oldDeveloperWallet, developerWallet);
+    }
+
+    function _setDeveloperWallet(address developerWallet) private {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._developerWallet = developerWallet;
     }
 
     /**
      * @dev Return developer fee in basis points
      */
-    function getDeveloperFeeBp() public view returns (uint256) {
-        return _developerFeeBp;
+    function getDeveloperFeeBp() public view returns (uint256 developerFeeBp) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._developerFeeBp;
     }
 
     /**
@@ -366,11 +431,19 @@ contract CMAccountManager is
      * 100 bp = 1%, ⁠1/100⁠, or 0.01.
      */
     function setDeveloperFeeBp(uint256 bp) public onlyRole(FEE_ADMIN_ROLE) {
-        emit DeveloperFeeBpUpdated(_developerFeeBp, bp);
-        _developerFeeBp = bp;
+        uint256 oldBp = getDeveloperFeeBp();
+        _setDeveloperFeeBp(bp);
+        emit DeveloperFeeBpUpdated(oldBp, bp);
     }
 
-    // ServiceRegistry
+    function _setDeveloperFeeBp(uint256 bp) private {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._developerFeeBp = bp;
+    }
+
+    /***************************************************
+     *               SERVICE REGISTRY                  *
+     ***************************************************/
 
     function registerService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
         _registerServiceName(serviceName);
