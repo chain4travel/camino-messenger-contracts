@@ -82,7 +82,7 @@ abstract contract ChequeManager is Initializable {
          * @dev EIP712 Domain Separator used for signature verification. This variable includes
          * dynamic chain ID, hence it is not a constant.
          */
-        bytes32 DOMAIN_SEPARATOR;
+        bytes32 _domainSeparator;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ChequeManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -168,7 +168,7 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Initializes the contract, setting the `DOMAIN_SEPARATOR` with EIP712 domain type hash and
+     * @dev Initializes the contract, setting the domain separator with EIP712 domain type hash and
      * the domain.
      *
      * EIP712Domain {
@@ -180,14 +180,14 @@ abstract contract ChequeManager is Initializable {
     function __ChequeManager_init() internal onlyInitializing {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
 
-        $.DOMAIN_SEPARATOR = keccak256(
+        $._domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
         );
     }
 
     function getDomainSeparator() public view returns (bytes32) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        return $.DOMAIN_SEPARATOR;
+        return $._domainSeparator;
     }
 
     /**
@@ -210,11 +210,10 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Return hash of the typed data with prefix and domain separator.
+     * @dev Return hash of the typed data (cheque) with prefix and domain separator.
      */
     function hashTypedDataV4(MessengerCheque memory cheque) public view returns (bytes32) {
-        bytes32 DOMAIN_SEPARATOR = getDomainSeparator();
-        return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashMessengerCheque(cheque)));
+        return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), hashMessengerCheque(cheque)));
     }
 
     /**
@@ -364,16 +363,25 @@ abstract contract ChequeManager is Initializable {
         return (amount * getDeveloperFeeBp()) / 10000;
     }
 
+    /**
+     * @dev Returns total cheque payments
+     */
     function getTotalChequePayments() public view returns (uint256) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         return $._totalChequePayments;
     }
 
+    /**
+     * @dev Sets total cheque payments
+     */
     function setTotalChequePayments(uint256 totalChequePayments) internal {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         $._totalChequePayments = totalChequePayments;
     }
 
+    /**
+     * @dev Adds to total cheque payments
+     */
     function addToTotalChequePayments(uint256 amount) internal {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         $._totalChequePayments += amount;
