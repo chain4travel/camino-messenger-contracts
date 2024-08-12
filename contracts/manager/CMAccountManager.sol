@@ -17,6 +17,9 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
 
+// Service Registry
+import "../partner/ServiceRegistry.sol";
+
 // ABI of the CMAccount implementation contract
 interface ICMAccount {
     function initialize(
@@ -34,7 +37,8 @@ contract CMAccountManager is
     PausableUpgradeable,
     AccessControlEnumerableUpgradeable,
     UUPSUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    ServiceRegistry
 {
     using Address for address payable;
 
@@ -47,6 +51,7 @@ contract CMAccountManager is
     bytes32 public constant FEE_ADMIN_ROLE = keccak256("FEE_ADMIN_ROLE");
     bytes32 public constant DEVELOPER_WALLET_ADMIN_ROLE = keccak256("DEVELOPER_WALLET_ADMIN_ROLE");
     bytes32 public constant PREFUND_ADMIN_ROLE = keccak256("PREFUND_ADMIN_ROLE");
+    bytes32 public constant SERVICE_REGISTRY_ADMIN_ROLE = keccak256("SERVICE_REGISTRY_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -363,5 +368,15 @@ contract CMAccountManager is
     function setDeveloperFeeBp(uint256 bp) public onlyRole(FEE_ADMIN_ROLE) {
         emit DeveloperFeeBpUpdated(_developerFeeBp, bp);
         _developerFeeBp = bp;
+    }
+
+    // ServiceRegistry
+
+    function registerService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
+        _registerServiceName(serviceName);
+    }
+
+    function unregisterService(string memory serviceName) public onlyRole(SERVICE_REGISTRY_ADMIN_ROLE) {
+        _unregisterServiceName(serviceName);
     }
 }

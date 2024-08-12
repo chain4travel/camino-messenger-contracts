@@ -19,6 +19,9 @@ import "./ChequeManager.sol";
 import "../booking-token/BookingTokenOperator.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+// Partner Config
+import "../partner/PartnerConfiguration.sol";
+
 interface ICMAccountManager {
     function getAccountImplementation() external view returns (address);
 
@@ -27,6 +30,10 @@ interface ICMAccountManager {
     function getDeveloperWallet() external view returns (address);
 
     function isCMAccount(address account) external view returns (bool);
+
+    function getRegisteredServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
+
+    function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string memory serviceName);
 }
 
 /**
@@ -40,7 +47,8 @@ contract CMAccount is
     UUPSUpgradeable,
     IERC721Receiver,
     ChequeManager,
-    BookingTokenOperator
+    BookingTokenOperator,
+    PartnerConfiguration
 {
     using Address for address payable;
 
@@ -52,6 +60,7 @@ contract CMAccount is
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
     bytes32 public constant BOOKING_OPERATOR_ROLE = keccak256("BOOKING_OPERATOR_ROLE");
+    bytes32 public constant SERVICE_ADMIN_ROLE = keccak256("SERVICE_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
@@ -141,6 +150,7 @@ contract CMAccount is
         __ChequeManager_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        _grantRole(SERVICE_ADMIN_ROLE, defaultAdmin);
         _grantRole(UPGRADER_ROLE, upgrader);
 
         _manager = manager;
@@ -292,5 +302,204 @@ contract CMAccount is
      */
     function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
         return _getTokenReservationPrice(_bookingToken, tokenId);
+    }
+
+    /***************************************************
+     *                PARTNER CONFIG                   *
+     ***************************************************/
+
+    /**
+     * @dev Add a service to the account
+     *
+     * {serviceName} is defined as pkg + service name in protobuf. For example:
+     *
+     *  ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+     * "cmp.services.accommodation.v1alpha.AccommodationSearchService")
+     *
+     * @param serviceName Service name to add to the account as a supported service
+     * @param fee Fee of the service in aCAM (wei in ETH terminology)
+     * @param capabilities Capabilities of the service (if any, optional)
+     */
+    function addService(
+        string memory serviceName,
+        uint256 fee,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        // Check if the service is registered. This function reverts if the service is not registered
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+
+        // Create the service object
+        Service memory service = Service({ _fee: fee, _capabilities: capabilities });
+
+        _addService(serviceHash, service);
+    }
+
+    /**
+     * @dev Remove a service from the account by its hash
+     */
+    function removeService(bytes32 serviceHash) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeService(serviceHash);
+    }
+
+    /**
+     * @dev Remove a service from the account by its name
+     */
+    function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _removeService(serviceHash);
+    }
+
+    // FEE
+
+    /**
+     * @dev Set the fee of a service by hash
+     */
+    function setServiceFee(bytes32 serviceHash, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setServiceFee(serviceHash, fee);
+    }
+
+    /**
+     * @dev Set the fee of a service by name
+     */
+    function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _setServiceFee(serviceHash, fee);
+    }
+
+    // ALL CAPABILITIES
+
+    /**
+     * @dev Set all capabilities for a service by hash
+     */
+    function setServiceCapabilities(
+        bytes32 serviceHash,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setServiceCapabilities(serviceHash, capabilities);
+    }
+
+    /**
+     * @dev Set all capabilities for a service by name
+     */
+    function setServiceCapabilities(
+        string memory serviceName,
+        string[] memory capabilities
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _setServiceCapabilities(serviceHash, capabilities);
+    }
+
+    // SINGLE CAPABILITY
+
+    /**
+     * @dev Add a single capability to the service by hash
+     */
+    function addServiceCapability(bytes32 serviceHash, string memory capability) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addServiceCapability(serviceHash, capability);
+    }
+
+    /**
+     * @dev Add a single capability to the service by name
+     */
+    function addServiceCapability(
+        string memory serviceName,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _addServiceCapability(serviceHash, capability);
+    }
+
+    /**
+     * @dev Remove a single capability from the service by hash
+     */
+    function removeServiceCapability(
+        bytes32 serviceHash,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeServiceCapability(serviceHash, capability);
+    }
+
+    /**
+     * @dev Remove a single capability from the service by name
+     */
+    function removeServiceCapability(
+        string memory serviceName,
+        string memory capability
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        _removeServiceCapability(serviceHash, capability);
+    }
+
+    // SERVICES WITH RESOLVED NAMES
+
+    /**
+     * @dev Get all supported services. Return a list of service names and a list of service objects.
+     */
+    function getSupportedServices() public view returns (string[] memory serviceNames, Service[] memory services) {
+        // Get all hashes and create a list with predefined length
+        bytes32[] memory _serviceHashes = getAllServiceHashes();
+        string[] memory _serviceNames = new string[](_serviceHashes.length);
+        Service[] memory _allSupportedServicesList = new Service[](_serviceHashes.length);
+
+        for (uint256 i = 0; i < _serviceHashes.length; i++) {
+            _serviceNames[i] = ICMAccountManager(_manager).getRegisteredServiceNameByHash(_serviceHashes[i]);
+            _allSupportedServicesList[i] = getService(_serviceHashes[i]);
+        }
+
+        return (_serviceNames, _allSupportedServicesList);
+    }
+
+    /**
+     * @dev Get service fee by name. Overloading the getServiceFee function.
+     */
+    function getServiceFeeByName(string memory serviceName) public view returns (uint256 fee) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        return getServiceFee(serviceHash);
+    }
+
+    /**
+     * @dev Get service capabilities by name. Overloading the getServiceCapabilities function.
+     */
+    function getServiceCapabilitiesByName(
+        string memory serviceName
+    ) public view returns (string[] memory capabilities) {
+        bytes32 serviceHash = ICMAccountManager(_manager).getRegisteredServiceHashByName(serviceName);
+        return getServiceCapabilities(serviceHash);
+    }
+
+    /***************************************************
+     *                   PAYMENT                       *
+     ***************************************************/
+
+    function setOffChainPaymentSupported(bool _isSupported) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setOffChainPaymentSupported(_isSupported);
+    }
+
+    function addSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addSupportedToken(_supportedToken);
+    }
+
+    function removeSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removeSupportedToken(_supportedToken);
+    }
+
+    /***************************************************
+     *                  PUBLIC KEY                     *
+     ***************************************************/
+
+    /**
+     * @dev Add public key with address
+     *
+     * These public keys are intended to be used with for off-chain encryption of private booking data.
+     */
+    function addPublicKey(address pubKeyAddress, bytes memory publicKey) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addPublicKey(pubKeyAddress, publicKey);
+    }
+
+    /**
+     * @dev Remove public key by address
+     */
+    function removePublicKey(address pubKeyAddress) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _removePublicKey(pubKeyAddress);
     }
 }
