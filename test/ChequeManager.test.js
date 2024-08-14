@@ -56,7 +56,7 @@ describe("ChequeManager", function () {
             const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
             const calculatedDomainSeparator = calculateDomainSeparatorForChain(chainId);
 
-            const cmAccountDomainSeparator = await cmAccount.DOMAIN_SEPARATOR();
+            const cmAccountDomainSeparator = await cmAccount.getDomainSeparator();
             expect(cmAccountDomainSeparator).to.be.equal(calculatedDomainSeparator);
         });
 

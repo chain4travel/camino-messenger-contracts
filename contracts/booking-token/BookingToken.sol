@@ -50,15 +50,6 @@ contract BookingToken is
      *                   STORAGE                       *
      ***************************************************/
 
-    // CMAccountManager address
-    address private _manager;
-
-    // Counter for generating unique token IDs
-    uint256 private _nextTokenId;
-
-    // Mininum allowed expiration timestamp difference
-    uint256 private _minExpirationTimestampDiff;
-
     // Reservation details
     struct TokenReservation {
         address reservedFor; // CM Account address that can buy the token
@@ -67,8 +58,26 @@ contract BookingToken is
         uint256 price; // Price of the token, only native for now
     }
 
-    // Reservation details for each token
-    mapping(uint256 tokenId => TokenReservation tokenReservation) private _reservations;
+    struct BookingTokenStorage {
+        // CMAccountManager address
+        address _manager;
+        // Counter for generating unique token IDs
+        uint256 _nextTokenId;
+        // Mininum allowed expiration timestamp difference
+        uint256 _minExpirationTimestampDiff;
+        // Reservation details for each token
+        mapping(uint256 tokenId => TokenReservation tokenReservation) _reservations;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingToken")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant BookingTokenStorageLocation =
+        0x9db9d405bf15683ce835607b1f0b423dc1484d44bb9d5af64a483fa4afd82900;
+
+    function _getBookingTokenStorage() private pure returns (BookingTokenStorage storage $) {
+        assembly {
+            $.slot := BookingTokenStorageLocation
+        }
+    }
 
     /***************************************************
      *                    EVENTS                       *
@@ -149,8 +158,10 @@ contract BookingToken is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(UPGRADER_ROLE, upgrader);
 
-        _manager = manager;
-        _minExpirationTimestampDiff = 60;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        $._manager = manager;
+        $._minExpirationTimestampDiff = 60;
     }
 
     // Function to authorize an upgrade for UUPS proxy
@@ -172,13 +183,16 @@ contract BookingToken is
         // Require reservedFor to be a CM Account
         requireCMAccount(reservedFor);
 
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
         // Expiration timestamp should be at least _minExpirationTimestampDiff seconds in the future
-        if (!(expirationTimestamp > (block.timestamp + _minExpirationTimestampDiff))) {
-            revert ExpirationTimestampTooSoon(expirationTimestamp, _minExpirationTimestampDiff);
+        uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
+        if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
+            revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
         }
 
         // Increment the token id
-        uint256 tokenId = _nextTokenId++;
+        uint256 tokenId = $._nextTokenId++;
 
         // Mint the token for the supplier (the caller)
         _safeMint(msg.sender, tokenId);
@@ -191,8 +205,10 @@ contract BookingToken is
     }
 
     function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
         // Get the reservation for the token
-        TokenReservation memory reservation = _reservations[tokenId];
+        TokenReservation memory reservation = $._reservations[tokenId];
 
         // Check reservationedFor and msg.sender match
         if (reservation.reservedFor != msg.sender) {
@@ -222,7 +238,7 @@ contract BookingToken is
         _transfer(reservation.supplier, msg.sender, tokenId);
 
         // Delete the reservation
-        delete _reservations[tokenId];
+        delete $._reservations[tokenId];
 
         // Emit event
         emit TokenBought(tokenId, msg.sender);
@@ -238,14 +254,16 @@ contract BookingToken is
         uint256 expirationTimestamp,
         uint256 price
     ) internal {
-        _reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price);
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        $._reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price);
     }
 
     /**
      * @dev Check if the token is transferable
      */
     function checkTransferable(uint256 tokenId) internal {
-        TokenReservation memory reservation = _reservations[tokenId];
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        TokenReservation memory reservation = $._reservations[tokenId];
 
         // If expiration time is in the past, token is transferable. Because it can
         // not be bought after expired.
@@ -257,7 +275,8 @@ contract BookingToken is
             // Token is not transferable
             revert TokenIsReserved(tokenId, reservation.reservedFor);
         } else if (reservation.reservedFor != address(0)) {
-            delete _reservations[tokenId];
+            // Clean up: Token is transferable but has expired reservation
+            delete $._reservations[tokenId];
         }
     }
 
@@ -265,7 +284,7 @@ contract BookingToken is
      * @dev Check if an address is a CM Account
      */
     function isCMAccount(address account) public view returns (bool) {
-        return ICMAccountManager(_manager).isCMAccount(account);
+        return ICMAccountManager(getManagerAddress()).isCMAccount(account);
     }
 
     /**
@@ -281,14 +300,16 @@ contract BookingToken is
      * @dev Setter for _manager
      */
     function setManagerAddress(address manager) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _manager = manager;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        $._manager = manager;
     }
 
     /**
      * @dev Getter for _manager
      */
     function getManagerAddress() public view returns (address) {
-        return _manager;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._manager;
     }
 
     /**
@@ -297,21 +318,24 @@ contract BookingToken is
     function setMinExpirationTimestampDiff(
         uint256 minExpirationTimestampDiff
     ) public onlyRole(MIN_EXPIRATION_ADMIN_ROLE) {
-        _minExpirationTimestampDiff = minExpirationTimestampDiff;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        $._minExpirationTimestampDiff = minExpirationTimestampDiff;
     }
 
     /**
      * @dev Getter for _minExpirationTimestampDiff
      */
     function getMinExpirationTimestampDiff() public view returns (uint256) {
-        return _minExpirationTimestampDiff;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._minExpirationTimestampDiff;
     }
 
     /**
      * @dev Get token reservation price for a specific token
      */
     function getReservationPrice(uint256 tokenId) public view returns (uint256) {
-        return _reservations[tokenId].price;
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._reservations[tokenId].price;
     }
 
     /***************************************************
