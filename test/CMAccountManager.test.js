@@ -330,6 +330,8 @@ describe("CMAccountManager", function () {
                 .withArgs(prefundAmount, prefundAmount - 1n);
         });
 
+        // TODO: Test for msg.value > prefund
+
         it("should set and get correct account creator", async function () {
             // Set up signers
             await setupSigners();
@@ -360,7 +362,9 @@ describe("CMAccountManager", function () {
             const parsedEvent = cmAccountManager.interface.parseLog(event);
             const newCMAccountAddress = parsedEvent.args.account;
 
-            expect(await cmAccountManager.getCreator(newCMAccountAddress)).to.be.equal(signers.managerAdmin.address);
+            expect(await cmAccountManager.getCMAccountCreator(newCMAccountAddress)).to.be.equal(
+                signers.managerAdmin.address,
+            );
         });
     });
 });

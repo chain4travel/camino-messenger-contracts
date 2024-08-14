@@ -315,6 +315,9 @@ abstract contract ChequeManager is Initializable {
         // Update the last cash ins.
         setLastCashIn(signer, cheque.toBot, cheque.counter, cheque.amount, cheque.createdAt, cheque.expiresAt);
 
+        // FIXME: Supplier should pay the developer fee (deduct from the cheque amount)
+        // FIXME: What happens if the amount is zero? This means no developer fee. Is this ok?
+
         // Transfer the amount to the `toCMAccount` using sendValue
         payable(cheque.toCMAccount).sendValue(paymentAmount);
 

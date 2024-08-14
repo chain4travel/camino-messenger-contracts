@@ -184,8 +184,8 @@ contract CMAccountManager is
     function initialize(
         address defaultAdmin,
         address pauser,
-        address upgrader,
-        address versioner,
+        address upgrader, // upgrade the manager (this contract)
+        address versioner, // sets cm account implementation address
         address developerWallet,
         uint256 developerFeeBp
     ) public initializer {
@@ -259,8 +259,11 @@ contract CMAccountManager is
 
         uint256 prefundAmount = getPrefundAmount();
 
+        // FIXME: Investigate which checks are more likely to fail frequently and move them up
+        // FIXME: Investigate if msg.value < prefund introduces any issues
+
         // Check pre-fund amount
-        if (msg.value != prefundAmount) {
+        if (msg.value < prefundAmount) {
             revert IncorrectPrefundAmount(prefundAmount, msg.value);
         }
 
@@ -289,7 +292,7 @@ contract CMAccountManager is
     /**
      * @dev Return account's creator
      */
-    function getCreator(address account) public view returns (address) {
+    function getCMAccountCreator(address account) public view returns (address) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
         return $._cmAccountInfo[account].creator;
     }
