@@ -50,9 +50,12 @@ describe("PartnerConfiguration", function () {
                 .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
 
             const fee = 1000n;
+            const restrictedRate = false;
             const capabilities = [];
 
-            await expect(cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, capabilities))
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
+            )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(serviceHash);
         });
@@ -89,10 +92,13 @@ describe("PartnerConfiguration", function () {
                 .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
 
             const fee = 1000n;
+            const restrictedRate = false;
             const capabilities = [];
 
             // Try to add a service with otherAccount2
-            await expect(cmAccount.connect(signers.otherAccount2).addService(serviceName, fee, capabilities))
+            await expect(
+                cmAccount.connect(signers.otherAccount2).addService(serviceName, fee, restrictedRate, capabilities),
+            )
                 .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
                 .withArgs(signers.otherAccount2.address, SERVICE_ADMIN_ROLE);
         });
@@ -105,25 +111,34 @@ describe("PartnerConfiguration", function () {
             const fee1 = 1000n;
             const fee2 = 2000n;
             const fee3 = 3000n;
+
+            const restrictedRate = false;
+
             const capabilities1 = ["test capability 1"];
             const capabilities2 = ["test capability 2"];
             const capabilities3 = ["test capability 3"];
 
             // Add services to CM account
             expect(
-                await cmAccount.connect(signers.cmServiceAdmin).addService(services.serviceName1, fee1, capabilities1),
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addService(services.serviceName1, fee1, restrictedRate, capabilities1),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash1);
 
             expect(
-                await cmAccount.connect(signers.cmServiceAdmin).addService(services.serviceName2, fee2, capabilities2),
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addService(services.serviceName2, fee2, restrictedRate, capabilities2),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash2);
 
             expect(
-                await cmAccount.connect(signers.cmServiceAdmin).addService(services.serviceName3, fee3, capabilities3),
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addService(services.serviceName3, fee3, restrictedRate, capabilities3),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash3);
@@ -133,9 +148,9 @@ describe("PartnerConfiguration", function () {
             expect(servicesFromCMAccount).to.be.deep.equal([
                 [services.serviceName1, services.serviceName2, services.serviceName3],
                 [
-                    [fee1, capabilities1],
-                    [fee2, capabilities2],
-                    [fee3, capabilities3],
+                    [fee1, restrictedRate, capabilities1],
+                    [fee2, restrictedRate, capabilities2],
+                    [fee3, restrictedRate, capabilities3],
                 ],
             ]);
 
@@ -159,10 +174,11 @@ describe("PartnerConfiguration", function () {
             const serviceName = "cmp.service.accommodation.v0.AccommodationSearchService";
 
             const fee = 1000n;
+            const restrictedRate = false;
             const capabilities = [];
 
             await expect(
-                cmAccount.connect(signers.cmServiceAdmin).addService(serviceName, fee, capabilities),
+                cmAccount.connect(signers.cmServiceAdmin).addService(serviceName, fee, restrictedRate, capabilities),
             ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
         });
     });
@@ -227,13 +243,15 @@ describe("PartnerConfiguration", function () {
             // Address of the public key
             const addr = ethers.computeAddress(pubkey);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+            const publicKeyUse = 0;
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, pubkey);
+                .withArgs(addr, [publicKeyUse, pubkey]);
 
             // Get public keys and check if they are correct, should include only addr and pubkey
             const publicKeys = await cmAccount.getPublicKeys();
-            expect(publicKeys).to.be.deep.equal([[addr], [pubkey]]);
+            expect(publicKeys).to.be.deep.equal([[addr], [[publicKeyUse, pubkey]]]);
         });
 
         it("should remove a public key correctly", async function () {
@@ -247,9 +265,11 @@ describe("PartnerConfiguration", function () {
             // Address of the public key
             const addr = ethers.computeAddress(pubkey);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+            const publicKeyUse = 0;
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, pubkey);
+                .withArgs(addr, [publicKeyUse, pubkey]);
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).removePublicKey(addr))
                 .to.emit(cmAccount, "PublicKeyRemoved")
@@ -265,15 +285,17 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
+            const publicKeyUse = 0;
+
             // Pubkey 1
             const pubkey1 =
                 "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
             // Address of the public key
             const addr1 = ethers.computeAddress(pubkey1);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr1, pubkey1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr1, pubkey1, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr1, pubkey1);
+                .withArgs(addr1, [publicKeyUse, pubkey1]);
 
             // Pubkey 2
             const pubkey2 =
@@ -281,15 +303,18 @@ describe("PartnerConfiguration", function () {
             // Address of the public key
             const addr2 = ethers.computeAddress(pubkey2);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr2, pubkey2))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr2, pubkey2, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr2, pubkey2);
+                .withArgs(addr2, [publicKeyUse, pubkey2]);
 
             // Get public keys
             const publicKeys = await cmAccount.getPublicKeys();
             expect(publicKeys).to.be.deep.equal([
                 [addr1, addr2],
-                [pubkey1, pubkey2],
+                [
+                    [publicKeyUse, pubkey1],
+                    [publicKeyUse, pubkey2],
+                ],
             ]);
         });
 
@@ -298,19 +323,39 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
+            const publicKeyUse = 0;
+
             // Pubkey
             const pubkey =
                 "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
             // Address of the public key
             const addr = ethers.computeAddress(pubkey);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, pubkey);
+                .withArgs(addr, [publicKeyUse, pubkey]);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.be.revertedWithCustomError(cmAccount, "PublicKeyAlreadyExists")
                 .withArgs(addr);
+        });
+
+        it("should revert when adding a public key with an invalid use type", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            const publicKeyUse = 255;
+
+            // Pubkey
+            const pubkey =
+                "0x04fbe3e51d1e56c8ff935360cd32931f5a13ce4aac17f18ed8265c33f06468532fcb8b84eba84c0fae7ce88f64f97e7b6c7cf847b32b697b9e304de7ad2842e6ab";
+            // Address of the public key
+            const addr = ethers.computeAddress(pubkey);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
+                .to.be.revertedWithCustomError(cmAccount, "InvalidPublicKeyUseType")
+                .withArgs(publicKeyUse);
         });
     });
 });

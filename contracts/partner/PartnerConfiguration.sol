@@ -17,6 +17,8 @@ abstract contract PartnerConfiguration is Initializable {
 
     struct Service {
         uint256 _fee;
+        // TODO: add rack rate / public rate / opaque rate boolean
+        bool _restrictedRate; // ask Sam for this
         string[] _capabilities;
     }
 
@@ -25,13 +27,27 @@ abstract contract PartnerConfiguration is Initializable {
         EnumerableSet.AddressSet _supportedTokens; // Supported on-chain token for payment
     }
 
+    /**
+     * @dev Purpose of the public key. Currently we only have one.
+     */
+    enum PublicKeyUseType {
+        EncryptPrivateData
+    }
+
+    struct PublicKey {
+        PublicKeyUseType _use;
+        bytes _data;
+    }
+
     /// @custom:storage-location erc7201:camino.messenger.storage.PartnerConfiguration
     struct PartnerConfigurationStorage {
         EnumerableSet.Bytes32Set _servicesHashSet;
         mapping(bytes32 _serviceHash => Service _service) _supportedServices;
         PaymentInfo _paymentInfo;
-        EnumerableSet.AddressSet _publicKeyAddressesSet; // Keep a enumerable list of pubkey addresses
-        mapping(address pubkeyAddress => bytes pubkey) _publicKeys; // Public keys for ecrypting private data for Booking Token
+        EnumerableSet.AddressSet _publicKeyAddressesSet; // Keep a enumerable list of public key addresses
+        mapping(address publicKeyAddress => PublicKey publicKey) _publicKeys; // Public keys for ecrypting private data for Booking Token
+
+        // TODO: Add support for distributors defining services they want to buy
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.PartnerConfiguration")) - 1)) & ~bytes32(uint256(0xff));
@@ -56,6 +72,7 @@ abstract contract PartnerConfiguration is Initializable {
 
     error PublicKeyAlreadyExists(address pubKeyAddress);
     error PublicKeyDoesNotExist(address pubKeyAddress);
+    error InvalidPublicKeyUseType(uint8 use);
 
     /***************************************************
      *                    EVENTS                       *
@@ -73,7 +90,7 @@ abstract contract PartnerConfiguration is Initializable {
 
     event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
 
-    event PublicKeyAdded(address indexed pubKeyAddress, bytes pubkey);
+    event PublicKeyAdded(address indexed pubKeyAddress, PublicKey publicKey);
     event PublicKeyRemoved(address indexed pubKeyAddress);
 
     /***************************************************
@@ -312,9 +329,23 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
+     * @dev Check if valid public key use enum
+     *
+     * This needs to be updated when new enums are added
+     */
+    function _isValidPublicKeyUse(uint8 use) internal virtual returns (bool) {
+        return use < uint(PublicKeyUseType.EncryptPrivateData) + 1;
+    }
+
+    /**
      * @dev Add public key with an address
      */
-    function _addPublicKey(address pubKeyAddress, bytes memory publicKey) internal virtual {
+    function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData, uint8 use) internal virtual {
+        // Check if {use} is valid enum and revert early if not
+        if (!_isValidPublicKeyUse(use)) {
+            revert InvalidPublicKeyUseType(use);
+        }
+
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         bool added = $._publicKeyAddressesSet.add(pubKeyAddress);
@@ -322,6 +353,8 @@ abstract contract PartnerConfiguration is Initializable {
         if (!added) {
             revert PublicKeyAlreadyExists(pubKeyAddress);
         }
+
+        PublicKey memory publicKey = PublicKey(PublicKeyUseType(use), publicKeyData);
 
         $._publicKeys[pubKeyAddress] = publicKey;
 
@@ -347,12 +380,17 @@ abstract contract PartnerConfiguration is Initializable {
     /**
      * @dev Return all public keys
      */
-    function getPublicKeys() public view virtual returns (address[] memory pubKeyAddresses, bytes[] memory publicKeys) {
+    function getPublicKeys()
+        public
+        view
+        virtual
+        returns (address[] memory pubKeyAddresses, PublicKey[] memory publicKeys)
+    {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
 
-        bytes[] memory _publicKeys = new bytes[](_pubKeyAddresses.length);
+        PublicKey[] memory _publicKeys = new PublicKey[](_pubKeyAddresses.length);
         for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
             _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
         }

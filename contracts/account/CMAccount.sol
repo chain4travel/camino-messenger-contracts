@@ -354,13 +354,14 @@ contract CMAccount is
     function addService(
         string memory serviceName,
         uint256 fee,
+        bool restrictedRate,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         // Check if the service is registered. This function reverts if the service is not registered
         bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
 
         // Create the service object
-        Service memory service = Service({ _fee: fee, _capabilities: capabilities });
+        Service memory service = Service({ _fee: fee, _capabilities: capabilities, _restrictedRate: restrictedRate });
 
         _addService(serviceHash, service);
     }
@@ -522,9 +523,13 @@ contract CMAccount is
      * @dev Add public key with address
      *
      * These public keys are intended to be used with for off-chain encryption of private booking data.
+     *
+     * @param pubKeyAddress address of the public key
+     * @param data public key data
+     * @param use type of public key, enum is defined in PartnerConfiguration contract
      */
-    function addPublicKey(address pubKeyAddress, bytes memory publicKey) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addPublicKey(pubKeyAddress, publicKey);
+    function addPublicKey(address pubKeyAddress, bytes memory data, uint8 use) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addPublicKey(pubKeyAddress, data, use);
     }
 
     /**
