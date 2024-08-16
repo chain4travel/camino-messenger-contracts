@@ -119,7 +119,7 @@ abstract contract ChequeManager is Initializable {
         address indexed fromBot,
         address indexed toBot,
         uint256 counter,
-        uint256 amount,
+        uint256 paid,
         uint256 developerFee
     );
 
@@ -315,15 +315,17 @@ abstract contract ChequeManager is Initializable {
         // Update the last cash ins.
         setLastCashIn(signer, cheque.toBot, cheque.counter, cheque.amount, cheque.createdAt, cheque.expiresAt);
 
-        // FIXME: Supplier should pay the developer fee (deduct from the cheque amount)
-        // FIXME: What happens if the amount is zero? This means no developer fee. Is this ok?
+        // Calculate developer fee
+        uint256 developerFee = calculateDeveloperFee(paymentAmount);
 
-        // Transfer the amount to the `toCMAccount` using sendValue
-        payable(cheque.toCMAccount).sendValue(paymentAmount);
+        // Subtract developer fee from payment amount
+        uint256 chequePaymentAmount = paymentAmount - developerFee;
 
         // Transfer developer fee to the developer wallet
-        uint256 developerFee = calculateDeveloperFee(paymentAmount);
         payable(getDeveloperWallet()).sendValue(developerFee);
+
+        // Transfer the cheque payment amount to the `toCMAccount`
+        payable(cheque.toCMAccount).sendValue(chequePaymentAmount);
 
         // Update total cheque payments excluding cheques to the same account
         if (cheque.fromCMAccount != cheque.toCMAccount) {
@@ -331,7 +333,7 @@ abstract contract ChequeManager is Initializable {
         }
 
         // Emit cash-in event
-        emit ChequeCashedIn(signer, cheque.toBot, cheque.counter, cheque.amount, developerFee);
+        emit ChequeCashedIn(signer, cheque.toBot, cheque.counter, chequePaymentAmount, developerFee);
     }
 
     /**
