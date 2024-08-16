@@ -315,7 +315,7 @@ describe("CMAccountManager", function () {
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
 
-        it("should fail if the prefund amount is incorrect", async function () {
+        it("should fail if the prefund amount is lower then the minimum", async function () {
             // Set up signers
             await setupSigners();
 
@@ -330,7 +330,36 @@ describe("CMAccountManager", function () {
                 .withArgs(prefundAmount, prefundAmount - 1n);
         });
 
-        // TODO: Test for msg.value > prefund
+        it("should allow the prefund amount to be higher then the minimum", async function () {
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const overPrefund = ethers.parseEther("100");
+            const newPrefundAmount = prefundAmount + overPrefund;
+
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader,
+                {
+                    value: newPrefundAmount,
+                },
+            );
+
+            const receipt = await tx.wait();
+
+            // Parse event to get the CMAccount address (this is the UUPS proxy address)
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const cmAccountAddress = parsedEvent.args.account;
+
+            expect(await ethers.provider.getBalance(cmAccountAddress)).to.be.equal(newPrefundAmount);
+        });
 
         it("should set and get correct account creator", async function () {
             // Set up signers
