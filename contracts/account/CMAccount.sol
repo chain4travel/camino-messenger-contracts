@@ -398,6 +398,26 @@ contract CMAccount is
         _setServiceFee(serviceHash, fee);
     }
 
+    // RESTRICTED RATE
+
+    /**
+     * @dev Set the restricted rate of a service by hash
+     */
+    function setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _setServiceRestrictedRate(serviceHash, restrictedRate);
+    }
+
+    /**
+     * @dev Set the restricted rate of a service by name
+     */
+    function setServiceRestrictedRate(
+        string memory serviceName,
+        bool restrictedRate
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+        _setServiceRestrictedRate(serviceHash, restrictedRate);
+    }
+
     // ALL CAPABILITIES
 
     /**
@@ -462,7 +482,9 @@ contract CMAccount is
         _removeServiceCapability(serviceHash, capability);
     }
 
-    // SERVICES WITH RESOLVED NAMES
+    /***************************************************
+     *           SERVICES WITH RESOLVED NAMES          *
+     ***************************************************/
 
     /**
      * @dev Get all supported services. Return a list of service names and a list of service objects.
@@ -484,17 +506,23 @@ contract CMAccount is
     /**
      * @dev Get service fee by name. Overloading the getServiceFee function.
      */
-    function getServiceFeeByName(string memory serviceName) public view returns (uint256 fee) {
+    function getServiceFee(string memory serviceName) public view returns (uint256 fee) {
         bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         return getServiceFee(serviceHash);
     }
 
     /**
+     * @dev Get service restricted rate by name. Overloading the getServiceRestrictedRate function.
+     */
+    function getServiceRestrictedRate(string memory serviceName) public view returns (bool restrictedRate) {
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+        return getServiceRestrictedRate(serviceHash);
+    }
+
+    /**
      * @dev Get service capabilities by name. Overloading the getServiceCapabilities function.
      */
-    function getServiceCapabilitiesByName(
-        string memory serviceName
-    ) public view returns (string[] memory capabilities) {
+    function getServiceCapabilities(string memory serviceName) public view returns (string[] memory capabilities) {
         bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         return getServiceCapabilities(serviceHash);
     }

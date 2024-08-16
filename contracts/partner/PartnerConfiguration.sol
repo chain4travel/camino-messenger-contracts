@@ -17,8 +17,11 @@ abstract contract PartnerConfiguration is Initializable {
 
     struct Service {
         uint256 _fee;
-        // TODO: add rack rate / public rate / opaque rate boolean
-        bool _restrictedRate; // ask Sam for this
+        /**
+         * @dev  If set to true, this means the service is restricted to pre-aggreement
+         * with the partner. (Not a rack rate)
+         */
+        bool _restrictedRate;
         string[] _capabilities;
     }
 
@@ -82,6 +85,9 @@ abstract contract PartnerConfiguration is Initializable {
     event ServiceRemoved(bytes32 serviceHash);
 
     event ServiceFeeUpdated(bytes32 serviceHash, uint256 fee);
+    event ServiceRestrictedRateUpdated(bytes32 serviceHash, bool restrictedRate);
+
+    event ServiceCapabilitiesUpdated(bytes32 serviceHash);
     event ServiceCapabilityAdded(bytes32 serviceHash, string capability);
     event ServiceCapabilityRemoved(bytes32 serviceHash, string capability);
 
@@ -163,6 +169,25 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
+     * @dev Set the Service restricted rate for a given hash.
+     *
+     * @param serviceHash Hash of the service
+     * @param restrictedRate Restricted rate
+     */
+    function _setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        $._supportedServices[serviceHash]._restrictedRate = restrictedRate;
+
+        emit ServiceRestrictedRateUpdated(serviceHash, restrictedRate);
+    }
+
+    /**
      * @dev Set the Service capabilities for a given hash.
      *
      * @param serviceHash Hash of the service
@@ -177,6 +202,8 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         $._supportedServices[serviceHash]._capabilities = capabilities;
+
+        emit ServiceCapabilitiesUpdated(serviceHash);
     }
 
     /**
@@ -250,17 +277,6 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash];
     }
 
-    function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
-        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
-
-        // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
-
-        return $._supportedServices[serviceHash]._capabilities;
-    }
-
     function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -270,6 +286,28 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         return $._supportedServices[serviceHash]._fee;
+    }
+
+    function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        return $._supportedServices[serviceHash]._restrictedRate;
+    }
+
+    function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        return $._supportedServices[serviceHash]._capabilities;
     }
 
     /***************************************************

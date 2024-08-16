@@ -103,7 +103,7 @@ describe("PartnerConfiguration", function () {
                 .withArgs(signers.otherAccount2.address, SERVICE_ADMIN_ROLE);
         });
 
-        it("should add and return all supported services correctly", async function () {
+        it("should add and return all supported services correctly + setter/getters test", async function () {
             const { cmAccountManager, cmAccount, services } = await loadFixture(
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
@@ -112,7 +112,9 @@ describe("PartnerConfiguration", function () {
             const fee2 = 2000n;
             const fee3 = 3000n;
 
-            const restrictedRate = false;
+            const restrictedRate1 = false;
+            const restrictedRate2 = true;
+            const restrictedRate3 = false;
 
             const capabilities1 = ["test capability 1"];
             const capabilities2 = ["test capability 2"];
@@ -122,7 +124,7 @@ describe("PartnerConfiguration", function () {
             expect(
                 await cmAccount
                     .connect(signers.cmServiceAdmin)
-                    .addService(services.serviceName1, fee1, restrictedRate, capabilities1),
+                    .addService(services.serviceName1, fee1, restrictedRate1, capabilities1),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash1);
@@ -130,7 +132,7 @@ describe("PartnerConfiguration", function () {
             expect(
                 await cmAccount
                     .connect(signers.cmServiceAdmin)
-                    .addService(services.serviceName2, fee2, restrictedRate, capabilities2),
+                    .addService(services.serviceName2, fee2, restrictedRate2, capabilities2),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash2);
@@ -138,7 +140,7 @@ describe("PartnerConfiguration", function () {
             expect(
                 await cmAccount
                     .connect(signers.cmServiceAdmin)
-                    .addService(services.serviceName3, fee3, restrictedRate, capabilities3),
+                    .addService(services.serviceName3, fee3, restrictedRate3, capabilities3),
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(services.serviceHash3);
@@ -148,21 +150,159 @@ describe("PartnerConfiguration", function () {
             expect(servicesFromCMAccount).to.be.deep.equal([
                 [services.serviceName1, services.serviceName2, services.serviceName3],
                 [
-                    [fee1, restrictedRate, capabilities1],
-                    [fee2, restrictedRate, capabilities2],
-                    [fee3, restrictedRate, capabilities3],
+                    [fee1, restrictedRate1, capabilities1],
+                    [fee2, restrictedRate2, capabilities2],
+                    [fee3, restrictedRate3, capabilities3],
                 ],
             ]);
 
-            // Get specific fee from a service name
-            expect(await cmAccount.getServiceFeeByName(services.serviceName1)).to.be.equal(fee1);
-            expect(await cmAccount.getServiceFeeByName(services.serviceName2)).to.be.equal(fee2);
-            expect(await cmAccount.getServiceFeeByName(services.serviceName3)).to.be.equal(fee3);
+            // The contract calls below uses
+            // contract["functionName(string)"](string) to get the correct
+            // overloaded function
 
-            // Get specific capabilities from a service name
-            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName1)).to.be.deep.equal(capabilities1);
-            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName2)).to.be.deep.equal(capabilities2);
-            expect(await cmAccount.getServiceCapabilitiesByName(services.serviceName3)).to.be.deep.equal(capabilities3);
+            // Get specific fee for a service name
+            expect(await cmAccount["getServiceFee(string)"](services.serviceName1)).to.be.equal(fee1);
+            expect(await cmAccount["getServiceFee(string)"](services.serviceName2)).to.be.equal(fee2);
+            expect(await cmAccount["getServiceFee(string)"](services.serviceName3)).to.be.equal(fee3);
+
+            // Get specific restricted rate for a service name
+            expect(await cmAccount["getServiceRestrictedRate(string)"](services.serviceName1)).to.be.equal(
+                restrictedRate1,
+            );
+            expect(await cmAccount["getServiceRestrictedRate(string)"](services.serviceName2)).to.be.equal(
+                restrictedRate2,
+            );
+            expect(await cmAccount["getServiceRestrictedRate(string)"](services.serviceName3)).to.be.equal(
+                restrictedRate3,
+            );
+
+            // Get specific capabilities for a service name
+            expect(await cmAccount["getServiceCapabilities(string)"](services.serviceName1)).to.be.deep.equal(
+                capabilities1,
+            );
+            expect(await cmAccount["getServiceCapabilities(string)"](services.serviceName2)).to.be.deep.equal(
+                capabilities2,
+            );
+            expect(await cmAccount["getServiceCapabilities(string)"](services.serviceName3)).to.be.deep.equal(
+                capabilities3,
+            );
+
+            // TEST SETTERS
+            // with new values for each service field
+
+            const newFee1 = 4000n;
+            const newFee2 = 5000n;
+            const newFee3 = 6000n;
+
+            const newRestrictedRate1 = true;
+            const newRestrictedRate2 = false;
+            const newRestrictedRate3 = true;
+
+            const newCapabilities1 = ["test capability 4"];
+            const newCapabilities2 = ["test capability 5"];
+            const newCapabilities3 = ["test capability 6"];
+
+            // Fee Setter
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceFee(string,uint256)"](services.serviceName1, newFee1),
+            )
+                .to.emit(cmAccount, "ServiceFeeUpdated")
+                .withArgs(services.serviceHash1, newFee1);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceFee(string,uint256)"](services.serviceName2, newFee2),
+            )
+                .to.emit(cmAccount, "ServiceFeeUpdated")
+                .withArgs(services.serviceHash2, newFee2);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceFee(string,uint256)"](services.serviceName3, newFee3),
+            )
+                .to.emit(cmAccount, "ServiceFeeUpdated")
+                .withArgs(services.serviceHash3, newFee3);
+
+            // Restricted Rate Setter
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceRestrictedRate(string,bool)"](services.serviceName1, newRestrictedRate1),
+            )
+                .to.emit(cmAccount, "ServiceRestrictedRateUpdated")
+                .withArgs(services.serviceHash1, newRestrictedRate1);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceRestrictedRate(string,bool)"](services.serviceName2, newRestrictedRate2),
+            )
+                .to.emit(cmAccount, "ServiceRestrictedRateUpdated")
+                .withArgs(services.serviceHash2, newRestrictedRate2);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceRestrictedRate(string,bool)"](services.serviceName3, newRestrictedRate3),
+            ).to.emit(cmAccount, "ServiceRestrictedRateUpdated");
+
+            // Capabilities Setter
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceCapabilities(string,string[])"](services.serviceName1, newCapabilities1),
+            )
+                .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
+                .withArgs(services.serviceHash1);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceCapabilities(string,string[])"](services.serviceName2, newCapabilities2),
+            )
+                .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
+                .withArgs(services.serviceHash2);
+
+            await expect(
+                await cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    ["setServiceCapabilities(string,string[])"](services.serviceName3, newCapabilities3),
+            )
+                .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
+                .withArgs(services.serviceHash3);
+
+            // TEST GETTERS with hashes
+
+            // Get specific fee for a service name
+            expect(await cmAccount["getServiceFee(bytes32)"](services.serviceHash1)).to.be.equal(newFee1);
+            expect(await cmAccount["getServiceFee(bytes32)"](services.serviceHash2)).to.be.equal(newFee2);
+            expect(await cmAccount["getServiceFee(bytes32)"](services.serviceHash3)).to.be.equal(newFee3);
+
+            // Get specific restricted rate for a service name
+            expect(await cmAccount["getServiceRestrictedRate(bytes32)"](services.serviceHash1)).to.be.equal(
+                newRestrictedRate1,
+            );
+            expect(await cmAccount["getServiceRestrictedRate(bytes32)"](services.serviceHash2)).to.be.equal(
+                newRestrictedRate2,
+            );
+            expect(await cmAccount["getServiceRestrictedRate(bytes32)"](services.serviceHash3)).to.be.equal(
+                newRestrictedRate3,
+            );
+
+            // Get specific capabilities for a service name
+            expect(await cmAccount["getServiceCapabilities(bytes32)"](services.serviceHash1)).to.be.deep.equal(
+                newCapabilities1,
+            );
+            expect(await cmAccount["getServiceCapabilities(bytes32)"](services.serviceHash2)).to.be.deep.equal(
+                newCapabilities2,
+            );
+            expect(await cmAccount["getServiceCapabilities(bytes32)"](services.serviceHash3)).to.be.deep.equal(
+                newCapabilities3,
+            );
         });
 
         it("should revert if the service is not registered", async function () {
