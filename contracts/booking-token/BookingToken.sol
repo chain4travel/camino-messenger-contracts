@@ -13,18 +13,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721Enumer
 // Access
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
+// Manager Interface
+import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
+
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
-
-interface ICMAccountManager {
-    function getAccountImplementation() external view returns (address);
-
-    function getDeveloperFeeBp() external view returns (uint256);
-
-    function getDeveloperWallet() external view returns (address);
-
-    function isCMAccount(address account) external view returns (bool);
-}
 
 contract BookingToken is
     Initializable,

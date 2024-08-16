@@ -12,6 +12,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 // Access
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
+// Manager Interface
+import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
+
 // Cheques
 import "./ChequeManager.sol";
 
@@ -21,20 +24,6 @@ import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Rec
 
 // Partner Config
 import "../partner/PartnerConfiguration.sol";
-
-interface ICMAccountManager {
-    function getAccountImplementation() external view returns (address);
-
-    function getDeveloperFeeBp() external view returns (uint256);
-
-    function getDeveloperWallet() external view returns (address);
-
-    function isCMAccount(address account) external view returns (bool);
-
-    function getRegisteredServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
-
-    function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string memory serviceName);
-}
 
 /**
  * @dev CM Account manages multiple bots for distributors and suppliers on Camino Messenger.

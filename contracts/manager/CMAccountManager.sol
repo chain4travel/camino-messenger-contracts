@@ -14,22 +14,14 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+// ABI of the CMAccount implementation contract
+import { ICMAccount } from "../account/ICMAccount.sol";
+
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
 
 // Service Registry
 import "../partner/ServiceRegistry.sol";
-
-// ABI of the CMAccount implementation contract
-interface ICMAccount {
-    function initialize(
-        address manager,
-        address bookingToken,
-        uint256 prefundAmount,
-        address owner,
-        address upgrader
-    ) external;
-}
 
 /// @custom:security-contact https://r.xyz/program/camino-network
 contract CMAccountManager is
