@@ -44,13 +44,18 @@ abstract contract PartnerConfiguration is Initializable {
 
     /// @custom:storage-location erc7201:camino.messenger.storage.PartnerConfiguration
     struct PartnerConfigurationStorage {
+        // Set of supported service hashes
         EnumerableSet.Bytes32Set _servicesHashSet;
+        // Mapping of service hashes to the service details
         mapping(bytes32 _serviceHash => Service _service) _supportedServices;
+        // Payment
         PaymentInfo _paymentInfo;
-        EnumerableSet.AddressSet _publicKeyAddressesSet; // Keep a enumerable list of public key addresses
-        mapping(address publicKeyAddress => PublicKey publicKey) _publicKeys; // Public keys for ecrypting private data for Booking Token
-
-        // TODO: Add support for distributors defining services they want to buy
+        // Public keys, keep a enumerable list of public key addresses
+        EnumerableSet.AddressSet _publicKeyAddressesSet;
+        // Public keys for ecrypting private data for Booking Token
+        mapping(address publicKeyAddress => PublicKey publicKey) _publicKeys;
+        // Services that this distributors want to buy
+        EnumerableSet.Bytes32Set _wantedServicesHashSet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.PartnerConfiguration")) - 1)) & ~bytes32(uint256(0xff));
@@ -70,6 +75,9 @@ abstract contract PartnerConfiguration is Initializable {
     error ServiceAlreadyExists(bytes32 serviceHash);
     error ServiceDoesNotExist(bytes32 serviceHash);
 
+    error WantedServiceAlreadyExists(bytes32 serviceHash);
+    error WantedServiceDoesNotExist(bytes32 serviceHash);
+
     error PaymentTokenAlreadyExists(address token);
     error PaymentTokenDoesNotExist(address token);
 
@@ -83,6 +91,9 @@ abstract contract PartnerConfiguration is Initializable {
 
     event ServiceAdded(bytes32 serviceHash);
     event ServiceRemoved(bytes32 serviceHash);
+
+    event WantedServiceAdded(bytes32 serviceHash);
+    event WantedServiceRemoved(bytes32 serviceHash);
 
     event ServiceFeeUpdated(bytes32 serviceHash, uint256 fee);
     event ServiceRestrictedRateUpdated(bytes32 serviceHash, bool restrictedRate);
@@ -308,6 +319,39 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         return $._supportedServices[serviceHash]._capabilities;
+    }
+
+    /***************************************************
+     *               WANTED SERVICES                   *
+     ***************************************************/
+
+    function _addWantedService(bytes32 serviceHash) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        bool added = $._wantedServicesHashSet.add(serviceHash);
+
+        if (!added) {
+            revert WantedServiceAlreadyExists(serviceHash);
+        }
+
+        emit WantedServiceAdded(serviceHash);
+    }
+
+    function _removeWantedService(bytes32 serviceHash) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        bool removed = $._wantedServicesHashSet.remove(serviceHash);
+
+        if (!removed) {
+            revert WantedServiceDoesNotExist(serviceHash);
+        }
+
+        emit WantedServiceRemoved(serviceHash);
+    }
+
+    function getWantedServiceHashes() public view virtual returns (bytes32[] memory serviceHashes) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._wantedServicesHashSet.values();
     }
 
     /***************************************************

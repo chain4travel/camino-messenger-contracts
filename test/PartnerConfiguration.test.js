@@ -323,6 +323,98 @@ describe("PartnerConfiguration", function () {
         });
     });
 
+    describe("Wanted Services", function () {
+        it("should add a wanted service correctly", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1);
+        });
+
+        it("should revert if a wanted service is already added", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1);
+
+            await expect(
+                cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1),
+            ).to.be.revertedWithCustomError(cmAccount, "WantedServiceAlreadyExists");
+        });
+
+        it("should revert if a wanted service is not registered", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(
+                cmAccount.connect(signers.cmServiceAdmin).addWantedService("cmp.service.test.v0.NonRegisteredService"),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+        });
+
+        it("should remove a wanted service correctly", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removeWantedService(services.serviceName1))
+                .to.emit(cmAccount, "WantedServiceRemoved")
+                .withArgs(services.serviceHash1);
+        });
+
+        it("should revert removal if a wanted service does not exist", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(
+                cmAccount.connect(signers.cmServiceAdmin).removeWantedService(services.serviceName1),
+            ).to.be.revertedWithCustomError(cmAccount, "WantedServiceDoesNotExist");
+        });
+
+        it("should add and get multiple wanted services correctly", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName2))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash2);
+
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName3))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash3);
+
+            // Get wanted services
+            expect(await cmAccount.getWantedServices()).to.be.deep.equal([
+                services.serviceName1,
+                services.serviceName2,
+                services.serviceName3,
+            ]);
+
+            // Get wanted service by hash
+            expect(await cmAccount.getWantedServiceHashes()).to.be.deep.equal([
+                services.serviceHash1,
+                services.serviceHash2,
+                services.serviceHash3,
+            ]);
+        });
+    });
+
     describe("Payment", function () {
         it("should set and remove payment info correctly", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(

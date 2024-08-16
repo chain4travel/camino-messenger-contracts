@@ -528,6 +528,34 @@ contract CMAccount is
     }
 
     /***************************************************
+     *                WANTED SERVICES                  *
+     ***************************************************/
+
+    function addWantedService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+        _addWantedService(serviceHash);
+    }
+
+    function removeWantedService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
+        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+        _removeWantedService(serviceHash);
+    }
+
+    function getWantedServices() public view returns (string[] memory serviceNames) {
+        bytes32[] memory _wantedServiceHashes = getWantedServiceHashes();
+
+        string[] memory _wantedServiceNames = new string[](_wantedServiceHashes.length);
+
+        for (uint256 i = 0; i < _wantedServiceHashes.length; i++) {
+            _wantedServiceNames[i] = ICMAccountManager(getManagerAddress()).getRegisteredServiceNameByHash(
+                _wantedServiceHashes[i]
+            );
+        }
+
+        return _wantedServiceNames;
+    }
+
+    /***************************************************
      *                   PAYMENT                       *
      ***************************************************/
 
