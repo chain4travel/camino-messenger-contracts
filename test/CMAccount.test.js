@@ -243,4 +243,74 @@ describe("CMAccount", function () {
             expect(await cmAccount.getRoleMemberCount(BOOKING_OPERATOR_ROLE)).to.be.equal(1);
         });
     });
+
+    describe("Messenger Bot", function () {
+        it("should add messenger bot correctly", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const bot = signers.otherAccount1;
+
+            // Register bot
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+                .to.emit(cmAccount, "MessengerBotAdded")
+                .withArgs(bot.address);
+
+            // Check if bot is allowed
+            expect(await cmAccount.isBotAllowed(bot.address)).to.be.true;
+
+            // Check roles
+            expect(await cmAccount.hasRole(await cmAccount.CHEQUE_OPERATOR_ROLE(), bot.address)).to.be.true;
+            expect(await cmAccount.hasRole(await cmAccount.BOOKING_OPERATOR_ROLE(), bot.address)).to.be.true;
+            expect(await cmAccount.hasRole(await cmAccount.GAS_WITHDRAWER_ROLE(), bot.address)).to.be.true;
+        });
+
+        it("should remove messenger bot correctly", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const bot = signers.otherAccount1;
+
+            // Register bot
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+                .to.emit(cmAccount, "MessengerBotAdded")
+                .withArgs(bot.address);
+
+            // Remove bot
+            await expect(cmAccount.connect(signers.cmAccountAdmin).removeMessengerBot(bot.address))
+                .to.emit(cmAccount, "MessengerBotRemoved")
+                .withArgs(bot.address);
+        });
+
+        it("should add messenger bot with gas money withdrawal correctly", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const bot = signers.otherAccount1;
+
+            const withdrawAmount = ethers.parseEther("0.1"); // Small amount, fixture has +1 CAM surplus over the prefund
+
+            // Register bot
+            const withdrawTx = cmAccount
+                .connect(signers.cmAccountAdmin)
+                ["addMessengerBot(address,uint256)"](bot.address, withdrawAmount);
+
+            await expect(withdrawTx).to.changeEtherBalances([cmAccount, bot], [-withdrawAmount, withdrawAmount]);
+            await expect(withdrawTx).to.emit(cmAccount, "MessengerBotAdded").withArgs(bot.address);
+        });
+
+        it("should revert adding messenger bot with gas money withdrawal if prefund not spent", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const bot = signers.otherAccount1;
+
+            const withdrawAmount = ethers.parseEther("10"); // Fixture has +1 CAM surplus over the prefund, 10 CAM should revert
+
+            // Register bot
+            await expect(
+                cmAccount
+                    .connect(signers.cmAccountAdmin)
+                    ["addMessengerBot(address,uint256)"](bot.address, withdrawAmount),
+            )
+                .to.revertedWithCustomError(cmAccount, "PrefundNotSpentYet")
+                .withArgs(ethers.parseEther("1"), ethers.parseEther("100"), ethers.parseEther("10"));
+        });
+    });
 });
