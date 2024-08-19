@@ -220,6 +220,25 @@ async function deployBookingTokenFixture() {
     return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount };
 }
 
+async function deployBookingTokenWithNullUSDFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount } =
+        await loadFixture(deployBookingTokenFixture);
+
+    // Deploy NullUSD test contract
+    const NullUSD = await ethers.getContractFactory("NullUSD");
+    const nullUSD = await NullUSD.deploy();
+
+    // Fund NullUSD to the CM accounts
+    const fundAmount = ethers.parseEther("10000");
+    nullUSD.transfer(supplierCMAccount.getAddress(), fundAmount);
+    nullUSD.transfer(distributorCMAccount.getAddress(), fundAmount);
+
+    return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount, nullUSD };
+}
+
 async function deployAndConfigureAllWithRegisteredServicesFixture() {
     // Set up signers
     await setupSigners();
@@ -293,4 +312,5 @@ module.exports = {
     deployCMAccountWithDepositFixture,
     deployBookingTokenFixture,
     deployAndConfigureAllWithRegisteredServicesFixture,
+    deployBookingTokenWithNullUSDFixture,
 };

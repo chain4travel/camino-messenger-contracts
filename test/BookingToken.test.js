@@ -12,6 +12,7 @@ const {
     deployAndConfigureAllFixture,
     deployCMAccountWithDepositFixture,
     deployBookingTokenFixture,
+    deployBookingTokenWithNullUSDFixture,
 } = require("./utils/fixtures");
 
 describe("BookingToken", function () {
@@ -27,6 +28,7 @@ describe("BookingToken", function () {
             expect(await bookingToken.isCMAccount(supplierCMAccount.getAddress())).to.be.true;
         });
     });
+
     describe("Mint", function () {
         it("Native: should revert if not called from a CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
@@ -51,6 +53,7 @@ describe("BookingToken", function () {
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
                 .withArgs(signers.btAdmin.address);
         });
+
         it("Native: should revert if reservedFor is not a CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
@@ -82,6 +85,42 @@ describe("BookingToken", function () {
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
                 .withArgs(signers.otherAccount1.address); // reservedFor address
         });
+
+        // TODO:
+        // it("Native: should revert transfers if not expired or bought", async function () {
+        //     const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+        //         await loadFixture(deployBookingTokenFixture);
+
+        //     const tokenURI =
+        //         "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+        //     const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+        //     const price = ethers.parseEther("0.05");
+
+        //     // Grant BOOKING_OPERATOR_ROLE
+        //     const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+        //     await expect(
+        //         supplierCMAccount
+        //             .connect(signers.cmAccountAdmin)
+        //             .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+        //     ).to.not.reverted;
+
+        //     await expect(
+        //         supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+        //             signers.otherAccount1.address, // set reservedFor to a non-CMAccount
+        //             tokenURI, // tokenURI
+        //             expirationTimestamp, // expiration
+        //             price, // price
+        //             ethers.ZeroAddress, // zero address
+        //         ),
+        //     )
+        //         .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
+        //         .withArgs(signers.otherAccount1.address); // reservedFor address
+
+        //     await expect(bookingToken.safeTransferFrom(await supplierCMAccount.getAddress(), signers.otherAccount1.address, 0n))
+        // });
+
         it("Native: should mint a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
@@ -140,7 +179,50 @@ describe("BookingToken", function () {
                     ethers.ZeroAddress, // zero address
                 );
         });
+
+        it("ERC20: should mint a booking token correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
+                await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("120");
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    nullUSD.getAddress(), // nullUSD address
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n, // token id
+                    distributorCMAccount.getAddress(), // reservedFor
+                    supplierCMAccount.getAddress(), // supplier
+                    expirationTimestamp,
+                    price,
+                    nullUSD.getAddress(), // nullUSD address
+                );
+
+            // Sanity check
+            expect(await bookingToken.getReservationPrice(0n)).to.be.deep.equal([price, await nullUSD.getAddress()]);
+        });
     });
+
     describe("Buy", function () {
         it("Native: should buy a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
@@ -210,6 +292,83 @@ describe("BookingToken", function () {
             // Check token ownership
             expect(await bookingToken.ownerOf(0n)).to.equal(await distributorCMAccount.getAddress());
         });
+
+        it("ERC20: should buy a booking token correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
+                await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("500");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    nullUSD.getAddress(), // nullUSD address
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    nullUSD.getAddress(), // nullUSD address
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Try to buy the token
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+
+            // Check emitted events
+            await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
+
+            // Check balances
+            // CAM
+            await expect(buyTx).to.changeEtherBalances([supplierCMAccount, distributorCMAccount], [0, 0]);
+            // Token: NullUSD
+            await expect(buyTx).to.changeTokenBalances(
+                nullUSD,
+                [supplierCMAccount, distributorCMAccount],
+                [price, -price],
+            );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await distributorCMAccount.getAddress());
+        });
+
         it("Native: should revert when trying to buy a booking token reserved for another CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
