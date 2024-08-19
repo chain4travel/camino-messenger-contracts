@@ -14,22 +14,14 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+// ABI of the CMAccount implementation contract
+import { ICMAccount } from "../account/ICMAccount.sol";
+
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
 
 // Service Registry
 import "../partner/ServiceRegistry.sol";
-
-// ABI of the CMAccount implementation contract
-interface ICMAccount {
-    function initialize(
-        address manager,
-        address bookingToken,
-        uint256 prefundAmount,
-        address owner,
-        address upgrader
-    ) external;
-}
 
 /// @custom:security-contact https://r.xyz/program/camino-network
 contract CMAccountManager is
@@ -184,8 +176,8 @@ contract CMAccountManager is
     function initialize(
         address defaultAdmin,
         address pauser,
-        address upgrader,
-        address versioner,
+        address upgrader, // upgrade the manager (this contract)
+        address versioner, // sets cm account implementation address
         address developerWallet,
         uint256 developerFeeBp
     ) public initializer {
@@ -243,6 +235,17 @@ contract CMAccountManager is
      */
     function _createCMAccount(address admin, address upgrader) private returns (address) {
         // Checks
+        if (admin == address(0)) {
+            revert CMAccountInvalidAdmin(admin);
+        }
+
+        uint256 prefundAmount = getPrefundAmount();
+
+        // Check pre-fund amount
+        if (msg.value < prefundAmount) {
+            revert IncorrectPrefundAmount(prefundAmount, msg.value);
+        }
+
         address latestAccountImplementation = getAccountImplementation();
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
@@ -251,17 +254,6 @@ contract CMAccountManager is
         address bookingToken = getBookingTokenAddress();
         if (bookingToken.code.length == 0) {
             revert InvalidBookingTokenAddress(bookingToken);
-        }
-
-        if (admin == address(0)) {
-            revert CMAccountInvalidAdmin(admin);
-        }
-
-        uint256 prefundAmount = getPrefundAmount();
-
-        // Check pre-fund amount
-        if (msg.value != prefundAmount) {
-            revert IncorrectPrefundAmount(prefundAmount, msg.value);
         }
 
         // Create CMAccount Proxy and set the implementation address
@@ -289,7 +281,7 @@ contract CMAccountManager is
     /**
      * @dev Return account's creator
      */
-    function getCreator(address account) public view returns (address) {
+    function getCMAccountCreator(address account) public view returns (address) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
         return $._cmAccountInfo[account].creator;
     }

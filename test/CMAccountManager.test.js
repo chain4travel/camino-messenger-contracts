@@ -315,7 +315,7 @@ describe("CMAccountManager", function () {
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
 
-        it("should fail if the prefund amount is incorrect", async function () {
+        it("should fail if the prefund amount is lower then the minimum", async function () {
             // Set up signers
             await setupSigners();
 
@@ -328,6 +328,48 @@ describe("CMAccountManager", function () {
             )
                 .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
                 .withArgs(prefundAmount, prefundAmount - 1n);
+        });
+
+        it("should fail if the prefund amount is zero", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            await expect(cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader))
+                .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
+                .withArgs(prefundAmount, 0n);
+        });
+
+        it("should allow the prefund amount to be higher then the minimum", async function () {
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const overPrefund = ethers.parseEther("100");
+            const newPrefundAmount = prefundAmount + overPrefund;
+
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader,
+                {
+                    value: newPrefundAmount,
+                },
+            );
+
+            const receipt = await tx.wait();
+
+            // Parse event to get the CMAccount address (this is the UUPS proxy address)
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const cmAccountAddress = parsedEvent.args.account;
+
+            expect(await ethers.provider.getBalance(cmAccountAddress)).to.be.equal(newPrefundAmount);
         });
 
         it("should set and get correct account creator", async function () {
@@ -360,7 +402,9 @@ describe("CMAccountManager", function () {
             const parsedEvent = cmAccountManager.interface.parseLog(event);
             const newCMAccountAddress = parsedEvent.args.account;
 
-            expect(await cmAccountManager.getCreator(newCMAccountAddress)).to.be.equal(signers.managerAdmin.address);
+            expect(await cmAccountManager.getCMAccountCreator(newCMAccountAddress)).to.be.equal(
+                signers.managerAdmin.address,
+            );
         });
     });
 });

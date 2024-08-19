@@ -375,20 +375,25 @@ describe("ChequeManager", function () {
             // Cash-in cheque
             const cashInResponse = await cmAccount.cashInCheque(cheque, signature);
 
-            // CMAccount balance descrease by cheque amount + developerFee
-            await expect(await cashInResponse).to.changeEtherBalance(cmAccount, -cheque.amount - developerFee);
+            // CMAccount balance should decrease by cheque amount (developer fee cut is taken from the cheque amount)
+            await expect(await cashInResponse).to.changeEtherBalance(cmAccount, -cheque.amount);
 
-            // toCMAccount balance increase by cheque amount, we are using regular wallet here instead of another CMAccount
-            // TODO: Use a real CMAccount as a receiver (CMAccount CAM receive not implemented yet)
-            await expect(await cashInResponse).to.changeEtherBalance(toCMAccountAddress, cheque.amount);
+            // toCMAccount balance should increase by cheque amount - developerFee
+            await expect(await cashInResponse).to.changeEtherBalance(toCMAccountAddress, cheque.amount - developerFee);
 
-            // DeveloperWallet balance increase by developerFee
+            // DeveloperWallet balance should increase by developerFee
             await expect(await cashInResponse).to.changeEtherBalance(signers.developerWallet, developerFee);
 
             // Should emit event with correct data
             await expect(await cashInResponse)
                 .to.emit(cmAccount, "ChequeCashedIn")
-                .withArgs(signers.chequeOperator.address, cheque.toBot, cheque.counter, cheque.amount, developerFee);
+                .withArgs(
+                    signers.chequeOperator.address,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount - developerFee, // paid amount
+                    developerFee, // developer cut
+                );
 
             // Sanity checks: should set lastCashIns
             const lastCashIn = await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot);
@@ -423,16 +428,16 @@ describe("ChequeManager", function () {
             // Cash-in cheque
             const cashInResponse2 = await cmAccount.cashInCheque(cheque2, signature2);
 
-            // CMAccount balance descrease by (cheque2 amount - cheque amount) + developerFee
+            // CMAccount balance descrease by (cheque2 amount - cheque amount)
             await expect(await cashInResponse2).to.changeEtherBalance(
                 cmAccount,
-                -cheque2.amount + cheque.amount - developerFee2, // Weird calculation but it works
+                -cheque2.amount + cheque.amount, // Weird calculation but it works
             );
 
-            // toCMAccount balance increase by (cheque2 amount - cheque amount)
+            // toCMAccount balance increase by (cheque2 amount - cheque amount) - developerFee2
             await expect(await cashInResponse2).to.changeEtherBalance(
                 toCMAccountAddress,
-                cheque2.amount - cheque.amount, // new cheque amount minus the lastCashIn amount
+                cheque2.amount - cheque.amount - developerFee2, // new cheque amount minus the lastCashIn amount
             );
 
             // DeveloperWallet balance increase by developerFee
@@ -445,7 +450,7 @@ describe("ChequeManager", function () {
                     signers.chequeOperator.address,
                     cheque2.toBot,
                     cheque2.counter,
-                    cheque2.amount,
+                    cheque2.amount - cheque.amount - developerFee2, // paid amount for this cheque
                     developerFee2,
                 );
 

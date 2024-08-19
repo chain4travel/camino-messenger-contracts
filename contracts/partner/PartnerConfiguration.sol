@@ -17,6 +17,11 @@ abstract contract PartnerConfiguration is Initializable {
 
     struct Service {
         uint256 _fee;
+        /**
+         * @dev  If set to true, this means the service is restricted to pre-aggreement
+         * with the partner. (Not a rack rate)
+         */
+        bool _restrictedRate;
         string[] _capabilities;
     }
 
@@ -25,13 +30,32 @@ abstract contract PartnerConfiguration is Initializable {
         EnumerableSet.AddressSet _supportedTokens; // Supported on-chain token for payment
     }
 
+    /**
+     * @dev Purpose of the public key. Currently we only have one.
+     */
+    enum PublicKeyUseType {
+        EncryptPrivateData
+    }
+
+    struct PublicKey {
+        PublicKeyUseType _use;
+        bytes _data;
+    }
+
     /// @custom:storage-location erc7201:camino.messenger.storage.PartnerConfiguration
     struct PartnerConfigurationStorage {
+        // Set of supported service hashes
         EnumerableSet.Bytes32Set _servicesHashSet;
+        // Mapping of service hashes to the service details
         mapping(bytes32 _serviceHash => Service _service) _supportedServices;
+        // Payment
         PaymentInfo _paymentInfo;
-        EnumerableSet.AddressSet _publicKeyAddressesSet; // Keep a enumerable list of pubkey addresses
-        mapping(address pubkeyAddress => bytes pubkey) _publicKeys; // Public keys for ecrypting private data for Booking Token
+        // Public keys, keep a enumerable list of public key addresses
+        EnumerableSet.AddressSet _publicKeyAddressesSet;
+        // Public keys for ecrypting private data for Booking Token
+        mapping(address publicKeyAddress => PublicKey publicKey) _publicKeys;
+        // Services that this distributors want to buy
+        EnumerableSet.Bytes32Set _wantedServicesHashSet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.PartnerConfiguration")) - 1)) & ~bytes32(uint256(0xff));
@@ -51,11 +75,15 @@ abstract contract PartnerConfiguration is Initializable {
     error ServiceAlreadyExists(bytes32 serviceHash);
     error ServiceDoesNotExist(bytes32 serviceHash);
 
+    error WantedServiceAlreadyExists(bytes32 serviceHash);
+    error WantedServiceDoesNotExist(bytes32 serviceHash);
+
     error PaymentTokenAlreadyExists(address token);
     error PaymentTokenDoesNotExist(address token);
 
     error PublicKeyAlreadyExists(address pubKeyAddress);
     error PublicKeyDoesNotExist(address pubKeyAddress);
+    error InvalidPublicKeyUseType(uint8 use);
 
     /***************************************************
      *                    EVENTS                       *
@@ -64,7 +92,13 @@ abstract contract PartnerConfiguration is Initializable {
     event ServiceAdded(bytes32 serviceHash);
     event ServiceRemoved(bytes32 serviceHash);
 
+    event WantedServiceAdded(bytes32 serviceHash);
+    event WantedServiceRemoved(bytes32 serviceHash);
+
     event ServiceFeeUpdated(bytes32 serviceHash, uint256 fee);
+    event ServiceRestrictedRateUpdated(bytes32 serviceHash, bool restrictedRate);
+
+    event ServiceCapabilitiesUpdated(bytes32 serviceHash);
     event ServiceCapabilityAdded(bytes32 serviceHash, string capability);
     event ServiceCapabilityRemoved(bytes32 serviceHash, string capability);
 
@@ -73,7 +107,7 @@ abstract contract PartnerConfiguration is Initializable {
 
     event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
 
-    event PublicKeyAdded(address indexed pubKeyAddress, bytes pubkey);
+    event PublicKeyAdded(address indexed pubKeyAddress, PublicKey publicKey);
     event PublicKeyRemoved(address indexed pubKeyAddress);
 
     /***************************************************
@@ -146,6 +180,25 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
+     * @dev Set the Service restricted rate for a given hash.
+     *
+     * @param serviceHash Hash of the service
+     * @param restrictedRate Restricted rate
+     */
+    function _setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        $._supportedServices[serviceHash]._restrictedRate = restrictedRate;
+
+        emit ServiceRestrictedRateUpdated(serviceHash, restrictedRate);
+    }
+
+    /**
      * @dev Set the Service capabilities for a given hash.
      *
      * @param serviceHash Hash of the service
@@ -160,6 +213,8 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         $._supportedServices[serviceHash]._capabilities = capabilities;
+
+        emit ServiceCapabilitiesUpdated(serviceHash);
     }
 
     /**
@@ -233,6 +288,28 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash];
     }
 
+    function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        return $._supportedServices[serviceHash]._fee;
+    }
+
+    function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        // Check if the service exists
+        if (!$._servicesHashSet.contains(serviceHash)) {
+            revert ServiceDoesNotExist(serviceHash);
+        }
+
+        return $._supportedServices[serviceHash]._restrictedRate;
+    }
+
     function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -244,15 +321,37 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash]._capabilities;
     }
 
-    function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee) {
+    /***************************************************
+     *               WANTED SERVICES                   *
+     ***************************************************/
+
+    function _addWantedService(bytes32 serviceHash) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
-        // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
+        bool added = $._wantedServicesHashSet.add(serviceHash);
+
+        if (!added) {
+            revert WantedServiceAlreadyExists(serviceHash);
         }
 
-        return $._supportedServices[serviceHash]._fee;
+        emit WantedServiceAdded(serviceHash);
+    }
+
+    function _removeWantedService(bytes32 serviceHash) internal virtual {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+        bool removed = $._wantedServicesHashSet.remove(serviceHash);
+
+        if (!removed) {
+            revert WantedServiceDoesNotExist(serviceHash);
+        }
+
+        emit WantedServiceRemoved(serviceHash);
+    }
+
+    function getWantedServiceHashes() public view virtual returns (bytes32[] memory serviceHashes) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._wantedServicesHashSet.values();
     }
 
     /***************************************************
@@ -312,9 +411,23 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
+     * @dev Check if valid public key use enum
+     *
+     * This needs to be updated when new enums are added
+     */
+    function _isValidPublicKeyUse(uint8 use) internal virtual returns (bool) {
+        return use < uint(PublicKeyUseType.EncryptPrivateData) + 1;
+    }
+
+    /**
      * @dev Add public key with an address
      */
-    function _addPublicKey(address pubKeyAddress, bytes memory publicKey) internal virtual {
+    function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData, uint8 use) internal virtual {
+        // Check if {use} is valid enum and revert early if not
+        if (!_isValidPublicKeyUse(use)) {
+            revert InvalidPublicKeyUseType(use);
+        }
+
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         bool added = $._publicKeyAddressesSet.add(pubKeyAddress);
@@ -322,6 +435,8 @@ abstract contract PartnerConfiguration is Initializable {
         if (!added) {
             revert PublicKeyAlreadyExists(pubKeyAddress);
         }
+
+        PublicKey memory publicKey = PublicKey(PublicKeyUseType(use), publicKeyData);
 
         $._publicKeys[pubKeyAddress] = publicKey;
 
@@ -347,12 +462,17 @@ abstract contract PartnerConfiguration is Initializable {
     /**
      * @dev Return all public keys
      */
-    function getPublicKeys() public view virtual returns (address[] memory pubKeyAddresses, bytes[] memory publicKeys) {
+    function getPublicKeys()
+        public
+        view
+        virtual
+        returns (address[] memory pubKeyAddresses, PublicKey[] memory publicKeys)
+    {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
 
-        bytes[] memory _publicKeys = new bytes[](_pubKeyAddresses.length);
+        PublicKey[] memory _publicKeys = new PublicKey[](_pubKeyAddresses.length);
         for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
             _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
         }
