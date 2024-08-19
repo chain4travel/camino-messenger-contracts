@@ -638,14 +638,10 @@ contract CMAccount is
         checkPrefundSpent(gasMoney);
 
         // Grant roles to bot
-        _grantRole(CHEQUE_OPERATOR_ROLE, bot);
-        _grantRole(BOOKING_OPERATOR_ROLE, bot);
-        _grantRole(GAS_WITHDRAWER_ROLE, bot);
+        addMessengerBot(bot);
 
         // Send gasMoney to bot
         payable(bot).sendValue(gasMoney);
-
-        emit MessengerBotAdded(bot);
     }
 
     function removeMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
