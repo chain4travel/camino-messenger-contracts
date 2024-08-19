@@ -28,7 +28,7 @@ describe("BookingToken", function () {
         });
     });
     describe("Mint", function () {
-        it("should revert if not called from a CMAccount", async function () {
+        it("Native: should revert if not called from a CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -45,12 +45,13 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
                 .withArgs(signers.btAdmin.address);
         });
-        it("should revert if reservedFor is not a CMAccount", async function () {
+        it("Native: should revert if reservedFor is not a CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -75,12 +76,13 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
                 .withArgs(signers.otherAccount1.address); // reservedFor address
         });
-        it("should mint a booking token correctly", async function () {
+        it("Native: should mint a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -105,6 +107,7 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -114,6 +117,7 @@ describe("BookingToken", function () {
                     supplierCMAccount.getAddress(),
                     expirationTimestamp,
                     price,
+                    ethers.ZeroAddress, // zero address
                 );
 
             // Mint again to make sure the token id is incremented
@@ -123,6 +127,7 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -132,11 +137,12 @@ describe("BookingToken", function () {
                     supplierCMAccount.getAddress(),
                     expirationTimestamp,
                     price,
+                    ethers.ZeroAddress, // zero address
                 );
         });
     });
     describe("Buy", function () {
-        it("should buy a booking token correctly", async function () {
+        it("Native: should buy a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -165,6 +171,7 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -174,6 +181,7 @@ describe("BookingToken", function () {
                     supplierCMAccount.getAddress(),
                     expirationTimestamp,
                     price,
+                    ethers.ZeroAddress, // zero address
                 );
 
             /***************************************************
@@ -196,7 +204,7 @@ describe("BookingToken", function () {
             // Check balances
             await expect(buyTx).to.changeEtherBalances([supplierCMAccount, distributorCMAccount], [price, -price]);
         });
-        it("should revert when trying to buy a booking token reserved for another CMAccount", async function () {
+        it("Native: should revert when trying to buy a booking token reserved for another CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -225,6 +233,7 @@ describe("BookingToken", function () {
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
+                    ethers.ZeroAddress, // zero address
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -234,6 +243,7 @@ describe("BookingToken", function () {
                     supplierCMAccount.getAddress(),
                     expirationTimestamp,
                     price,
+                    ethers.ZeroAddress, // zero address
                 );
 
             /***************************************************

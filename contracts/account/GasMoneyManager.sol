@@ -88,6 +88,7 @@ abstract contract GasMoneyManager is Initializable {
         }
 
         // Update the withdrawn amount
+        // FIXME: Not likely but still, check overflow (safe math libs?)
         $._withdrawnAmount[msg.sender] += amount;
 
         // Transfer the gas money

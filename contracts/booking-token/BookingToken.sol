@@ -18,6 +18,7 @@ import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 
 // Utils
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract BookingToken is
     Initializable,
@@ -28,6 +29,7 @@ contract BookingToken is
     UUPSUpgradeable
 {
     using Address for address payable;
+    using SafeERC20 for IERC20;
 
     /***************************************************
      *                   CONSTANTS                     *
@@ -49,6 +51,7 @@ contract BookingToken is
         address supplier; // CM Account address that minted the token and created the reservation
         uint256 expirationTimestamp; // Timestamp when the reservation expires
         uint256 price; // Price of the token, only native for now
+        IERC20 paymentToken; // Token used to pay for the reserved token
     }
 
     struct BookingTokenStorage {
@@ -82,7 +85,8 @@ contract BookingToken is
         address indexed reservedFor,
         address indexed supplier,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     );
 
     // Reserved token bought
@@ -171,7 +175,8 @@ contract BookingToken is
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     ) public onlyCMAccount(msg.sender) {
         // Require reservedFor to be a CM Account
         requireCMAccount(reservedFor);
@@ -192,9 +197,9 @@ contract BookingToken is
         _setTokenURI(tokenId, uri);
 
         // Store the reservation
-        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price);
+        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
 
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price);
+        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
     }
 
     function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
@@ -245,10 +250,11 @@ contract BookingToken is
         address reservedFor,
         address supplier,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     ) internal {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        $._reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price);
+        $._reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price, paymentToken);
     }
 
     /**

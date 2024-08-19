@@ -317,10 +317,11 @@ contract CMAccount is
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     ) public override onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price);
+        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price, paymentToken);
     }
 
     /**

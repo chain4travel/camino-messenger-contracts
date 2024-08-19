@@ -3,15 +3,21 @@ pragma solidity ^0.8.20;
 
 import "./IBookingToken.sol";
 
+// ERC-20 Utils
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 abstract contract BookingTokenOperator {
+    using SafeERC20 for IERC20;
+
     function _mintBookingToken(
         address bookingToken,
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     ) internal virtual {
-        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price);
+        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
     }
 
     /**
@@ -40,7 +46,8 @@ abstract contract BookingTokenOperator {
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
-        uint256 price
+        uint256 price,
+        IERC20 paymentToken
     ) external virtual;
 
     /**
