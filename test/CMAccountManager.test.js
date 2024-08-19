@@ -330,6 +330,17 @@ describe("CMAccountManager", function () {
                 .withArgs(prefundAmount, prefundAmount - 1n);
         });
 
+        it("should fail if the prefund amount is zero", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            await expect(cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader))
+                .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
+                .withArgs(prefundAmount, 0n);
+        });
+
         it("should allow the prefund amount to be higher then the minimum", async function () {
             const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 

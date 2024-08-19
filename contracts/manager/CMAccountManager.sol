@@ -235,6 +235,17 @@ contract CMAccountManager is
      */
     function _createCMAccount(address admin, address upgrader) private returns (address) {
         // Checks
+        if (admin == address(0)) {
+            revert CMAccountInvalidAdmin(admin);
+        }
+
+        uint256 prefundAmount = getPrefundAmount();
+
+        // Check pre-fund amount
+        if (msg.value < prefundAmount) {
+            revert IncorrectPrefundAmount(prefundAmount, msg.value);
+        }
+
         address latestAccountImplementation = getAccountImplementation();
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
@@ -243,20 +254,6 @@ contract CMAccountManager is
         address bookingToken = getBookingTokenAddress();
         if (bookingToken.code.length == 0) {
             revert InvalidBookingTokenAddress(bookingToken);
-        }
-
-        if (admin == address(0)) {
-            revert CMAccountInvalidAdmin(admin);
-        }
-
-        uint256 prefundAmount = getPrefundAmount();
-
-        // FIXME: Investigate which checks are more likely to fail frequently and move them up
-        // FIXME: Investigate if msg.value < prefund introduces any issues
-
-        // Check pre-fund amount
-        if (msg.value < prefundAmount) {
-            revert IncorrectPrefundAmount(prefundAmount, msg.value);
         }
 
         // Create CMAccount Proxy and set the implementation address
