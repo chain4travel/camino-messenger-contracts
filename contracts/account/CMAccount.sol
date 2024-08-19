@@ -542,14 +542,22 @@ contract CMAccount is
      *                WANTED SERVICES                  *
      ***************************************************/
 
-    function addWantedService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _addWantedService(serviceHash);
+    function addWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
+        for (uint256 i = 0; i < serviceNames.length; i++) {
+            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
+                serviceNames[i]
+            );
+            _addWantedService(serviceHash);
+        }
     }
 
-    function removeWantedService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _removeWantedService(serviceHash);
+    function removeWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
+        for (uint256 i = 0; i < serviceNames.length; i++) {
+            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
+                serviceNames[i]
+            );
+            _removeWantedService(serviceHash);
+        }
     }
 
     function getWantedServices() public view returns (string[] memory serviceNames) {

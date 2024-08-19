@@ -329,9 +329,40 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
                 .withArgs(services.serviceHash1);
+        });
+
+        it("should add multiple (6) wanted services correctly", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addWantedServices([
+                        services.serviceName1,
+                        services.serviceName2,
+                        services.serviceName3,
+                        services.serviceName4,
+                        services.serviceName5,
+                        services.serviceName6,
+                    ]),
+            )
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash2)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash3)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash4)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash5)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash6);
         });
 
         it("should revert if a wanted service is already added", async function () {
@@ -339,12 +370,12 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
                 .withArgs(services.serviceHash1);
 
             await expect(
-                cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1),
+                cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]),
             ).to.be.revertedWithCustomError(cmAccount, "WantedServiceAlreadyExists");
         });
 
@@ -354,7 +385,9 @@ describe("PartnerConfiguration", function () {
             );
 
             await expect(
-                cmAccount.connect(signers.cmServiceAdmin).addWantedService("cmp.service.test.v0.NonRegisteredService"),
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addWantedServices(["cmp.service.test.v0.NonRegisteredService"]),
             ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
         });
 
@@ -363,13 +396,39 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
                 .withArgs(services.serviceHash1);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).removeWantedService(services.serviceName1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removeWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceRemoved")
                 .withArgs(services.serviceHash1);
+        });
+
+        it("should remove multiple wanted services correctly", async function () {
+            const { cmAccountManager, cmAccount, services } = await loadFixture(
+                deployAndConfigureAllWithRegisteredServicesFixture,
+            );
+
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addWantedServices([services.serviceName1, services.serviceName2]),
+            )
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash1)
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(services.serviceHash2);
+
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .removeWantedServices([services.serviceName1, services.serviceName2]),
+            )
+                .to.emit(cmAccount, "WantedServiceRemoved")
+                .withArgs(services.serviceHash1)
+                .to.emit(cmAccount, "WantedServiceRemoved")
+                .withArgs(services.serviceHash2);
         });
 
         it("should revert removal if a wanted service does not exist", async function () {
@@ -378,7 +437,7 @@ describe("PartnerConfiguration", function () {
             );
 
             await expect(
-                cmAccount.connect(signers.cmServiceAdmin).removeWantedService(services.serviceName1),
+                cmAccount.connect(signers.cmServiceAdmin).removeWantedServices([services.serviceName1]),
             ).to.be.revertedWithCustomError(cmAccount, "WantedServiceDoesNotExist");
         });
 
@@ -387,15 +446,17 @@ describe("PartnerConfiguration", function () {
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName1))
+            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
                 .withArgs(services.serviceHash1);
 
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName2))
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addWantedServices([services.serviceName2, services.serviceName3]),
+            )
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash2);
-
-            await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedService(services.serviceName3))
+                .withArgs(services.serviceHash2)
                 .to.emit(cmAccount, "WantedServiceAdded")
                 .withArgs(services.serviceHash3);
 

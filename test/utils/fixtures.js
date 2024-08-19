@@ -242,6 +242,15 @@ async function deployAndConfigureAllWithRegisteredServicesFixture() {
     const serviceName3 = "cmp.service.accommodation.v3.AccommodationSearchService";
     const serviceHash3 = ethers.keccak256(ethers.toUtf8Bytes(serviceName3));
 
+    const serviceName4 = "cmp.service.accommodation.v4.AccommodationSearchService";
+    const serviceHash4 = ethers.keccak256(ethers.toUtf8Bytes(serviceName4));
+
+    const serviceName5 = "cmp.service.accommodation.v5.AccommodationSearchService";
+    const serviceHash5 = ethers.keccak256(ethers.toUtf8Bytes(serviceName5));
+
+    const serviceName6 = "cmp.service.accommodation.v6.AccommodationSearchService";
+    const serviceHash6 = ethers.keccak256(ethers.toUtf8Bytes(serviceName6));
+
     const services = {
         serviceName1,
         serviceHash1,
@@ -249,12 +258,21 @@ async function deployAndConfigureAllWithRegisteredServicesFixture() {
         serviceHash2,
         serviceName3,
         serviceHash3,
+        serviceName4,
+        serviceHash4,
+        serviceName5,
+        serviceHash5,
+        serviceName6,
+        serviceHash6,
     };
 
     // Register services
     await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName1);
     await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName2);
     await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName3);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName4);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName5);
+    await cmAccountManager.connect(signers.registryAdmin).registerService(serviceName6);
 
     // Get the SERVICE_ADMIN_ROLE
     const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
