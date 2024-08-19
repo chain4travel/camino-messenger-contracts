@@ -14,5 +14,5 @@ interface IBookingToken {
 
     function buyReservedToken(uint256 tokenId) external payable;
 
-    function getReservationPrice(uint256 tokenId) external view returns (uint256);
+    function getReservationPrice(uint256 tokenId) external view returns (uint256 price, IERC20 paymentToken);
 }

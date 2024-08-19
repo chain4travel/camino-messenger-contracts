@@ -184,6 +184,9 @@ describe("BookingToken", function () {
                     ethers.ZeroAddress, // zero address
                 );
 
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
             /***************************************************
              *                  DISTRIBUTOR                    *
              ***************************************************/
@@ -203,6 +206,9 @@ describe("BookingToken", function () {
 
             // Check balances
             await expect(buyTx).to.changeEtherBalances([supplierCMAccount, distributorCMAccount], [price, -price]);
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await distributorCMAccount.getAddress());
         });
         it("Native: should revert when trying to buy a booking token reserved for another CMAccount", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
@@ -229,7 +235,7 @@ describe("BookingToken", function () {
 
             await expect(
                 await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
-                    supplierCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    supplierCMAccount.getAddress(), // set reservedFor address to NOT distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price

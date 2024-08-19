@@ -132,6 +132,11 @@ contract BookingToken is
      */
     error TokenIsReserved(uint256 tokenId, address reservedFor);
 
+    /**
+     * @dev Insufficient allowance to transfer the ERC20 token to the supplier
+     */
+    error InsufficientAllowance(address sender, IERC20 paymentToken, uint256 price, uint256 allowance);
+
     /***************************************************
      *                  MODIFIERS                      *
      ***************************************************/
@@ -224,15 +229,33 @@ contract BookingToken is
             revert SupplierIsNotOwner(tokenId, reservation.supplier);
         }
 
-        // Check if we receive the right price
-        if (msg.value != reservation.price) {
-            revert IncorrectPrice(msg.value, reservation.price);
+        if (address(reservation.paymentToken) == address(0)) {
+            // Payment is in native currency
+            // Check if we receive the right price
+            if (msg.value != reservation.price) {
+                revert IncorrectPrice(msg.value, reservation.price);
+            }
+
+            // Transfer payment to the supplier
+            payable(reservation.supplier).sendValue(msg.value);
+        } else {
+            // Payment is in ERC20.
+            //
+            // Message sender (buyer of the Booking Token, generally the
+            // distributor) must provide enough allowance for this (BookingToken)
+            // contract to pay the reservation price for the token to the supplier.
+            uint256 allowance = reservation.paymentToken.allowance(msg.sender, address(this));
+            if (allowance < reservation.price) {
+                revert InsufficientAllowance(msg.sender, reservation.paymentToken, reservation.price, allowance);
+            }
+
+            // Transfer the ERC20 tokens from buyer to supplier
+            reservation.paymentToken.safeTransferFrom(msg.sender, reservation.supplier, reservation.price);
         }
 
-        // Transfer payment to the supplier
-        payable(reservation.supplier).sendValue(msg.value);
-
-        // Transfer the token
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
         _transfer(reservation.supplier, msg.sender, tokenId);
 
         // Delete the reservation
@@ -332,9 +355,9 @@ contract BookingToken is
     /**
      * @dev Get token reservation price for a specific token
      */
-    function getReservationPrice(uint256 tokenId) public view returns (uint256) {
+    function getReservationPrice(uint256 tokenId) public view returns (uint256 price, IERC20 paymentToken) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        return $._reservations[tokenId].price;
+        return ($._reservations[tokenId].price, $._reservations[tokenId].paymentToken);
     }
 
     /***************************************************

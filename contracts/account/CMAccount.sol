@@ -328,6 +328,7 @@ contract CMAccount is
      * @dev Buy booking token
      */
     function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
+        // TODO: Approve payment token
         _buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
@@ -343,7 +344,7 @@ contract CMAccount is
     /**
      * @dev Get the price of a booking token
      */
-    function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
+    function getTokenReservationPrice(uint256 tokenId) public view returns (uint256 price, IERC20 paymentToken) {
         return _getTokenReservationPrice(getBookingTokenAddress(), tokenId);
     }
 
