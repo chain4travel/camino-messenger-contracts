@@ -15,7 +15,7 @@ abstract contract GasMoneyManager is Initializable {
      ***************************************************/
 
     struct GasMoneyStorage {
-        mapping(address => uint256) _lastWithdrawalTime;
+        mapping(address => uint256) _withdrawalPeriodStart;
         mapping(address => uint256) _withdrawnAmount;
         uint256 _withdrawalLimit;
         uint256 _withdrawalPeriod;
@@ -73,13 +73,13 @@ abstract contract GasMoneyManager is Initializable {
 
         // Get timestamps
         uint256 currentTime = block.timestamp;
-        uint256 lastTime = $._lastWithdrawalTime[msg.sender];
+        uint256 withdrawalPeriodStart = $._withdrawalPeriodStart[msg.sender];
 
         // Reset the withdrawn amount if a new period has started. If more time then
         // the withdrawal period has passed, it is allowed to withdraw full amount.
-        if (currentTime > lastTime + withdrawalPeriod) {
+        if (currentTime > withdrawalPeriodStart + withdrawalPeriod) {
             $._withdrawnAmount[msg.sender] = 0;
-            $._lastWithdrawalTime[msg.sender] = currentTime;
+            $._withdrawalPeriodStart[msg.sender] = currentTime;
         }
 
         // Ensure the withdrawal does not exceed the allowed limit for the period
@@ -120,9 +120,9 @@ abstract contract GasMoneyManager is Initializable {
         return $._withdrawalPeriod;
     }
 
-    function getGasMoneyLastWithdrawalTime(address account) public view returns (uint256) {
+    function getGasMoneyWithdrawalPeriodStart(address account) public view returns (uint256) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._lastWithdrawalTime[account];
+        return $._withdrawalPeriodStart[account];
     }
 
     function getGasMoneyWithdrawnAmount(address account) public view returns (uint256) {
