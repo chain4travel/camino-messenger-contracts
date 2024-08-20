@@ -123,11 +123,6 @@ abstract contract ChequeManager is Initializable {
         uint256 developerFee
     );
 
-    /**
-     * @dev Last recorded amount and cheque's amount is the same. There is nothing to pay.
-     */
-    event NothingToPay();
-
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
@@ -266,14 +261,6 @@ abstract contract ChequeManager is Initializable {
         // Revert if the cheque amount is lower then the last recorded amount
         if (cheque.amount < lastCashIn.amount) {
             revert InvalidAmount(cheque.amount, lastCashIn.amount);
-        }
-
-        // If cheque amount is same as the last cashed in amount, there is nothing to pay.
-        // This might happen if the service is free of charge on Camino Messenger and cheque
-        // holder still wants to record the cheque on-chain.
-        if (cheque.amount == lastCashIn.amount) {
-            // There is nothing to pay but the cheque is still valid, so continue the process.
-            emit NothingToPay();
         }
 
         // Ensure the current cheque's counter is greater than the last recorded one
