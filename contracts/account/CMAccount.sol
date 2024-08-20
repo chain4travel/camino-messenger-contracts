@@ -44,6 +44,7 @@ contract CMAccount is
     GasMoneyManager
 {
     using Address for address payable;
+    using SafeERC20 for IERC20;
 
     /***************************************************
      *                    ROLES                        *
@@ -143,6 +144,11 @@ contract CMAccount is
      * @dev Error to revert with if the prefund is not spent yet
      */
     error PrefundNotSpentYet(uint256 withdrawableAmount, uint256 prefundLeft, uint256 amount);
+
+    /**
+     * @dev Error to revert if transfer to zero address
+     */
+    error TransferToZeroAddress();
 
     /***************************************************
      *         CONSTRUCTOR & INITIALIZATION            *
@@ -347,6 +353,22 @@ contract CMAccount is
     function getTokenReservationPrice(uint256 tokenId) public view returns (uint256 price, IERC20 paymentToken) {
         return _getTokenReservationPrice(getBookingTokenAddress(), tokenId);
     }
+
+    /***************************************************
+     *                ERC20 & ERC721                   *
+     ***************************************************/
+
+    function transferERC20(IERC20 token, address to, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+        token.safeTransfer(to, amount);
+    }
+
+    // function transferERC721(address token, address to, uint256 tokenId) public onlyRole(WITHDRAWER_ROLE) {
+    //     require(to != address(0), "Transfer to the zero address");
+    //     IERC721(token).safeTransferFrom(address(this), to, tokenId);
+    // }
 
     /***************************************************
      *                PARTNER CONFIG                   *
