@@ -358,9 +358,11 @@ contract CMAccount is
         token.safeTransfer(to, amount);
     }
 
-    function transferERC721(address token, address to, uint256 tokenId) external onlyRole(WITHDRAWER_ROLE) {
-        require(to != address(0), "Transfer to the zero address");
-        IERC721(token).safeTransferFrom(address(this), to, tokenId);
+    function transferERC721(IERC721 token, address to, uint256 tokenId) external onlyRole(WITHDRAWER_ROLE) {
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+        token.safeTransferFrom(address(this), to, tokenId);
     }
 
     /***************************************************
