@@ -318,6 +318,12 @@ contract CMAccount is
 
     /**
      * @dev Mint booking token
+     *
+     * @param reservedFor The account to reserve the token for
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The payment token, if address(0) then native
      */
     function mintBookingToken(
         address reservedFor,
@@ -334,7 +340,6 @@ contract CMAccount is
      * @dev Buy booking token
      */
     function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
-        // TODO: Approve payment token
         _buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 

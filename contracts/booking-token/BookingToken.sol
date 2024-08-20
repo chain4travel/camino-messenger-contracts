@@ -174,7 +174,13 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Mints a new token with a reservation for a specific address with an expiration timestamp
+     * @dev Mints a new token with a reservation for a specific address
+     *
+     * @param reservedFor The CM Account address that can buy the token
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
      */
     function safeMintWithReservation(
         address reservedFor,
