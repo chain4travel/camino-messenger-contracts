@@ -294,20 +294,20 @@ abstract contract ChequeManager is Initializable {
         }
 
         // Get the last cash-in details for the signer and `toBot`
-        LastCashIn memory lastCashIn = getLastCashIn(signer, toBot);
+        (uint256 lastAmount, uint256 lastCounter) = getLastCashInAmountAndCounter(signer, toBot);
 
         // Revert if the cheque amount is lower then the last recorded amount
-        if (amount < lastCashIn.amount) {
-            revert InvalidAmount(amount, lastCashIn.amount);
+        if (amount < lastAmount) {
+            revert InvalidAmount(amount, lastAmount);
         }
 
         // Ensure the current cheque's counter is greater than the last recorded one
-        if (counter <= lastCashIn.counter) {
-            revert InvalidCounter(counter, lastCashIn.counter);
+        if (counter <= lastCounter) {
+            revert InvalidCounter(counter, lastCounter);
         }
 
         // Everthing is valid. Calculate payment amount.
-        paymentAmount = amount - lastCashIn.amount;
+        paymentAmount = amount - lastAmount;
 
         // Emit event
         emit ChequeVerified(
@@ -367,7 +367,8 @@ abstract contract ChequeManager is Initializable {
         setLastCashIn(signer, toBot, counter, amount, createdAt, expiresAt);
 
         // Calculate developer fee
-        uint256 developerFee = calculateDeveloperFee(paymentAmount);
+        // For amounts lower then fee basis point, the developer fee is 0.
+        uint256 developerFee = (paymentAmount * getDeveloperFeeBp()) / 10000;
 
         // Subtract developer fee from payment amount
         uint256 chequePaymentAmount = paymentAmount - developerFee;
@@ -390,9 +391,12 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
      */
-    function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory cashIn) {
+    function getLastCashInAmountAndCounter(
+        address fromBot,
+        address toBot
+    ) public view returns (uint256 lastAmount, uint256 lastCounter) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        return $._lastCashIns[fromBot][toBot];
+        return ($._lastCashIns[fromBot][toBot].amount, $._lastCashIns[fromBot][toBot].counter);
     }
 
     /**
@@ -408,15 +412,6 @@ abstract contract ChequeManager is Initializable {
     ) internal {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         $._lastCashIns[fromBot][toBot] = LastCashIn(counter, amount, createdAt, expiresAt);
-    }
-
-    /**
-     * @dev Calculates the developer fee for a given amount.
-     *
-     * For amounts lower then fee basis point, the developer fee is 0.
-     */
-    function calculateDeveloperFee(uint256 amount) public view returns (uint256) {
-        return (amount * getDeveloperFeeBp()) / 10000;
     }
 
     /**
