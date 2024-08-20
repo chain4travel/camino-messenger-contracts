@@ -188,18 +188,26 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Returns the hash of the `MessengerCheque` encoded with `MESSENGER_CHEQUE_TYPEHASH`.
      */
-    function hashMessengerCheque(MessengerCheque memory cheque) public pure returns (bytes32) {
+    function hashMessengerCheque(
+        address fromCMAccount,
+        address toCMAccount,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt
+    ) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     MESSENGER_CHEQUE_TYPEHASH,
-                    cheque.fromCMAccount,
-                    cheque.toCMAccount,
-                    cheque.toBot,
-                    cheque.counter,
-                    cheque.amount,
-                    cheque.createdAt,
-                    cheque.expiresAt
+                    fromCMAccount,
+                    toCMAccount,
+                    toBot,
+                    counter,
+                    amount,
+                    createdAt,
+                    expiresAt
                 )
             );
     }
@@ -207,15 +215,39 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Return hash of the typed data (cheque) with prefix and domain separator.
      */
-    function hashTypedDataV4(MessengerCheque memory cheque) public view returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), hashMessengerCheque(cheque)));
+    function hashTypedDataV4(
+        address fromCMAccount,
+        address toCMAccount,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt
+    ) public view returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    getDomainSeparator(),
+                    hashMessengerCheque(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt)
+                )
+            );
     }
 
     /**
      * @dev Return signer for the given cheque and signature
      */
-    function recoverSigner(MessengerCheque memory cheque, bytes memory signature) public view returns (address signer) {
-        bytes32 digest = hashTypedDataV4(cheque);
+    function recoverSigner(
+        address fromCMAccount,
+        address toCMAccount,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt,
+        bytes memory signature
+    ) public view returns (address signer) {
+        bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
         signer = digest.recover(signature);
         return signer;
     }
@@ -227,27 +259,33 @@ abstract contract ChequeManager is Initializable {
      * Please be aware that `cheque.amount <
      */
     function verifyCheque(
-        MessengerCheque memory cheque,
+        address fromCMAccount,
+        address toCMAccount,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt,
         bytes memory signature
     ) public returns (address signer, uint256 paymentAmount) {
         // Revert if cheque is not for this contract
-        if (cheque.fromCMAccount != address(this)) {
-            revert InvalidFromCMAccount(cheque.fromCMAccount);
+        if (fromCMAccount != address(this)) {
+            revert InvalidFromCMAccount(fromCMAccount);
         }
 
         // Revert if cheque payee is not a CM account
-        if (!isCMAccount(cheque.toCMAccount)) {
-            revert InvalidToCMAccount(cheque.toCMAccount);
+        if (!isCMAccount(toCMAccount)) {
+            revert InvalidToCMAccount(toCMAccount);
         }
 
         // Revert if the cheque is expired
-        if (block.timestamp >= cheque.expiresAt) {
-            revert ChequeExpired(cheque.expiresAt);
+        if (block.timestamp >= expiresAt) {
+            revert ChequeExpired(expiresAt);
         }
 
         // Recover the signer from the signature. If the signature is invalid, this
         // will recover different signer address.
-        bytes32 digest = hashTypedDataV4(cheque);
+        bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
         signer = digest.recover(signature);
 
         // Check if the signer is an allowed bot.
@@ -256,29 +294,29 @@ abstract contract ChequeManager is Initializable {
         }
 
         // Get the last cash-in details for the signer and `toBot`
-        LastCashIn memory lastCashIn = getLastCashIn(signer, cheque.toBot);
+        LastCashIn memory lastCashIn = getLastCashIn(signer, toBot);
 
         // Revert if the cheque amount is lower then the last recorded amount
-        if (cheque.amount < lastCashIn.amount) {
-            revert InvalidAmount(cheque.amount, lastCashIn.amount);
+        if (amount < lastCashIn.amount) {
+            revert InvalidAmount(amount, lastCashIn.amount);
         }
 
         // Ensure the current cheque's counter is greater than the last recorded one
-        if (cheque.counter <= lastCashIn.counter) {
-            revert InvalidCounter(cheque.counter, lastCashIn.counter);
+        if (counter <= lastCashIn.counter) {
+            revert InvalidCounter(counter, lastCashIn.counter);
         }
 
         // Everthing is valid. Calculate payment amount.
-        paymentAmount = cheque.amount - lastCashIn.amount;
+        paymentAmount = amount - lastCashIn.amount;
 
         // Emit event
         emit ChequeVerified(
-            cheque.fromCMAccount,
-            cheque.toCMAccount,
+            fromCMAccount,
+            toCMAccount,
             signer, // fromBot
-            cheque.toBot,
-            cheque.counter,
-            cheque.amount,
+            toBot,
+            counter,
+            amount,
             paymentAmount
         );
 
@@ -290,17 +328,43 @@ abstract contract ChequeManager is Initializable {
      * and the last recorded amount for the signer and `toBot` pair.
      *
      * A percentage of the amount is also paid to the developer wallet.
+     * 
+     *         address fromCMAccount; // CM Account that will pay the amount
+        address toCMAccount; // CM Account that will receive the amount
+        address toBot; // The address of the bot that receives the cheque
+        uint256 counter; // This should be increased with every cheque
+        uint256 amount; // The amount to be transferred
+        uint256 createdAt; // Creation timestamp of the cheque
+        uint256 expiresAt; // Expiration timestamp of the cheque
      */
-    function cashInCheque(MessengerCheque memory cheque, bytes memory signature) public {
+    function cashInCheque(
+        address fromCMAccount,
+        address toCMAccount,
+        address toBot,
+        uint256 counter,
+        uint256 amount,
+        uint256 createdAt,
+        uint256 expiresAt,
+        bytes memory signature
+    ) public {
         // Authorize cheque cash in
-        _authorizeChequeCashIn(cheque, signature);
+        //_authorizeChequeCashIn(cheque, signature);
 
         // Verify the cheque and get the signer and payment amount
-        (address signer, uint256 paymentAmount) = verifyCheque(cheque, signature);
+        (address signer, uint256 paymentAmount) = verifyCheque(
+            fromCMAccount,
+            toCMAccount,
+            toBot,
+            counter,
+            amount,
+            createdAt,
+            expiresAt,
+            signature
+        );
 
         // If we didn't revert in the verifyCheque above, the cheque is valid.
         // Update the last cash ins.
-        setLastCashIn(signer, cheque.toBot, cheque.counter, cheque.amount, cheque.createdAt, cheque.expiresAt);
+        setLastCashIn(signer, toBot, counter, amount, createdAt, expiresAt);
 
         // Calculate developer fee
         uint256 developerFee = calculateDeveloperFee(paymentAmount);
@@ -312,15 +376,15 @@ abstract contract ChequeManager is Initializable {
         payable(getDeveloperWallet()).sendValue(developerFee);
 
         // Transfer the cheque payment amount to the `toCMAccount`
-        payable(cheque.toCMAccount).sendValue(chequePaymentAmount);
+        payable(toCMAccount).sendValue(chequePaymentAmount);
 
         // Update total cheque payments excluding cheques to the same account
-        if (cheque.fromCMAccount != cheque.toCMAccount) {
+        if (fromCMAccount != toCMAccount) {
             addToTotalChequePayments(paymentAmount);
         }
 
         // Emit cash-in event
-        emit ChequeCashedIn(signer, cheque.toBot, cheque.counter, chequePaymentAmount, developerFee);
+        emit ChequeCashedIn(signer, toBot, counter, chequePaymentAmount, developerFee);
     }
 
     /**

@@ -74,7 +74,15 @@ describe("ChequeManager", function () {
 
             const calculatedHash = calculateMessengerChequeHash(cheque);
 
-            const hashFromContract = await cmAccount.hashMessengerCheque(cheque);
+            const hashFromContract = await cmAccount.hashMessengerCheque(
+                cheque.fromCMAccount,
+                cheque.toCMAccount,
+                cheque.toBot,
+                cheque.counter,
+                cheque.amount,
+                cheque.createdAt,
+                cheque.expiresAt,
+            );
 
             expect(hashFromContract).to.be.equal(calculatedHash);
         });
@@ -102,7 +110,15 @@ describe("ChequeManager", function () {
             const calculatedTypedDataHash = calculateTypedDataHash(cheque, calculatedDomainSeparator);
 
             // Get typedDataHash from contract
-            const typedDataHashFromContract = await cmAccount.hashTypedDataV4(cheque);
+            const typedDataHashFromContract = await cmAccount.hashTypedDataV4(
+                cheque.fromCMAccount,
+                cheque.toCMAccount,
+                cheque.toBot,
+                cheque.counter,
+                cheque.amount,
+                cheque.createdAt,
+                cheque.expiresAt,
+            );
 
             // Assert that the calculated typedDataHash is equal to the typedDataHash from contract
             expect(typedDataHashFromContract).to.be.equal(calculatedTypedDataHash);
@@ -154,7 +170,16 @@ describe("ChequeManager", function () {
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
 
             // Verify cheque
-            const verifyResponse = await cmAccount.verifyCheque(cheque, signature);
+            const verifyResponse = await cmAccount.verifyCheque(
+                cheque.fromCMAccount,
+                cheque.toCMAccount,
+                cheque.toBot,
+                cheque.counter,
+                cheque.amount,
+                cheque.createdAt,
+                cheque.expiresAt,
+                signature,
+            );
 
             // Should emit ChequeVerified event with correct data
             await expect(await verifyResponse)
@@ -220,7 +245,18 @@ describe("ChequeManager", function () {
             // Verify cheque, should revert and have the wrong address in the event
             // Because invalid signatures return a different address, we used a predicate to verify that
             // it's not the expected signer.
-            await expect(cmAccount.verifyCheque(cheque, signature))
+            await expect(
+                cmAccount.verifyCheque(
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount,
+                    cheque.createdAt,
+                    cheque.expiresAt,
+                    signature,
+                ),
+            )
                 .to.be.revertedWithCustomError(cmAccount, "NotAllowedToSignCheques")
                 .withArgs((addr) => addr !== signers.chequeOperator.address);
         });
@@ -268,7 +304,18 @@ describe("ChequeManager", function () {
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
 
             // Verify cheque, should revert
-            await expect(cmAccount.verifyCheque(cheque, signature))
+            await expect(
+                cmAccount.verifyCheque(
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount,
+                    cheque.createdAt,
+                    cheque.expiresAt,
+                    signature,
+                ),
+            )
                 .to.be.revertedWithCustomError(cmAccount, "NotAllowedToSignCheques")
                 .withArgs(signers.chequeOperator.address);
         });
@@ -320,7 +367,18 @@ describe("ChequeManager", function () {
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
 
             // Verify cheque, should revert with ChequeExpired
-            await expect(cmAccount.verifyCheque(cheque, signature))
+            await expect(
+                cmAccount.verifyCheque(
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount,
+                    cheque.createdAt,
+                    cheque.expiresAt,
+                    signature,
+                ),
+            )
                 .to.be.revertedWithCustomError(cmAccount, "ChequeExpired")
                 .withArgs(expiresAt);
         });
@@ -373,7 +431,16 @@ describe("ChequeManager", function () {
             const developerFee = await cmAccount.calculateDeveloperFee(cheque.amount);
 
             // Cash-in cheque
-            const cashInResponse = await cmAccount.cashInCheque(cheque, signature);
+            const cashInResponse = await cmAccount.cashInCheque(
+                cheque.fromCMAccount,
+                cheque.toCMAccount,
+                cheque.toBot,
+                cheque.counter,
+                cheque.amount,
+                cheque.createdAt,
+                cheque.expiresAt,
+                signature,
+            );
 
             // CMAccount balance should decrease by cheque amount (developer fee cut is taken from the cheque amount)
             await expect(await cashInResponse).to.changeEtherBalance(cmAccount, -cheque.amount);
@@ -426,7 +493,16 @@ describe("ChequeManager", function () {
             const developerFee2 = await cmAccount.calculateDeveloperFee(cheque2.amount - cheque.amount);
 
             // Cash-in cheque
-            const cashInResponse2 = await cmAccount.cashInCheque(cheque2, signature2);
+            const cashInResponse2 = await cmAccount.cashInCheque(
+                cheque2.fromCMAccount,
+                cheque2.toCMAccount,
+                cheque2.toBot,
+                cheque2.counter,
+                cheque2.amount,
+                cheque2.createdAt,
+                cheque2.expiresAt,
+                signature2,
+            );
 
             // CMAccount balance descrease by (cheque2 amount - cheque amount)
             await expect(await cashInResponse2).to.changeEtherBalance(
@@ -493,7 +569,16 @@ describe("ChequeManager", function () {
             expect(await cmAccount.getTotalChequePayments()).to.be.equal(0n);
 
             // Cash-in cheque
-            const cashInResponse = await cmAccount.cashInCheque(cheque, signature);
+            const cashInResponse = await cmAccount.cashInCheque(
+                cheque.fromCMAccount,
+                cheque.toCMAccount,
+                cheque.toBot,
+                cheque.counter,
+                cheque.amount,
+                cheque.createdAt,
+                cheque.expiresAt,
+                signature,
+            );
             await expect(cashInResponse).to.be.not.reverted;
 
             // After cash-in total cheque payments should still be zero because the
