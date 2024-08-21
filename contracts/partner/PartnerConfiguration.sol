@@ -446,25 +446,43 @@ abstract contract PartnerConfiguration is Initializable {
         emit PublicKeyRemoved(pubKeyAddress);
     }
 
-    /**
-     * @dev Return all public keys
-     */
-    function getPublicKeys()
-        public
-        view
-        virtual
-        returns (address[] memory pubKeyAddresses, PublicKey[] memory publicKeys)
-    {
+    // Size Impact: -0.156 (Compared to the getPublicKeys below with a loop)
+    function getPublicKeysAddresses() public view virtual returns (address[] memory pubKeyAddresses) {
+        PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+        return $._publicKeyAddressesSet.values();
+    }
+
+    function getPublicKey(address pubKeyAddress) public view virtual returns (uint8 use, bytes memory data) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
-        address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
-
-        PublicKey[] memory _publicKeys = new PublicKey[](_pubKeyAddresses.length);
-        for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
-            _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
+        if (!$._publicKeyAddressesSet.contains(pubKeyAddress)) {
+            revert PublicKeyDoesNotExist(pubKeyAddress);
         }
 
-        // return addresses and public keys
-        return (_pubKeyAddresses, _publicKeys);
+        return (uint8($._publicKeys[pubKeyAddress]._use), $._publicKeys[pubKeyAddress]._data);
     }
+
+    /**
+     * @dev Return all public keys
+     *
+     * Size Impact: +0.650
+     */
+    // function getPublicKeys()
+    //     public
+    //     view
+    //     virtual
+    //     returns (address[] memory pubKeyAddresses, PublicKey[] memory publicKeys)
+    // {
+    //     PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
+
+    //     address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
+
+    //     PublicKey[] memory _publicKeys = new PublicKey[](_pubKeyAddresses.length);
+    //     for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
+    //         _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
+    //     }
+
+    //     // return addresses and public keys
+    //     return (_pubKeyAddresses, _publicKeys);
+    // }
 }

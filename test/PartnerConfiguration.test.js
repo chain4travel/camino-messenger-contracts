@@ -543,8 +543,8 @@ describe("PartnerConfiguration", function () {
                 .withArgs(addr);
 
             // Get public keys and check if they are correct, should include only addr and pubkey
-            const publicKeys = await cmAccount.getPublicKeys();
-            expect(publicKeys).to.be.deep.equal([[addr], [[publicKeyUse, pubkey]]]);
+            const publicKeys = await cmAccount.getPublicKey(addr);
+            expect(publicKeys).to.be.deep.equal([publicKeyUse, pubkey]);
         });
 
         it("should remove a public key correctly", async function () {
@@ -569,8 +569,9 @@ describe("PartnerConfiguration", function () {
                 .withArgs(addr);
 
             // Get public keys, it should be a array of two empty arrays
-            const publicKeys = await cmAccount.getPublicKeys();
-            expect(publicKeys).to.be.deep.equal([[], []]);
+            await expect(cmAccount.getPublicKey(addr))
+                .to.be.revertedWithCustomError(cmAccount, "PublicKeyDoesNotExist")
+                .withArgs(addr);
         });
 
         it("should get public keys correctly", async function () {
@@ -601,14 +602,10 @@ describe("PartnerConfiguration", function () {
                 .withArgs(addr2);
 
             // Get public keys
-            const publicKeys = await cmAccount.getPublicKeys();
-            expect(publicKeys).to.be.deep.equal([
-                [addr1, addr2],
-                [
-                    [publicKeyUse, pubkey1],
-                    [publicKeyUse, pubkey2],
-                ],
-            ]);
+            const publicKeys = await cmAccount.getPublicKey(addr1);
+            expect(publicKeys).to.be.deep.equal([publicKeyUse, pubkey1]);
+            const publicKeys2 = await cmAccount.getPublicKey(addr2);
+            expect(publicKeys2).to.be.deep.equal([publicKeyUse, pubkey2]);
         });
 
         it("should revert when adding the same public key", async function () {
