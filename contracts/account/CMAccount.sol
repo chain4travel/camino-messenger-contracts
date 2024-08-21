@@ -196,7 +196,7 @@ contract CMAccount is
      *                    Getters                      *
      ***************************************************/
 
-    function getManagerAddress() public view returns (address) {
+    function getManagerAddress() public view override returns (address) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._manager;
     }
@@ -250,28 +250,28 @@ contract CMAccount is
         return hasRole(CHEQUE_OPERATOR_ROLE, bot);
     }
 
-    /**
-     * @dev Return true if address is a registered CMAccount on the CMAccountManager
-     */
-    function isCMAccount(address account) internal view override returns (bool) {
-        return ICMAccountManager(getManagerAddress()).isCMAccount(account);
-    }
+    // /**
+    //  * @dev Return true if address is a registered CMAccount on the CMAccountManager
+    //  */
+    // function isCMAccount(address account) internal view override returns (bool) {
+    //     return ICMAccountManager(getManagerAddress()).isCMAccount(account);
+    // }
 
-    /**
-     * @dev Return developer wallet address
-     */
-    function getDeveloperWallet() public view override returns (address) {
-        address developerWallet = ICMAccountManager(getManagerAddress()).getDeveloperWallet();
-        return developerWallet;
-    }
+    // /**
+    //  * @dev Return developer wallet address
+    //  */
+    // function getDeveloperWallet() public view override returns (address) {
+    //     address developerWallet = ICMAccountManager(getManagerAddress()).getDeveloperWallet();
+    //     return developerWallet;
+    // }
 
     /**
      * @dev Return developer fee in basis points
      */
-    function getDeveloperFeeBp() public view override returns (uint256) {
-        uint256 developerFeeBp = ICMAccountManager(getManagerAddress()).getDeveloperFeeBp();
-        return developerFeeBp;
-    }
+    // function getDeveloperFeeBp() public view override returns (uint256) {
+    //     uint256 developerFeeBp = ICMAccountManager(getManagerAddress()).getDeveloperFeeBp();
+    //     return developerFeeBp;
+    // }
 
     /**
      * @dev Verifies if the amount is withdrawable by checking if prefund is spent

@@ -8,6 +8,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+// Manager Interface
+import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
+
 /**
  * @dev ChequeManager manages, verifies, and cashes in messenger cheques.
  *
@@ -278,7 +281,7 @@ abstract contract ChequeManager is Initializable {
         }
 
         // Revert if cheque payee is not a CM account
-        if (!isCMAccount(toCMAccount)) {
+        if (!ICMAccountManager(getManagerAddress()).isCMAccount(toCMAccount)) {
             revert InvalidToCMAccount(toCMAccount);
         }
 
@@ -380,13 +383,13 @@ abstract contract ChequeManager is Initializable {
 
         // Calculate developer fee
         // For amounts lower then fee basis point, the developer fee is 0.
-        uint256 developerFee = (paymentAmount * getDeveloperFeeBp()) / 10000;
+        uint256 developerFee = (paymentAmount * ICMAccountManager(getManagerAddress()).getDeveloperFeeBp()) / 10000;
 
         // Subtract developer fee from payment amount
         uint256 chequePaymentAmount = paymentAmount - developerFee;
 
         // Transfer developer fee to the developer wallet
-        payable(getDeveloperWallet()).sendValue(developerFee);
+        payable(ICMAccountManager(getManagerAddress()).getDeveloperWallet()).sendValue(developerFee);
 
         // Transfer the cheque payment amount to the `toCMAccount`
         payable(toCMAccount).sendValue(chequePaymentAmount);
@@ -400,6 +403,11 @@ abstract contract ChequeManager is Initializable {
         // Emit cash-in event
         emit ChequeCashedIn(signer, toBot, counter, chequePaymentAmount, developerFee);
     }
+
+    // function getManagerAddress() public view returns (address) {
+    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
+    //     return $._manager;
+    // }
 
     /**
      * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
@@ -480,13 +488,13 @@ abstract contract ChequeManager is Initializable {
      * @dev Abstract function to check if an address is a Camino Messenger account. This must be
      * implemented by the inheriting contract.
      */
-    function isCMAccount(address account) internal view virtual returns (bool);
+    //function isCMAccount(address account) internal view virtual returns (bool);
 
     /**
      * @dev Abstract function to get the developer wallet. This must be implemented by the inheriting
      * contract.
      */
-    function getDeveloperWallet() public view virtual returns (address developerWallet);
+    //function getDeveloperWallet() public view virtual returns (address developerWallet);
 
     /**
      * @dev Abstract function to get the developer fee in basis points. This must be implemented by
@@ -498,5 +506,7 @@ abstract contract ChequeManager is Initializable {
      * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
      * 100 bp = 1%, ⁠1/100⁠, or 0.01.
      */
-    function getDeveloperFeeBp() public view virtual returns (uint256 developerFee);
+    //function getDeveloperFeeBp() public view virtual returns (uint256 developerFee);
+
+    function getManagerAddress() public view virtual returns (address);
 }
