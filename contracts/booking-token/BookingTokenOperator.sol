@@ -42,24 +42,4 @@ library BookingTokenOperator {
             IBookingToken(bookingToken).buyReservedToken(tokenId);
         }
     }
-
-    /**
-     * @dev Mint a booking token
-     *
-     * This function should be overridden by the implementation
-     */
-    // function mintBookingToken(
-    //     address reservedFor,
-    //     string memory uri,
-    //     uint256 expirationTimestamp,
-    //     uint256 price,
-    //     IERC20 paymentToken
-    // ) external;
-
-    /**
-     * @dev Buy a booking token
-     *
-     * This function should be overridden by the implementation
-     */
-    //function buyBookingToken(uint256 tokenId) external virtual;
 }

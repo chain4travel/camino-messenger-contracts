@@ -394,23 +394,9 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Check if valid public key use enum
-     *
-     * This needs to be updated when new enums are added
-     */
-    // function _isValidPublicKeyUse(uint8 use) internal virtual returns (bool) {
-    //     return use < uint(PublicKeyUseType.EncryptPrivateData) + 1;
-    // }
-
-    /**
      * @dev Add public key with an address
      */
     function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData) internal virtual {
-        // Check if {use} is valid enum and revert early if not
-        // if (!_isValidPublicKeyUse(use)) {
-        //     revert InvalidPublicKeyUseType(use);
-        // }
-
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         bool added = $._publicKeyAddressesSet.add(pubKeyAddress);
@@ -419,7 +405,6 @@ abstract contract PartnerConfiguration is Initializable {
             revert PublicKeyAlreadyExists(pubKeyAddress);
         }
 
-        // $._publicKeys[pubKeyAddress] = PublicKey(PublicKeyUseType(use), publicKeyData);
         $._publicKeys[pubKeyAddress] = publicKeyData;
 
         emit PublicKeyAdded(pubKeyAddress);
@@ -441,12 +426,17 @@ abstract contract PartnerConfiguration is Initializable {
         emit PublicKeyRemoved(pubKeyAddress);
     }
 
-    // Size Impact: -0.156 (Compared to the getPublicKeys below with a loop)
+    /**
+     * @dev Return addresses of all public keys
+     */
     function getPublicKeysAddresses() public view virtual returns (address[] memory pubKeyAddresses) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         return $._publicKeyAddressesSet.values();
     }
 
+    /**
+     * @dev Return public key data for a given address
+     */
     function getPublicKey(address pubKeyAddress) public view virtual returns (bytes memory data) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -456,24 +446,4 @@ abstract contract PartnerConfiguration is Initializable {
 
         return $._publicKeys[pubKeyAddress];
     }
-
-    /**
-     * @dev Return all public keys
-     *
-     * Size Impact: +0.650
-     */
-    // function getPublicKeys() public view virtual returns (address[] memory pubKeyAddresses, bytes[] memory publicKeys) {
-    //     PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
-
-    //     address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
-
-    //     bytes[] memory _publicKeys = new bytes[](_pubKeyAddresses.length);
-
-    //     for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
-    //         _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
-    //     }
-
-    //     // return addresses and public keys
-    //     return (_pubKeyAddresses, _publicKeys);
-    // }
 }

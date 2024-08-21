@@ -245,34 +245,11 @@ contract CMAccount is
     }
 
     /**
-     * @dev Returns true if an address is authorized bot
+     * @dev Returns true if an address is authorized to sign cheques
      */
     function isBotAllowed(address bot) public view override returns (bool) {
         return hasRole(CHEQUE_OPERATOR_ROLE, bot);
     }
-
-    // /**
-    //  * @dev Return true if address is a registered CMAccount on the CMAccountManager
-    //  */
-    // function isCMAccount(address account) internal view override returns (bool) {
-    //     return ICMAccountManager(getManagerAddress()).isCMAccount(account);
-    // }
-
-    // /**
-    //  * @dev Return developer wallet address
-    //  */
-    // function getDeveloperWallet() public view override returns (address) {
-    //     address developerWallet = ICMAccountManager(getManagerAddress()).getDeveloperWallet();
-    //     return developerWallet;
-    // }
-
-    /**
-     * @dev Return developer fee in basis points
-     */
-    // function getDeveloperFeeBp() public view override returns (uint256) {
-    //     uint256 developerFeeBp = ICMAccountManager(getManagerAddress()).getDeveloperFeeBp();
-    //     return developerFeeBp;
-    // }
 
     /**
      * @dev Verifies if the amount is withdrawable by checking if prefund is spent
@@ -400,7 +377,6 @@ contract CMAccount is
         bool restrictedRate,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        // Check if the service is registered. This function reverts if the service is not registered
         _addService(getServiceHash(serviceName), fee, capabilities, restrictedRate);
     }
 
@@ -466,7 +442,10 @@ contract CMAccount is
         _removeServiceCapability(getServiceHash(serviceName), capability);
     }
 
-    // Size Impact:   ********************
+    /**
+     * @dev Get service hash by name. Returns the keccak256 hash of the service name
+     * from the account manager
+     */
     function getServiceHash(string memory serviceName) private view returns (bytes32 serviceHash) {
         return ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
     }
@@ -588,21 +567,9 @@ contract CMAccount is
      *                MESSENGER BOTS                   *
      ***************************************************/
 
-    // FIXME: Should we allow all bots to be able to mint booking tokens?
-    // TODO: Create tests for this
-
     /**
-     * @dev Add messenger bot
+     * @dev Add messenger bot with initial gas money
      */
-    // function addMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
-    //     // Grant roles to bot
-    //     _grantRole(CHEQUE_OPERATOR_ROLE, bot);
-    //     _grantRole(BOOKING_OPERATOR_ROLE, bot);
-    //     _grantRole(GAS_WITHDRAWER_ROLE, bot);
-
-    //     emit MessengerBotAdded(bot);
-    // }
-
     function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
         // Check if we can spend the gasMoney to send it to the bot
         _checkPrefundSpent(gasMoney);
@@ -618,6 +585,9 @@ contract CMAccount is
         payable(bot).sendValue(gasMoney);
     }
 
+    /**
+     * @dev Remove messenger bot
+     */
     function removeMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
         _revokeRole(CHEQUE_OPERATOR_ROLE, bot);
         _revokeRole(BOOKING_OPERATOR_ROLE, bot);
@@ -631,14 +601,11 @@ contract CMAccount is
      ***************************************************/
 
     function withdrawGasMoney(uint256 amount) public onlyRole(GAS_WITHDRAWER_ROLE) {
+        _checkPrefundSpent(amount);
         _withdrawGasMoney(amount);
     }
 
     function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
         _setGasMoneyWithdrawal(limit, period);
     }
-
-    // function setGasMoneyWithdrawalPeriod(uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
-    //     _setGasMoneyWithdrawalPeriod(period);
-    // }
 }

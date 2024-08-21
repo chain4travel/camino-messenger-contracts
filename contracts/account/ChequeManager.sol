@@ -181,10 +181,6 @@ abstract contract ChequeManager is Initializable {
         $._domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
         );
-
-        // Size Impact: -0.115 (but this makes it chain specific)
-        //keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid));
-        //$._domainSeparator = 0x792acc3adab7297918d2cdaeb59ac5f091943a65aba244c580164ec2ec307451;
     }
 
     function getDomainSeparator() public view returns (bytes32) {
@@ -290,23 +286,13 @@ abstract contract ChequeManager is Initializable {
             revert ChequeExpired(expiresAt);
         }
 
-        // Recover the signer from the signature. If the signature is invalid, this
-        // will recover different signer address.
-        // bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
-        // signer = digest.recover(signature);
-
+        // Recover signer
         signer = recoverSigner(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt, signature);
 
         // Check if the signer is an allowed bot.
         if (!isBotAllowed(signer)) {
             revert NotAllowedToSignCheques(signer);
         }
-
-        // Get the last cash-in details for the signer and `toBot`
-        // (uint256 lastCounter, uint256 lastAmount, uint256 lastCreatedAt, uint256 lastExpiresAt) = getLastCashIn(
-        //     signer,
-        //     toBot
-        // );
 
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         LastCashIn storage lastCashIn = $._lastCashIns[signer][toBot];
@@ -343,14 +329,6 @@ abstract contract ChequeManager is Initializable {
      * and the last recorded amount for the signer and `toBot` pair.
      *
      * A percentage of the amount is also paid to the developer wallet.
-     * 
-     *         address fromCMAccount; // CM Account that will pay the amount
-        address toCMAccount; // CM Account that will receive the amount
-        address toBot; // The address of the bot that receives the cheque
-        uint256 counter; // This should be increased with every cheque
-        uint256 amount; // The amount to be transferred
-        uint256 createdAt; // Creation timestamp of the cheque
-        uint256 expiresAt; // Expiration timestamp of the cheque
      */
     function cashInCheque(
         address fromCMAccount,
@@ -362,9 +340,6 @@ abstract contract ChequeManager is Initializable {
         uint256 expiresAt,
         bytes memory signature
     ) public {
-        // Authorize cheque cash in
-        //_authorizeChequeCashIn(cheque, signature);
-
         // Verify the cheque and get the signer and payment amount
         (address signer, uint256 paymentAmount) = verifyCheque(
             fromCMAccount,
@@ -404,22 +379,9 @@ abstract contract ChequeManager is Initializable {
         emit ChequeCashedIn(signer, toBot, counter, chequePaymentAmount, developerFee);
     }
 
-    // function getManagerAddress() public view returns (address) {
-    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
-    //     return $._manager;
-    // }
-
     /**
-     * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
-     *
-     * Size Impact: +0.277
+     * @dev Returns last cash-in details for given `fromBot` & `toBot` pair.
      */
-    // function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory lastCashIn) {
-    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
-    //     return $._lastCashIns[fromBot][toBot];
-    // }
-
-    // Size Impact: -0.074 (Compared to using the one above)
     function getLastCashIn(
         address fromBot,
         address toBot
@@ -460,23 +422,9 @@ abstract contract ChequeManager is Initializable {
         $._totalChequePayments = totalChequePayments;
     }
 
-    /**
-     * @dev Adds to total cheque payments
-     */
-    // function addToTotalChequePayments(uint256 amount) internal {
-    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
-    //     $._totalChequePayments += amount;
-    // }
-
     /***************************************************
      *                   ABSTRACT                      *
      ***************************************************/
-
-    /**
-     * @dev Function that should revert when `msg.sender` is not authorized to cash-in the cheque.
-     * Called by {cashInCheque}.
-     */
-    function _authorizeChequeCashIn(MessengerCheque memory cheque, bytes memory signature) internal virtual {}
 
     /**
      * @dev Abstract function to check if a bot is allowed to sign cheques. This must be implemented
@@ -485,28 +433,8 @@ abstract contract ChequeManager is Initializable {
     function isBotAllowed(address bot) public view virtual returns (bool);
 
     /**
-     * @dev Abstract function to check if an address is a Camino Messenger account. This must be
-     * implemented by the inheriting contract.
+     * @dev Abstract function to get the manager address. This must be implemented
+     * by the inheriting contract.
      */
-    //function isCMAccount(address account) internal view virtual returns (bool);
-
-    /**
-     * @dev Abstract function to get the developer wallet. This must be implemented by the inheriting
-     * contract.
-     */
-    //function getDeveloperWallet() public view virtual returns (address developerWallet);
-
-    /**
-     * @dev Abstract function to get the developer fee in basis points. This must be implemented by
-     * the inheriting contract.
-     *
-     * A basis point (bp) is one hundredth of 1 percentage point.
-     *
-     * 1 bp = 0.01%, 1/10,000⁠, or 0.0001.
-     * 10 bp = 0.1%, 1/1,000⁠, or 0.001.
-     * 100 bp = 1%, ⁠1/100⁠, or 0.01.
-     */
-    //function getDeveloperFeeBp() public view virtual returns (uint256 developerFee);
-
     function getManagerAddress() public view virtual returns (address);
 }

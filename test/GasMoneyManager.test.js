@@ -57,6 +57,17 @@ describe("GasMoneyManager", function () {
 
             const withdrawer = signers.withdrawer;
 
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             // Register withdrawer as a bot
             await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
@@ -77,6 +88,17 @@ describe("GasMoneyManager", function () {
 
             const withdrawer = signers.withdrawer;
 
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             // Do not add withdrawer as a bot.
 
             // Withdraw
@@ -91,6 +113,18 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
@@ -110,6 +144,18 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
@@ -151,6 +197,18 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
