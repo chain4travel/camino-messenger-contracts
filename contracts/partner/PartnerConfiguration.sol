@@ -124,11 +124,13 @@ abstract contract PartnerConfiguration is Initializable {
 
     /**
      * @dev Adds a supported Service object for a given hash.
-     *
-     * @param serviceHash Hash of the service
-     * @param service Service object
      */
-    function _addService(bytes32 serviceHash, Service memory service) internal virtual {
+    function _addService(
+        bytes32 serviceHash,
+        uint256 fee,
+        string[] memory capabilities,
+        bool restrictedRate
+    ) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Try to add the service to the services hash set
@@ -136,7 +138,11 @@ abstract contract PartnerConfiguration is Initializable {
         if (!added) {
             revert ServiceAlreadyExists(serviceHash);
         }
-        $._supportedServices[serviceHash] = service;
+        $._supportedServices[serviceHash] = Service({
+            _fee: fee,
+            _capabilities: capabilities,
+            _restrictedRate: restrictedRate
+        });
 
         emit ServiceAdded(serviceHash);
     }

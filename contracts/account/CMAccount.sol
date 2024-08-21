@@ -393,20 +393,14 @@ contract CMAccount is
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         // Check if the service is registered. This function reverts if the service is not registered
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-
-        // Create the service object
-        Service memory service = Service({ _fee: fee, _capabilities: capabilities, _restrictedRate: restrictedRate });
-
-        _addService(serviceHash, service);
+        _addService(getServiceHash(serviceName), fee, capabilities, restrictedRate);
     }
 
     /**
      * @dev Remove a service from the account by its name
      */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _removeService(serviceHash);
+        _removeService(getServiceHash(serviceName));
     }
 
     // FEE
@@ -415,8 +409,7 @@ contract CMAccount is
      * @dev Set the fee of a service by name
      */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceFee(serviceHash, fee);
+        _setServiceFee(getServiceHash(serviceName), fee);
     }
 
     // RESTRICTED RATE
@@ -428,8 +421,7 @@ contract CMAccount is
         string memory serviceName,
         bool restrictedRate
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceRestrictedRate(serviceHash, restrictedRate);
+        _setServiceRestrictedRate(getServiceHash(serviceName), restrictedRate);
     }
 
     // ALL CAPABILITIES
@@ -441,8 +433,7 @@ contract CMAccount is
         string memory serviceName,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceCapabilities(serviceHash, capabilities);
+        _setServiceCapabilities(getServiceHash(serviceName), capabilities);
     }
 
     // SINGLE CAPABILITY
@@ -454,8 +445,7 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _addServiceCapability(serviceHash, capability);
+        _addServiceCapability(getServiceHash(serviceName), capability);
     }
 
     /**
@@ -465,8 +455,12 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _removeServiceCapability(serviceHash, capability);
+        _removeServiceCapability(getServiceHash(serviceName), capability);
+    }
+
+    // Size Impact:   ********************
+    function getServiceHash(string memory serviceName) private view returns (bytes32 serviceHash) {
+        return ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
     }
 
     /***************************************************
@@ -494,24 +488,21 @@ contract CMAccount is
      * @dev Get service fee by name. Overloading the getServiceFee function.
      */
     function getServiceFee(string memory serviceName) public view returns (uint256 fee) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceFee(serviceHash);
+        return getServiceFee(getServiceHash(serviceName));
     }
 
     /**
      * @dev Get service restricted rate by name. Overloading the getServiceRestrictedRate function.
      */
     function getServiceRestrictedRate(string memory serviceName) public view returns (bool restrictedRate) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceRestrictedRate(serviceHash);
+        return getServiceRestrictedRate(getServiceHash(serviceName));
     }
 
     /**
      * @dev Get service capabilities by name. Overloading the getServiceCapabilities function.
      */
     function getServiceCapabilities(string memory serviceName) public view returns (string[] memory capabilities) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceCapabilities(serviceHash);
+        return getServiceCapabilities(getServiceHash(serviceName));
     }
 
     /***************************************************
@@ -520,18 +511,14 @@ contract CMAccount is
 
     function addWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
-            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
-                serviceNames[i]
-            );
+            bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _addWantedService(serviceHash);
         }
     }
 
     function removeWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
-            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
-                serviceNames[i]
-            );
+            bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _removeWantedService(serviceHash);
         }
     }
