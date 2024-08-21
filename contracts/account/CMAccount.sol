@@ -572,10 +572,9 @@ contract CMAccount is
      *
      * @param pubKeyAddress address of the public key
      * @param data public key data
-     * @param use type of public key, enum is defined in PartnerConfiguration contract
      */
-    function addPublicKey(address pubKeyAddress, bytes memory data, uint8 use) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addPublicKey(pubKeyAddress, data, use);
+    function addPublicKey(address pubKeyAddress, bytes memory data) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addPublicKey(pubKeyAddress, data);
     }
 
     /**

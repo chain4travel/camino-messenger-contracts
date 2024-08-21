@@ -33,14 +33,9 @@ abstract contract PartnerConfiguration is Initializable {
     /**
      * @dev Purpose of the public key. Currently we only have one.
      */
-    enum PublicKeyUseType {
-        EncryptPrivateData
-    }
-
-    struct PublicKey {
-        PublicKeyUseType _use;
-        bytes _data;
-    }
+    // enum PublicKeyUseType {
+    //     EncryptPrivateData
+    // }
 
     /// @custom:storage-location erc7201:camino.messenger.storage.PartnerConfiguration
     struct PartnerConfigurationStorage {
@@ -53,7 +48,7 @@ abstract contract PartnerConfiguration is Initializable {
         // Public keys, keep a enumerable list of public key addresses
         EnumerableSet.AddressSet _publicKeyAddressesSet;
         // Public keys for ecrypting private data for Booking Token
-        mapping(address publicKeyAddress => PublicKey publicKey) _publicKeys;
+        mapping(address publicKeyAddress => bytes publicKey) _publicKeys;
         // Services that this distributors want to buy
         EnumerableSet.Bytes32Set _wantedServicesHashSet;
     }
@@ -410,18 +405,18 @@ abstract contract PartnerConfiguration is Initializable {
      *
      * This needs to be updated when new enums are added
      */
-    function _isValidPublicKeyUse(uint8 use) internal virtual returns (bool) {
-        return use < uint(PublicKeyUseType.EncryptPrivateData) + 1;
-    }
+    // function _isValidPublicKeyUse(uint8 use) internal virtual returns (bool) {
+    //     return use < uint(PublicKeyUseType.EncryptPrivateData) + 1;
+    // }
 
     /**
      * @dev Add public key with an address
      */
-    function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData, uint8 use) internal virtual {
+    function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData) internal virtual {
         // Check if {use} is valid enum and revert early if not
-        if (!_isValidPublicKeyUse(use)) {
-            revert InvalidPublicKeyUseType(use);
-        }
+        // if (!_isValidPublicKeyUse(use)) {
+        //     revert InvalidPublicKeyUseType(use);
+        // }
 
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -431,7 +426,8 @@ abstract contract PartnerConfiguration is Initializable {
             revert PublicKeyAlreadyExists(pubKeyAddress);
         }
 
-        $._publicKeys[pubKeyAddress] = PublicKey(PublicKeyUseType(use), publicKeyData);
+        // $._publicKeys[pubKeyAddress] = PublicKey(PublicKeyUseType(use), publicKeyData);
+        $._publicKeys[pubKeyAddress] = publicKeyData;
 
         emit PublicKeyAdded(pubKeyAddress);
     }
@@ -458,14 +454,14 @@ abstract contract PartnerConfiguration is Initializable {
         return $._publicKeyAddressesSet.values();
     }
 
-    function getPublicKey(address pubKeyAddress) public view virtual returns (uint8 use, bytes memory data) {
+    function getPublicKey(address pubKeyAddress) public view virtual returns (bytes memory data) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         if (!$._publicKeyAddressesSet.contains(pubKeyAddress)) {
             revert PublicKeyDoesNotExist(pubKeyAddress);
         }
 
-        return (uint8($._publicKeys[pubKeyAddress]._use), $._publicKeys[pubKeyAddress]._data);
+        return $._publicKeys[pubKeyAddress];
     }
 
     /**
@@ -473,17 +469,13 @@ abstract contract PartnerConfiguration is Initializable {
      *
      * Size Impact: +0.650
      */
-    // function getPublicKeys()
-    //     public
-    //     view
-    //     virtual
-    //     returns (address[] memory pubKeyAddresses, PublicKey[] memory publicKeys)
-    // {
+    // function getPublicKeys() public view virtual returns (address[] memory pubKeyAddresses, bytes[] memory publicKeys) {
     //     PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
     //     address[] memory _pubKeyAddresses = $._publicKeyAddressesSet.values();
 
-    //     PublicKey[] memory _publicKeys = new PublicKey[](_pubKeyAddresses.length);
+    //     bytes[] memory _publicKeys = new bytes[](_pubKeyAddresses.length);
+
     //     for (uint256 i = 0; i < _pubKeyAddresses.length; i++) {
     //         _publicKeys[i] = $._publicKeys[_pubKeyAddresses[i]];
     //     }
