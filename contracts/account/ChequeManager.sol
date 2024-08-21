@@ -175,13 +175,13 @@ abstract contract ChequeManager is Initializable {
     function __ChequeManager_init() internal onlyInitializing {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
 
-        // $._domainSeparator = keccak256(
-        //     abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
-        // );
+        $._domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
+        );
 
-        // Size Impact: -0.115
+        // Size Impact: -0.115 (but this makes it chain specific)
         //keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid));
-        $._domainSeparator = 0x792acc3adab7297918d2cdaeb59ac5f091943a65aba244c580164ec2ec307451;
+        //$._domainSeparator = 0x792acc3adab7297918d2cdaeb59ac5f091943a65aba244c580164ec2ec307451;
     }
 
     function getDomainSeparator() public view returns (bytes32) {
