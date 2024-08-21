@@ -166,11 +166,4 @@ abstract contract ServiceRegistry is Initializable {
 
         return serviceNames;
     }
-
-    /**
-     * @dev Get all registered services as a string list
-     */
-    function getAllRegisteredServices() public view returns (string[] memory services) {
-        return getAllRegisteredServiceNames();
-    }
 }
