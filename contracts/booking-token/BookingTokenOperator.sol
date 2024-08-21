@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 library BookingTokenOperator {
     using SafeERC20 for IERC20;
 
+    error TokenApprovalFailed(address token, address spender, uint256 amount);
+
     function _mintBookingToken(
         address bookingToken,
         address reservedFor,
@@ -36,7 +38,11 @@ library BookingTokenOperator {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
-            paymentToken.approve(bookingToken, price);
+            bool approval = paymentToken.approve(bookingToken, price);
+
+            if (!approval) {
+                revert TokenApprovalFailed(bookingToken, address(paymentToken), price);
+            }
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);

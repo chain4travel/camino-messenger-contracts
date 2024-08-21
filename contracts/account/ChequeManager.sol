@@ -414,14 +414,6 @@ abstract contract ChequeManager is Initializable {
         return $._totalChequePayments;
     }
 
-    /**
-     * @dev Sets total cheque payments
-     */
-    function setTotalChequePayments(uint256 totalChequePayments) internal {
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        $._totalChequePayments = totalChequePayments;
-    }
-
     /***************************************************
      *                   ABSTRACT                      *
      ***************************************************/
