@@ -316,9 +316,9 @@ describe("CMAccount", function () {
 
             // Transfer
             await expect(
-                supplierCMAccount
+                await supplierCMAccount
                     .connect(signers.withdrawer)
-                    .transferERC20(nullUSD.getAddress(), signers.otherAccount1.address, amount),
+                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount1.address, amount),
             ).to.changeTokenBalances(
                 nullUSD,
                 [await supplierCMAccount.getAddress(), signers.otherAccount1],
