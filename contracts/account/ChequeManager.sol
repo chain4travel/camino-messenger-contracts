@@ -175,9 +175,13 @@ abstract contract ChequeManager is Initializable {
     function __ChequeManager_init() internal onlyInitializing {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
 
-        $._domainSeparator = keccak256(
-            abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
-        );
+        // $._domainSeparator = keccak256(
+        //     abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
+        // );
+
+        // Size Impact: -0.115
+        //keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid));
+        $._domainSeparator = 0x792acc3adab7297918d2cdaeb59ac5f091943a65aba244c580164ec2ec307451;
     }
 
     function getDomainSeparator() public view returns (bytes32) {
@@ -246,7 +250,7 @@ abstract contract ChequeManager is Initializable {
         uint256 createdAt,
         uint256 expiresAt,
         bytes memory signature
-    ) public view returns (address signer) {
+    ) internal view returns (address signer) {
         bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
         signer = digest.recover(signature);
         return signer;
@@ -285,8 +289,10 @@ abstract contract ChequeManager is Initializable {
 
         // Recover the signer from the signature. If the signature is invalid, this
         // will recover different signer address.
-        bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
-        signer = digest.recover(signature);
+        // bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
+        // signer = digest.recover(signature);
+
+        signer = recoverSigner(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt, signature);
 
         // Check if the signer is an allowed bot.
         if (!isBotAllowed(signer)) {
@@ -294,20 +300,26 @@ abstract contract ChequeManager is Initializable {
         }
 
         // Get the last cash-in details for the signer and `toBot`
-        (uint256 lastAmount, uint256 lastCounter) = getLastCashInAmountAndCounter(signer, toBot);
+        // (uint256 lastCounter, uint256 lastAmount, uint256 lastCreatedAt, uint256 lastExpiresAt) = getLastCashIn(
+        //     signer,
+        //     toBot
+        // );
+
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        LastCashIn storage lastCashIn = $._lastCashIns[signer][toBot];
 
         // Revert if the cheque amount is lower then the last recorded amount
-        if (amount < lastAmount) {
-            revert InvalidAmount(amount, lastAmount);
+        if (amount < lastCashIn.amount) {
+            revert InvalidAmount(amount, lastCashIn.amount);
         }
 
         // Ensure the current cheque's counter is greater than the last recorded one
-        if (counter <= lastCounter) {
-            revert InvalidCounter(counter, lastCounter);
+        if (counter <= lastCashIn.counter) {
+            revert InvalidCounter(counter, lastCashIn.counter);
         }
 
         // Everthing is valid. Calculate payment amount.
-        paymentAmount = amount - lastAmount;
+        paymentAmount = amount - lastCashIn.amount;
 
         // Emit event
         emit ChequeVerified(
@@ -381,7 +393,8 @@ abstract contract ChequeManager is Initializable {
 
         // Update total cheque payments excluding cheques to the same account
         if (fromCMAccount != toCMAccount) {
-            addToTotalChequePayments(paymentAmount);
+            ChequeManagerStorage storage $ = _getChequeManagerStorage();
+            $._totalChequePayments += paymentAmount;
         }
 
         // Emit cash-in event
@@ -390,13 +403,22 @@ abstract contract ChequeManager is Initializable {
 
     /**
      * @dev Returns last cash-in for given `fromBot`, `toBot` pair.
+     *
+     * Size Impact: +0.277
      */
-    function getLastCashInAmountAndCounter(
+    // function getLastCashIn(address fromBot, address toBot) public view returns (LastCashIn memory lastCashIn) {
+    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
+    //     return $._lastCashIns[fromBot][toBot];
+    // }
+
+    // Size Impact: -0.074 (Compared to using the one above)
+    function getLastCashIn(
         address fromBot,
         address toBot
-    ) public view returns (uint256 lastAmount, uint256 lastCounter) {
+    ) public view returns (uint256 lastCounter, uint256 lastAmount, uint256 lastCreatedAt, uint256 lastExpiresAt) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        return ($._lastCashIns[fromBot][toBot].amount, $._lastCashIns[fromBot][toBot].counter);
+        LastCashIn storage lastCashIn = $._lastCashIns[fromBot][toBot];
+        return (lastCashIn.counter, lastCashIn.amount, lastCashIn.createdAt, lastCashIn.expiresAt);
     }
 
     /**
@@ -433,10 +455,10 @@ abstract contract ChequeManager is Initializable {
     /**
      * @dev Adds to total cheque payments
      */
-    function addToTotalChequePayments(uint256 amount) internal {
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        $._totalChequePayments += amount;
-    }
+    // function addToTotalChequePayments(uint256 amount) internal {
+    //     ChequeManagerStorage storage $ = _getChequeManagerStorage();
+    //     $._totalChequePayments += amount;
+    // }
 
     /***************************************************
      *                   ABSTRACT                      *

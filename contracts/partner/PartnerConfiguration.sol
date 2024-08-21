@@ -107,7 +107,7 @@ abstract contract PartnerConfiguration is Initializable {
 
     event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
 
-    event PublicKeyAdded(address indexed pubKeyAddress, PublicKey publicKey);
+    event PublicKeyAdded(address indexed pubKeyAddress);
     event PublicKeyRemoved(address indexed pubKeyAddress);
 
     /***************************************************
@@ -425,11 +425,9 @@ abstract contract PartnerConfiguration is Initializable {
             revert PublicKeyAlreadyExists(pubKeyAddress);
         }
 
-        PublicKey memory publicKey = PublicKey(PublicKeyUseType(use), publicKeyData);
+        $._publicKeys[pubKeyAddress] = PublicKey(PublicKeyUseType(use), publicKeyData);
 
-        $._publicKeys[pubKeyAddress] = publicKey;
-
-        emit PublicKeyAdded(pubKeyAddress, publicKey);
+        emit PublicKeyAdded(pubKeyAddress);
     }
 
     /**

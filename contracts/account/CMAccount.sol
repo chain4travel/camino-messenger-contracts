@@ -402,13 +402,6 @@ contract CMAccount is
     }
 
     /**
-     * @dev Remove a service from the account by its hash
-     */
-    function removeService(bytes32 serviceHash) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _removeService(serviceHash);
-    }
-
-    /**
      * @dev Remove a service from the account by its name
      */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
@@ -419,13 +412,6 @@ contract CMAccount is
     // FEE
 
     /**
-     * @dev Set the fee of a service by hash
-     */
-    function setServiceFee(bytes32 serviceHash, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceFee(serviceHash, fee);
-    }
-
-    /**
      * @dev Set the fee of a service by name
      */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
@@ -434,13 +420,6 @@ contract CMAccount is
     }
 
     // RESTRICTED RATE
-
-    /**
-     * @dev Set the restricted rate of a service by hash
-     */
-    function setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceRestrictedRate(serviceHash, restrictedRate);
-    }
 
     /**
      * @dev Set the restricted rate of a service by name
@@ -456,16 +435,6 @@ contract CMAccount is
     // ALL CAPABILITIES
 
     /**
-     * @dev Set all capabilities for a service by hash
-     */
-    function setServiceCapabilities(
-        bytes32 serviceHash,
-        string[] memory capabilities
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceCapabilities(serviceHash, capabilities);
-    }
-
-    /**
      * @dev Set all capabilities for a service by name
      */
     function setServiceCapabilities(
@@ -479,13 +448,6 @@ contract CMAccount is
     // SINGLE CAPABILITY
 
     /**
-     * @dev Add a single capability to the service by hash
-     */
-    function addServiceCapability(bytes32 serviceHash, string memory capability) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addServiceCapability(serviceHash, capability);
-    }
-
-    /**
      * @dev Add a single capability to the service by name
      */
     function addServiceCapability(
@@ -494,16 +456,6 @@ contract CMAccount is
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
         _addServiceCapability(serviceHash, capability);
-    }
-
-    /**
-     * @dev Remove a single capability from the service by hash
-     */
-    function removeServiceCapability(
-        bytes32 serviceHash,
-        string memory capability
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _removeServiceCapability(serviceHash, capability);
     }
 
     /**

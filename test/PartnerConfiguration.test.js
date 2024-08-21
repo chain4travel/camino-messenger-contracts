@@ -540,7 +540,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, [publicKeyUse, pubkey]);
+                .withArgs(addr);
 
             // Get public keys and check if they are correct, should include only addr and pubkey
             const publicKeys = await cmAccount.getPublicKeys();
@@ -562,7 +562,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, [publicKeyUse, pubkey]);
+                .withArgs(addr);
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).removePublicKey(addr))
                 .to.emit(cmAccount, "PublicKeyRemoved")
@@ -588,7 +588,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr1, pubkey1, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr1, [publicKeyUse, pubkey1]);
+                .withArgs(addr1);
 
             // Pubkey 2
             const pubkey2 =
@@ -598,7 +598,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr2, pubkey2, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr2, [publicKeyUse, pubkey2]);
+                .withArgs(addr2);
 
             // Get public keys
             const publicKeys = await cmAccount.getPublicKeys();
@@ -626,7 +626,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.emit(cmAccount, "PublicKeyAdded")
-                .withArgs(addr, [publicKeyUse, pubkey]);
+                .withArgs(addr);
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addPublicKey(addr, pubkey, publicKeyUse))
                 .to.be.revertedWithCustomError(cmAccount, "PublicKeyAlreadyExists")

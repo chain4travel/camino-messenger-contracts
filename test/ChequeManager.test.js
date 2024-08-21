@@ -492,7 +492,8 @@ describe("ChequeManager", function () {
             // Sign Cheque
             const signature2 = await signMessengerCheque(cheque2, signers.chequeOperator);
 
-            const developerFee2 = await cmAccount.calculateDeveloperFee(cheque2.amount - cheque.amount);
+            // Calculate developer fee
+            const developerFee2 = ((cheque2.amount - cheque.amount) * developerFeeBp) / 10000n;
 
             // Cash-in cheque
             const cashInResponse2 = await cmAccount.cashInCheque(
