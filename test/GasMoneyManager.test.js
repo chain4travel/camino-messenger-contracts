@@ -24,8 +24,8 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
             const expectedPeriod = 24 * 60 * 60; // 24 hours
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(expectedLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([expectedLimit, expectedPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
         });
 
         it("should set gas money limit and period correctly", async function () {
@@ -34,22 +34,22 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
             const expectedPeriod = 24 * 60 * 60; // 24 hours
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(expectedLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([expectedLimit, expectedPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
 
             const newLimit = ethers.parseEther("20"); // 20 CAM
             const newPeriod = 48 * 60 * 60; // 48 hours
 
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalLimit(newLimit))
-                .to.emit(cmAccount, "GasMoneyWithdrawalLimitUpdated")
-                .withArgs(newLimit);
+            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawal(newLimit, newPeriod))
+                .to.emit(cmAccount, "GasMoneyWithdrawalUpdated")
+                .withArgs(newLimit, newPeriod);
 
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalPeriod(newPeriod))
-                .to.emit(cmAccount, "GasMoneyWithdrawalPeriodUpdated")
-                .withArgs(newPeriod);
+            // await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalPeriod(newPeriod))
+            //     .to.emit(cmAccount, "GasMoneyWithdrawalPeriodUpdated")
+            //     .withArgs(newPeriod);
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(newLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(newPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([newLimit, newPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(newPeriod);
         });
 
         it("should withdraw gas money", async function () {

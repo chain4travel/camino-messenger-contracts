@@ -36,8 +36,8 @@ abstract contract GasMoneyManager is Initializable {
      ***************************************************/
 
     event GasMoneyWithdrawal(address indexed withdrawer, uint256 amount);
-    event GasMoneyWithdrawalLimitUpdated(uint256 limit);
-    event GasMoneyWithdrawalPeriodUpdated(uint256 period);
+    event GasMoneyWithdrawalUpdated(uint256 limit, uint256 period);
+    //event GasMoneyWithdrawalPeriodUpdated(uint256 period);
 
     /***************************************************
      *                   ERRORS                        *
@@ -63,28 +63,27 @@ abstract contract GasMoneyManager is Initializable {
     function _withdrawGasMoney(uint256 amount) internal {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
 
-        uint256 withdrawalLimit = $._withdrawalLimit;
-        uint256 withdrawalPeriod = $._withdrawalPeriod;
+        // uint256 withdrawalLimit = $._withdrawalLimit;
+        // uint256 withdrawalPeriod = $._withdrawalPeriod;
 
         // Ensure the withdrawal does not exceed the allowed limit
-        if (amount > withdrawalLimit) {
-            revert WithdrawalLimitExceeded(withdrawalLimit, amount);
+        if (amount > $._withdrawalLimit) {
+            revert WithdrawalLimitExceeded($._withdrawalLimit, amount);
         }
 
         // Get timestamps
         uint256 currentTime = block.timestamp;
-        uint256 withdrawalPeriodStart = $._withdrawalPeriodStart[msg.sender];
 
         // Reset the withdrawn amount if a new period has started. If more time then
         // the withdrawal period has passed, it is allowed to withdraw full amount.
-        if (currentTime > withdrawalPeriodStart + withdrawalPeriod) {
+        if (currentTime > $._withdrawalPeriodStart[msg.sender] + $._withdrawalPeriod) {
             $._withdrawnAmount[msg.sender] = 0;
             $._withdrawalPeriodStart[msg.sender] = currentTime;
         }
 
         // Ensure the withdrawal does not exceed the allowed limit for the period
-        if ($._withdrawnAmount[msg.sender] + amount > withdrawalLimit) {
-            revert WithdrawalLimitExceededForPeriod(withdrawalLimit, amount);
+        if ($._withdrawnAmount[msg.sender] + amount > $._withdrawalLimit) {
+            revert WithdrawalLimitExceededForPeriod($._withdrawalLimit, amount);
         }
 
         // Update the withdrawn amount
@@ -97,37 +96,38 @@ abstract contract GasMoneyManager is Initializable {
         emit GasMoneyWithdrawal(msg.sender, amount);
     }
 
-    function _setGasMoneyWithdrawalLimit(uint256 limit) internal {
+    function _setGasMoneyWithdrawal(uint256 limit, uint256 period) internal {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
         $._withdrawalLimit = limit;
-
-        emit GasMoneyWithdrawalLimitUpdated(limit);
-    }
-
-    function _setGasMoneyWithdrawalPeriod(uint256 period) internal {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
         $._withdrawalPeriod = period;
 
-        emit GasMoneyWithdrawalPeriodUpdated(period);
+        emit GasMoneyWithdrawalUpdated(limit, period);
     }
 
-    function getGasMoneyWithdrawalLimit() public view returns (uint256) {
+    // function _setGasMoneyWithdrawalPeriod(uint256 period) internal {
+    //     GasMoneyStorage storage $ = _getGasMoneyStorage();
+    //     $._withdrawalPeriod = period;
+
+    //     emit GasMoneyWithdrawalPeriodUpdated(period);
+    // }
+
+    function getGasMoneyWithdrawal() public view returns (uint256, uint256) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalLimit;
+        return ($._withdrawalLimit, $._withdrawalPeriod);
     }
 
-    function getGasMoneyWithdrawalPeriod() public view returns (uint256) {
+    // function getGasMoneyWithdrawalPeriod() public view returns (uint256) {
+    //     GasMoneyStorage storage $ = _getGasMoneyStorage();
+    //     return $._withdrawalPeriod;
+    // }
+
+    function getGasMoneyWithdrawalForAccount(address account) public view returns (uint256, uint256) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalPeriod;
+        return ($._withdrawalPeriodStart[account], $._withdrawnAmount[account]);
     }
 
-    function getGasMoneyWithdrawalPeriodStart(address account) public view returns (uint256) {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalPeriodStart[account];
-    }
-
-    function getGasMoneyWithdrawnAmount(address account) public view returns (uint256) {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawnAmount[account];
-    }
+    // function getGasMoneyWithdrawnAmount(address account) public view returns (uint256) {
+    //     GasMoneyStorage storage $ = _getGasMoneyStorage();
+    //     return $._withdrawnAmount[account];
+    // }
 }

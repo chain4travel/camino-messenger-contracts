@@ -623,11 +623,11 @@ contract CMAccount is
         _withdrawGasMoney(amount);
     }
 
-    function setGasMoneyWithdrawalLimit(uint256 limit) public onlyRole(BOT_ADMIN_ROLE) {
-        _setGasMoneyWithdrawalLimit(limit);
+    function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
+        _setGasMoneyWithdrawal(limit, period);
     }
 
-    function setGasMoneyWithdrawalPeriod(uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
-        _setGasMoneyWithdrawalPeriod(period);
-    }
+    // function setGasMoneyWithdrawalPeriod(uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
+    //     _setGasMoneyWithdrawalPeriod(period);
+    // }
 }
