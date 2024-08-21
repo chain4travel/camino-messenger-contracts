@@ -6,7 +6,7 @@ import "./IBookingToken.sol";
 // ERC-20 Utils
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract BookingTokenOperator {
+library BookingTokenOperator {
     using SafeERC20 for IERC20;
 
     function _mintBookingToken(
@@ -16,14 +16,14 @@ abstract contract BookingTokenOperator {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken
-    ) internal virtual {
+    ) public {
         IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
     }
 
     /**
      * @dev Buy a booking token with the specified price
      */
-    function _buyBookingToken(address bookingToken, uint256 tokenId) internal virtual {
+    function _buyBookingToken(address bookingToken, uint256 tokenId) public {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
@@ -48,18 +48,18 @@ abstract contract BookingTokenOperator {
      *
      * This function should be overridden by the implementation
      */
-    function mintBookingToken(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) external virtual;
+    // function mintBookingToken(
+    //     address reservedFor,
+    //     string memory uri,
+    //     uint256 expirationTimestamp,
+    //     uint256 price,
+    //     IERC20 paymentToken
+    // ) external;
 
     /**
      * @dev Buy a booking token
      *
      * This function should be overridden by the implementation
      */
-    function buyBookingToken(uint256 tokenId) external virtual;
+    //function buyBookingToken(uint256 tokenId) external virtual;
 }

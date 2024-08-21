@@ -26,7 +26,11 @@ describe("CMAccount", function () {
             const oldImplementationAddress = await cmAccountManager.getAccountImplementation();
 
             // Create a new implementation for CMAccount
-            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount");
+            const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+            const bookingTokenOperator = await BookingTokenOperator.deploy();
+            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount", {
+                libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+            });
             const cmAccountImplV2 = await CMAccountImplV2.deploy();
             await cmAccountImplV2.waitForDeployment();
             const newImplementationAddress = await cmAccountImplV2.getAddress();
@@ -48,7 +52,11 @@ describe("CMAccount", function () {
             const oldImplementationAddress = await cmAccountManager.getAccountImplementation();
 
             // Create a new implementation for CMAccount
-            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount");
+            const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+            const bookingTokenOperator = await BookingTokenOperator.deploy();
+            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount", {
+                libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+            });
             const cmAccountImplV2 = await CMAccountImplV2.deploy();
             await cmAccountImplV2.waitForDeployment();
             const newImplementationAddress = await cmAccountImplV2.getAddress();
@@ -235,7 +243,7 @@ describe("CMAccount", function () {
             const bot = signers.otherAccount1;
 
             // Register bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(bot.address);
 
@@ -254,7 +262,7 @@ describe("CMAccount", function () {
             const bot = signers.otherAccount1;
 
             // Register bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(bot.address);
 

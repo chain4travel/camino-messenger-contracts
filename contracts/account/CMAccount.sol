@@ -10,7 +10,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Access
+// Size Impact: +0.411 (Enumerable)
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+//import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 // ERC721
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -42,7 +44,6 @@ contract CMAccount is
     UUPSUpgradeable,
     IERC721Receiver,
     ChequeManager,
-    BookingTokenOperator,
     PartnerConfiguration,
     GasMoneyManager
 {
@@ -331,16 +332,23 @@ contract CMAccount is
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken
-    ) external override onlyRole(BOOKING_OPERATOR_ROLE) {
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price, paymentToken);
+        BookingTokenOperator._mintBookingToken(
+            getBookingTokenAddress(),
+            reservedFor,
+            uri,
+            expirationTimestamp,
+            price,
+            paymentToken
+        );
     }
 
     /**
      * @dev Buy booking token
      */
-    function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
-        _buyBookingToken(getBookingTokenAddress(), tokenId);
+    function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator._buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
     /**
@@ -587,21 +595,25 @@ contract CMAccount is
     /**
      * @dev Add messenger bot
      */
-    function addMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
-        // Grant roles to bot
-        _grantRole(CHEQUE_OPERATOR_ROLE, bot);
-        _grantRole(BOOKING_OPERATOR_ROLE, bot);
-        _grantRole(GAS_WITHDRAWER_ROLE, bot);
+    // function addMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
+    //     // Grant roles to bot
+    //     _grantRole(CHEQUE_OPERATOR_ROLE, bot);
+    //     _grantRole(BOOKING_OPERATOR_ROLE, bot);
+    //     _grantRole(GAS_WITHDRAWER_ROLE, bot);
 
-        emit MessengerBotAdded(bot);
-    }
+    //     emit MessengerBotAdded(bot);
+    // }
 
     function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
         // Check if we can spend the gasMoney to send it to the bot
         _checkPrefundSpent(gasMoney);
 
         // Grant roles to bot
-        addMessengerBot(bot);
+        _grantRole(CHEQUE_OPERATOR_ROLE, bot);
+        _grantRole(BOOKING_OPERATOR_ROLE, bot);
+        _grantRole(GAS_WITHDRAWER_ROLE, bot);
+
+        emit MessengerBotAdded(bot);
 
         // Send gasMoney to bot
         payable(bot).sendValue(gasMoney);

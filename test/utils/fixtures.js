@@ -73,7 +73,11 @@ async function deployCMAccountManagerFixture() {
 }
 
 async function deployCMAccountImplFixture() {
-    const CMAccount = await ethers.getContractFactory("CMAccount");
+    const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+    const bookingTokenOperator = await BookingTokenOperator.deploy();
+    const CMAccount = await ethers.getContractFactory("CMAccount", {
+        libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+    });
     const cmAccountImpl = await CMAccount.deploy();
     await cmAccountImpl.waitForDeployment();
 
@@ -110,6 +114,7 @@ async function deployAndConfigureAllFixture() {
     await cmAccountManager.grantRole(await cmAccountManager.FEE_ADMIN_ROLE(), signers.feeAdmin.address);
 
     // Deploy BookingToken
+
     const BookingToken = await ethers.getContractFactory("BookingToken");
     const bookingToken = await upgrades.deployProxy(
         BookingToken,

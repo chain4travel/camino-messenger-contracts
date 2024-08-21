@@ -58,7 +58,7 @@ describe("GasMoneyManager", function () {
             const withdrawer = signers.withdrawer;
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -94,7 +94,7 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -113,7 +113,7 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -154,7 +154,7 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
