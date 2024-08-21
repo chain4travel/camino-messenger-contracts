@@ -30,13 +30,6 @@ abstract contract PartnerConfiguration is Initializable {
         EnumerableSet.AddressSet _supportedTokens; // Supported on-chain token for payment
     }
 
-    /**
-     * @dev Purpose of the public key. Currently we only have one.
-     */
-    // enum PublicKeyUseType {
-    //     EncryptPrivateData
-    // }
-
     /// @custom:storage-location erc7201:camino.messenger.storage.PartnerConfiguration
     struct PartnerConfigurationStorage {
         // Set of supported service hashes

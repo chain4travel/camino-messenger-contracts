@@ -238,8 +238,8 @@ async function deployBookingTokenWithNullUSDFixture() {
 
     // Fund NullUSD to the CM accounts
     const fundAmount = ethers.parseEther("1000");
-    nullUSD.transfer(supplierCMAccount.getAddress(), fundAmount);
-    nullUSD.transfer(distributorCMAccount.getAddress(), fundAmount);
+    await nullUSD.transfer(await supplierCMAccount.getAddress(), fundAmount);
+    await nullUSD.transfer(await distributorCMAccount.getAddress(), fundAmount);
 
     return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount, nullUSD };
 }
