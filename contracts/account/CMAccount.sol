@@ -10,9 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Access
-// Size Impact: +0.411 (Enumerable)
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-//import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 // ERC721
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
