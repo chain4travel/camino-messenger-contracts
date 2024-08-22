@@ -14,6 +14,7 @@ const {
     deployCMAccountManagerWithCMAccountImplFixture,
     deployAndConfigureAllFixture,
     deployCMAccountWithDepositFixture,
+    deployBookingTokenWithNullUSDFixture,
 } = require("./utils/fixtures");
 
 describe("CMAccount", function () {
@@ -311,6 +312,85 @@ describe("CMAccount", function () {
             )
                 .to.revertedWithCustomError(cmAccount, "PrefundNotSpentYet")
                 .withArgs(ethers.parseEther("1"), ethers.parseEther("100"), ethers.parseEther("10"));
+        });
+    });
+
+    describe("Transfer ERC20 & ERC721", function () {
+        it("should transfer ERC20 correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
+                await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+            // Supplier and distributor CM accounts has 10k NullUSD from the fixture
+            const amount = ethers.parseEther("100");
+
+            // Transfer
+            await expect(
+                supplierCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC20(nullUSD.getAddress(), signers.otherAccount1.address, amount),
+            ).to.changeTokenBalances(
+                nullUSD,
+                [await supplierCMAccount.getAddress(), signers.otherAccount1],
+                [-amount, amount],
+            );
+
+            // Check balance
+            expect(await nullUSD.balanceOf(signers.otherAccount1.address)).to.be.equal(amount);
+        });
+
+        it("should transfer ERC721 correctly after it expires", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
+                await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                );
+
+            // Advance time to after the expiration
+            await network.provider.send("evm_setNextBlockTimestamp", [expirationTimestamp + 1]);
+            await network.provider.send("evm_mine");
+
+            // Try to transfer the token with the supplier CMAccount
+            await expect(
+                supplierCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC721(await bookingToken.getAddress(), signers.otherAccount1.address, 0n),
+            )
+                .to.emit(bookingToken, "Transfer")
+                .withArgs(await supplierCMAccount.getAddress(), signers.otherAccount1.address, 0n);
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await signers.otherAccount1.getAddress());
         });
     });
 });

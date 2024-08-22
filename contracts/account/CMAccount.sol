@@ -12,6 +12,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 // Access
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
+// ERC721
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
 // Manager Interface
 import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 
@@ -44,6 +47,7 @@ contract CMAccount is
     GasMoneyManager
 {
     using Address for address payable;
+    using SafeERC20 for IERC20;
 
     /***************************************************
      *                    ROLES                        *
@@ -143,6 +147,11 @@ contract CMAccount is
      * @dev Error to revert with if the prefund is not spent yet
      */
     error PrefundNotSpentYet(uint256 withdrawableAmount, uint256 prefundLeft, uint256 amount);
+
+    /**
+     * @dev Error to revert if transfer to zero address
+     */
+    error TransferToZeroAddress();
 
     /***************************************************
      *         CONSTRUCTOR & INITIALIZATION            *
@@ -267,7 +276,7 @@ contract CMAccount is
     /**
      * @dev Verifies if the amount is withdrawable by checking if prefund is spent
      */
-    function checkPrefundSpent(uint256 amount) public view {
+    function _checkPrefundSpent(uint256 amount) private view {
         uint256 prefundAmount = getPrefundAmount();
         uint256 totalChequePayments = getTotalChequePayments();
 
@@ -295,9 +304,9 @@ contract CMAccount is
      * spam by forcing user to spend the full prefund for cheques, so they can not just create an account
      * and withdraw the prefund.
      */
-    function withdraw(address payable recipient, uint256 amount) public onlyRole(WITHDRAWER_ROLE) {
+    function withdraw(address payable recipient, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
         // Check if amount is withdrawable according to the prefund spent amount
-        checkPrefundSpent(amount);
+        _checkPrefundSpent(amount);
 
         recipient.sendValue(amount);
         emit Withdraw(recipient, amount);
@@ -307,20 +316,24 @@ contract CMAccount is
      *                 BOOKING TOKEN                   *
      ***************************************************/
 
-    // TODO: Make sure the contract is able to use its booking tokens with
-    // {IERC721-safeTransferFrom}, {IERC721-approve} or {IERC721-setApprovalForAll}.
-
     /**
      * @dev Mint booking token
+     *
+     * @param reservedFor The account to reserve the token for
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The payment token, if address(0) then native
      */
     function mintBookingToken(
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
-        uint256 price
-    ) public override onlyRole(BOOKING_OPERATOR_ROLE) {
+        uint256 price,
+        IERC20 paymentToken
+    ) external override onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price);
+        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price, paymentToken);
     }
 
     /**
@@ -339,11 +352,22 @@ contract CMAccount is
         return this.onERC721Received.selector;
     }
 
-    /**
-     * @dev Get the price of a booking token
-     */
-    function getTokenReservationPrice(uint256 tokenId) public view returns (uint256) {
-        return _getTokenReservationPrice(getBookingTokenAddress(), tokenId);
+    /***************************************************
+     *                ERC20 & ERC721                   *
+     ***************************************************/
+
+    function transferERC20(IERC20 token, address to, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+        token.safeTransfer(to, amount);
+    }
+
+    function transferERC721(IERC721 token, address to, uint256 tokenId) external onlyRole(WITHDRAWER_ROLE) {
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+        token.safeTransferFrom(address(this), to, tokenId);
     }
 
     /***************************************************
@@ -635,7 +659,7 @@ contract CMAccount is
 
     function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
         // Check if we can spend the gasMoney to send it to the bot
-        checkPrefundSpent(gasMoney);
+        _checkPrefundSpent(gasMoney);
 
         // Grant roles to bot
         addMessengerBot(bot);

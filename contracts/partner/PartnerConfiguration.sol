@@ -170,9 +170,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._fee = fee;
 
@@ -189,9 +187,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._restrictedRate = restrictedRate;
 
@@ -208,9 +204,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._capabilities = capabilities;
 
@@ -227,9 +221,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._capabilities.push(capability);
 
@@ -246,9 +238,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         string[] storage capabilities = $._supportedServices[serviceHash]._capabilities;
         for (uint256 i = 0; i < capabilities.length; i++) {
@@ -281,9 +271,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         return $._supportedServices[serviceHash];
     }
@@ -292,9 +280,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         return $._supportedServices[serviceHash]._fee;
     }
@@ -303,9 +289,7 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
-        if (!$._servicesHashSet.contains(serviceHash)) {
-            revert ServiceDoesNotExist(serviceHash);
-        }
+        _checkServiceExists(serviceHash, $);
 
         return $._supportedServices[serviceHash]._restrictedRate;
     }
@@ -314,11 +298,16 @@ abstract contract PartnerConfiguration is Initializable {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
         // Check if the service exists
+        _checkServiceExists(serviceHash, $);
+
+        return $._supportedServices[serviceHash]._capabilities;
+    }
+
+    function _checkServiceExists(bytes32 serviceHash, PartnerConfigurationStorage storage $) private view {
+        // Check if the service exists
         if (!$._servicesHashSet.contains(serviceHash)) {
             revert ServiceDoesNotExist(serviceHash);
         }
-
-        return $._supportedServices[serviceHash]._capabilities;
     }
 
     /***************************************************
