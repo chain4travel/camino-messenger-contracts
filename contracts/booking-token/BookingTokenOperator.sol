@@ -30,11 +30,7 @@ library BookingTokenOperator {
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
         // Check if payment is in native currency or in ERC20
-        if (address(paymentToken) == address(0)) {
-            // Payment is in native currency. Buy the token sending the payment in
-            // native currency to the BookingToken contract.
-            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
-        } else {
+        if (address(paymentToken) != address(0) && price > 0) {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
@@ -46,6 +42,10 @@ library BookingTokenOperator {
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
+        } else {
+            // Payment is in native currency. Buy the token sending the payment in
+            // native currency to the BookingToken contract.
+            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }
 }

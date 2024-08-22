@@ -235,16 +235,7 @@ contract BookingToken is
             revert SupplierIsNotOwner(tokenId, reservation.supplier);
         }
 
-        if (address(reservation.paymentToken) == address(0)) {
-            // Payment is in native currency
-            // Check if we receive the right price
-            if (msg.value != reservation.price) {
-                revert IncorrectPrice(msg.value, reservation.price);
-            }
-
-            // Transfer payment to the supplier
-            payable(reservation.supplier).sendValue(msg.value);
-        } else {
+        if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
             // Payment is in ERC20.
             //
             // Message sender (buyer of the Booking Token, generally the
@@ -257,6 +248,15 @@ contract BookingToken is
 
             // Transfer the ERC20 tokens from buyer to supplier
             reservation.paymentToken.safeTransferFrom(msg.sender, reservation.supplier, reservation.price);
+        } else {
+            // Payment is in native currency
+            // Check if we receive the right price
+            if (msg.value != reservation.price) {
+                revert IncorrectPrice(msg.value, reservation.price);
+            }
+
+            // Transfer payment to the supplier
+            payable(reservation.supplier).sendValue(msg.value);
         }
 
         // Transfer the token. We are using `_transfer` instead of
