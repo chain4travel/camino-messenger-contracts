@@ -4,32 +4,21 @@
 
 pragma solidity ^0.8.24;
 
-// UUPS Proxy
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
-// Access
-import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-
-// ERC721
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
-// Manager Interface
-import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
-
-// Cheques
-import "./ChequeManager.sol";
-
-// Booking Token
-import "../booking-token/BookingTokenOperator.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
-// Partner Config
-import "../partner/PartnerConfiguration.sol";
-
-// Partner Config
-import "./GasMoneyManager.sol";
+import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
+import { ChequeManager } from "./ChequeManager.sol";
+import { BookingTokenOperator } from "../booking-token/BookingTokenOperator.sol";
+import { PartnerConfiguration } from "../partner/PartnerConfiguration.sol";
+import { GasMoneyManager } from "./GasMoneyManager.sol";
 
 /**
  * @title Camino Messenger Account
