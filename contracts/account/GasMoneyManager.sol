@@ -89,9 +89,6 @@ abstract contract GasMoneyManager is Initializable {
     function _withdrawGasMoney(uint256 amount) internal {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
 
-        // uint256 withdrawalLimit = $._withdrawalLimit;
-        // uint256 withdrawalPeriod = $._withdrawalPeriod;
-
         // Ensure the withdrawal does not exceed the allowed limit
         if (amount > $._withdrawalLimit) {
             revert WithdrawalLimitExceeded($._withdrawalLimit, amount);
