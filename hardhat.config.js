@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 require("hardhat-contract-sizer");
+require("solidity-docgen");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -55,5 +56,10 @@ module.exports = {
                 },
             },
         ],
+    },
+    docgen: {
+        path: "./docs",
+        pages: "single",
+        runOnCompile: true,
     },
 };

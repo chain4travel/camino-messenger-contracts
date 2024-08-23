@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 
 /**
- * @dev ChequeManager manages, verifies, and cashes in the messenger cheques.
+ * @notice ChequeManager manages, verifies, and cashes in the messenger cheques.
  *
  * EIP712 Domain name & version:
  *   DOMAIN_NAME = "CaminoMessenger"
@@ -27,19 +27,23 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Pre-computed hash of the MessengerCheque type
+     * @notice Pre-computed hash of the MessengerCheque type
      *
+     * ```
      * keccak256(
      *     "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)"
      * );
+     * ```
      */
     bytes32 public constant MESSENGER_CHEQUE_TYPEHASH =
         0x87b38f131334165ac2b361f08966c9fcff3a953fa7d9d9c2861b7f0b50445bcb;
 
     /**
-     * @dev Pre-computed hash of the EIP712Domain type
+     * @notice Pre-computed hash of the EIP712Domain type
      *
+     * ```
      * keccak256("EIP712Domain(string name,string version,uint256 chainId)");
+     * ```
      */
     bytes32 public constant DOMAIN_TYPEHASH = 0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e;
 
@@ -48,7 +52,7 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Struct representing a Messenger Cheque.
+     * @notice Struct representing a Messenger Cheque.
      */
     struct MessengerCheque {
         address fromCMAccount; // CM Account that will pay the amount
@@ -61,7 +65,7 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Struct for tracking the counter, amount and timestamps used for the last
+     * @notice Struct for tracking the counter, amount and timestamps used for the last
      * cash-in operation.
      */
     struct LastCashIn {
@@ -78,15 +82,15 @@ abstract contract ChequeManager is Initializable {
     /// @custom:storage-location erc7201:camino.messenger.storage.ChequeManager
     struct ChequeManagerStorage {
         /**
-         * @dev Mapping to track the cash-in details for each pair of fromBot and toBot addresses.
+         * @notice Mapping to track the cash-in details for each pair of fromBot and toBot addresses.
          */
         mapping(address fromBot => mapping(address toBot => LastCashIn)) _lastCashIns;
         /**
-         * @dev Total amount of cheques that have been cashed in.
+         * @notice Total amount of cheques that have been cashed in.
          */
         uint256 _totalChequePayments;
         /**
-         * @dev EIP712 Domain Separator used for signature verification. This variable includes
+         * @notice EIP712 Domain Separator used for signature verification. This variable includes
          * dynamic chain ID, hence it is not a constant.
          */
         bytes32 _domainSeparator;
@@ -107,7 +111,7 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Cheque verified event. Emitted when a cheque is verified.
+     * @notice Cheque verified event. Emitted when a cheque is verified.
      */
     event ChequeVerified(
         address indexed fromCMAccount,
@@ -120,7 +124,7 @@ abstract contract ChequeManager is Initializable {
     );
 
     /**
-     * @dev Cash-in event. Emitted when a cheque is cashed in.
+     * @notice Cash-in event. Emitted when a cheque is cashed in.
      */
     event ChequeCashedIn(
         address indexed fromBot,
@@ -135,33 +139,33 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Invalid CM Account. Cheque's `fromCMAccount` has to be for `address(this)`.
+     * @notice Invalid CM Account. Cheque's `fromCMAccount` has to be for `address(this)`.
      */
     error InvalidFromCMAccount(address fromCMAccount);
 
     /**
-     * @dev `toCMAccoun` address is not a registered CMAccount on the manager
+     * @notice `toCMAccount` address is not a registered CMAccount on the manager.
      */
     error InvalidToCMAccount(address toCMAccount);
 
     /**
-     * @dev The signer is not allowed to sign cheques
+     * @notice The signer is not allowed to sign cheques
      */
     error NotAllowedToSignCheques(address signer);
 
     /**
-     * @dev Invalid counter for the cheque. The counter on the cheque is not greater then the last
+     * @notice Invalid counter for the cheque. The counter on the cheque is not greater then the last
      * recorded counter.
      */
     error InvalidCounter(uint256 chequeCounter, uint256 lastCounter);
 
     /**
-     * @dev Last recorded amount is lower than the cheque's amount.
+     * @notice Last recorded amount is lower than the cheque's amount.
      */
     error InvalidAmount(uint256 chequeAmount, uint256 lastAmount);
 
     /**
-     * @dev The cheque is expired at the given timestamp
+     * @notice The cheque is expired at the given timestamp.
      */
     error ChequeExpired(uint256 expiresAt);
 
@@ -170,7 +174,7 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Initializes the contract, setting the domain separator with EIP712 domain type hash and
+     * @notice Initializes the contract, setting the domain separator with EIP712 domain type hash and
      * the domain.
      *
      * EIP712Domain {
@@ -188,7 +192,7 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns the domain separator.
+     * @notice Returns the domain separator.
      */
     function getDomainSeparator() public view returns (bytes32) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
@@ -196,7 +200,7 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns the hash of the `MessengerCheque` encoded with
+     * @notice Returns the hash of the `MessengerCheque` encoded with
      * `MESSENGER_CHEQUE_TYPEHASH`.
      */
     function hashMessengerCheque(
@@ -224,7 +228,7 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns the hash of the typed data (cheque) with prefix and domain
+     * @notice Returns the hash of the typed data (cheque) with prefix and domain
      * separator.
      */
     function hashTypedDataV4(
@@ -247,7 +251,7 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns the signer for the given cheque and signature. Uses {ECDSA} library to
+     * @notice Returns the signer for the given cheque and signature. Uses {ECDSA} library to
      * recover the signer.
      */
     function recoverSigner(
@@ -266,12 +270,13 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns signer and payment amount if the signature is valid for the
+     * @notice Returns signer and payment amount if the signature is valid for the
      * given cheque, the signer is an allowed bot, cheque counter and amounts are
      * valid according to last cash ins.
      *
      * Please be aware that `cheque.amount < paymentAmount` for a valid cheque as
-     * long as the last amount is lower than the cheque amount.
+     * long as the last amount is lower than the cheque amount. Only the difference
+     * between the cheque amount and the last recorded amount is paid.
      */
     function verifyCheque(
         address fromCMAccount,
@@ -337,9 +342,8 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Cash in a cheque by verifying it and paying the difference between the
-     * cheque amount
-     * and the last recorded amount for the signer and `toBot` pair.
+     * @notice Cash in a cheque by verifying it and paying the difference between the
+     * cheque amount and the last recorded amount for the signer and `toBot` pair.
      *
      * A percentage of the amount is also paid to the developer wallet.
      *
@@ -404,12 +408,17 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns last cash-in details for given `fromBot` & `toBot` pair.
+     * @notice Returns last cash-in details for given `fromBot` & `toBot` pair.
      *
      * @param fromBot The address of the bot that sent the cheque.
      * @param toBot The address of the bot that received the cheque.
      *
      * Returns (lastCounter, lastAmount, lastCreatedAt, lastExpiresAt)
+     *
+     * @return lastCounter The last counter of the cheque.
+     * @return lastAmount The last amount of the cheque.
+     * @return lastCreatedAt The last creation timestamp of the cheque.
+     * @return lastExpiresAt The last expiration timestamp of the cheque.
      */
     function getLastCashIn(
         address fromBot,
@@ -421,7 +430,14 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Sets last cash-in for given `fromBot`, `toBot` pair.
+     * @notice Sets last cash-in for given `fromBot`, `toBot` pair.
+     *
+     * @param fromBot The address of the bot that sent the cheque.
+     * @param toBot The address of the bot that received the cheque.
+     * @param counter The counter of the cheque.
+     * @param amount The amount of the cheque.
+     * @param createdAt The creation timestamp of the cheque.
+     * @param expiresAt The expiration timestamp of the cheque.
      */
     function setLastCashIn(
         address fromBot,
@@ -436,7 +452,9 @@ abstract contract ChequeManager is Initializable {
     }
 
     /**
-     * @dev Returns total cheque payments. This is the sum of all cashed in cheques.
+     * @notice Returns total cheque payments. This is the sum of all cashed in cheques.
+     *
+     * @return totalChequePayments The total cheque payments made.
      */
     function getTotalChequePayments() public view returns (uint256) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
@@ -448,13 +466,13 @@ abstract contract ChequeManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Abstract function to check if a bot is allowed to sign cheques. This
+     * @notice Abstract function to check if a bot is allowed to sign cheques. This
      * must be implemented by the inheriting contract.
      */
     function isBotAllowed(address bot) public view virtual returns (bool);
 
     /**
-     * @dev Abstract function to get the manager address. This must be implemented
+     * @notice Abstract function to get the manager address. This must be implemented
      * by the inheriting contract.
      */
     function getManagerAddress() public view virtual returns (address);

@@ -58,18 +58,18 @@ contract CMAccountManager is
     using Address for address payable;
 
     /**
-     * @dev Pauser role can pause the contract. Currently this only affects the
+     * @notice Pauser role can pause the contract. Currently this only affects the
      * creation of CM Accounts. When paused, account creation is stopped.
      */
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     /**
-     * @dev Upgrader role can upgrade the contract to a new implementation.
+     * @notice Upgrader role can upgrade the contract to a new implementation.
      */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
-     * @dev Versioner role can set new {CMAccount} implementation address. When a
+     * @notice Versioner role can set new {CMAccount} implementation address. When a
      * new implementation address is set, it is used for the new {CMAccount}
      * creations.
      *
@@ -80,31 +80,31 @@ contract CMAccountManager is
     bytes32 public constant VERSIONER_ROLE = keccak256("VERSIONER_ROLE");
 
     /**
-     * @dev Fee admin role can set the developer fee basis points which used for
+     * @notice Fee admin role can set the developer fee basis points which used for
      * calculating the developer fee that is cut from the cheque payments.
      */
     bytes32 public constant FEE_ADMIN_ROLE = keccak256("FEE_ADMIN_ROLE");
 
     /**
-     * @dev Developer wallet admin role can set the developer wallet address
+     * @notice Developer wallet admin role can set the developer wallet address
      * which is used to receive the developer fee.
      */
     bytes32 public constant DEVELOPER_WALLET_ADMIN_ROLE = keccak256("DEVELOPER_WALLET_ADMIN_ROLE");
 
     /**
-     * @dev Prefund admin role can set the mandatory prefund amount for {CMAccount}
+     * @notice Prefund admin role can set the mandatory prefund amount for {CMAccount}
      * contracts.
      */
     bytes32 public constant PREFUND_ADMIN_ROLE = keccak256("PREFUND_ADMIN_ROLE");
 
     /**
-     * @dev Service registry admin role can add and remove services to the service
+     * @notice Service registry admin role can add and remove services to the service
      * registry mapping. Implemented by {ServiceRegistry} contract.
      */
     bytes32 public constant SERVICE_REGISTRY_ADMIN_ROLE = keccak256("SERVICE_REGISTRY_ADMIN_ROLE");
 
     /**
-     * @dev This role is granted to the created CM Accounts. It is used to keep
+     * @notice This role is granted to the created CM Accounts. It is used to keep
      * an enumerable list of CM Accounts.
      */
     bytes32 public constant CMACCOUNT_ROLE = keccak256("CMACCOUNT_ROLE");
@@ -114,7 +114,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev CMAccount info struct, to keep track of created CM Accounts and their
+     * @notice CMAccount info struct, to keep track of created CM Accounts and their
      * creators.
      */
     struct CMAccountInfo {
@@ -125,12 +125,12 @@ contract CMAccountManager is
     /// @custom:storage-location erc7201:camino.messenger.storage.CMAccountManager
     struct CMAccountManagerStorage {
         /**
-         * @dev CM Account implementation address to be used by the CMAccount contract to resctrict
+         * @dev CM Account implementation address to be used by the CMAccount contract to restrict
          * the implementation address for the UUPS proxies.
          */
         address _latestAccountImplementation;
         /**
-         * @dev Prefund amount
+         * @dev Prefund amount.
          */
         uint256 _prefundAmount;
         /**
@@ -138,7 +138,7 @@ contract CMAccountManager is
          */
         address _developerWallet;
         /**
-         * @dev Developer fee basis points
+         * @dev Developer fee basis points.
          *
          * A basis point (bp) is one hundredth of 1 percentage point.
          *
@@ -148,11 +148,11 @@ contract CMAccountManager is
          */
         uint256 _developerFeeBp;
         /**
-         * @dev BookingToken address
+         * @dev BookingToken address.
          */
         address _bookingToken;
         /**
-         * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators
+         * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators.
          */
         mapping(address account => CMAccountInfo) _cmAccountInfo;
     }
@@ -172,34 +172,34 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev CM Account created
+     * @notice CM Account created event.
      * @param account The address of the new CMAccount
      */
     event CMAccountCreated(address indexed account);
 
     /**
-     * @dev CM Account implementation address updated
+     * @notice CM Account implementation address updated event.
      * @param oldImplementation The old implementation address
      * @param newImplementation The new implementation address
      */
     event CMAccountImplementationUpdated(address indexed oldImplementation, address indexed newImplementation);
 
     /**
-     * @dev Developer wallet address updated
+     * @notice Developer wallet address updated event.
      * @param oldDeveloperWallet The old developer wallet address
      * @param newDeveloperWallet The new developer wallet address
      */
     event DeveloperWalletUpdated(address indexed oldDeveloperWallet, address indexed newDeveloperWallet);
 
     /**
-     * @dev Developer fee basis points updated
+     * @notice Developer fee basis points updated event.
      * @param oldDeveloperFeeBp The old developer fee basis points
      * @param newDeveloperFeeBp The new developer fee basis points
      */
     event DeveloperFeeBpUpdated(uint256 indexed oldDeveloperFeeBp, uint256 indexed newDeveloperFeeBp);
 
     /**
-     * @dev Booking token address updated
+     * @notice Booking token address updated event.
      * @param oldBookingToken The old booking token address
      * @param newBookingToken The new booking token address
      */
@@ -210,31 +210,31 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev The implementation of the CMAccount is invalid
+     * @notice The implementation of the CMAccount is invalid.
      * @param implementation The implementation address of the CMAccount
      */
     error CMAccountInvalidImplementation(address implementation);
 
     /**
-     * @dev The admin address is invalid
+     * @notice The admin address is invalid.
      * @param admin The admin address
      */
     error CMAccountInvalidAdmin(address admin);
 
     /**
-     * @dev Invalid developer address
+     * @notice Invalid developer address.
      * @param developerWallet The developer wallet address
      */
     error InvalidDeveloperWallet(address developerWallet);
 
     /**
-     * @dev Invalid booking token address
+     * @notice Invalid booking token address.
      * @param bookingToken The booking token address
      */
     error InvalidBookingTokenAddress(address bookingToken);
 
     /**
-     * @dev Incorrect pre fund amount
+     * @notice Incorrect pre fund amount.
      * @param expected The expected pre fund amount
      */
     error IncorrectPrefundAmount(uint256 expected, uint256 sended);
@@ -275,7 +275,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Pauses the CMAccountManager contract. Currently this only affects the
+     * @notice Pauses the CMAccountManager contract. Currently this only affects the
      * creation of CMAccount. When paused, account creation is stopped.
      */
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -283,14 +283,14 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Unpauses the CMAccountManager contract.
+     * @notice Unpauses the CMAccountManager contract.
      */
     function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
     /**
-     * @dev Authorization for the CMAccountManager contract upgrade.
+     * @notice Authorization for the CMAccountManager contract upgrade.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 
@@ -299,7 +299,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
+     * @notice Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
      * implementation from the manager.
      *
      * Because this function is deploying a contract, it reverts if the caller is
@@ -307,7 +307,7 @@ contract CMAccountManager is
      *
      * Caller must send the pre-fund amount with the transaction.
      *
-     * Emits a {CMAccountCreated} event.
+     * @dev Emits a {CMAccountCreated} event.
      */
     function createCMAccount(
         address admin,
@@ -317,7 +317,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Private function to create CMAccount
+     * @notice Private function to create a `CMAccount`.
      */
     function _createCMAccount(address admin, address upgrader) private returns (address) {
         // Checks
@@ -368,7 +368,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Returns the given account's creator
+     * @notice Returns the given account's creator.
      * @param account The account address
      */
     function getCMAccountCreator(address account) public view returns (address) {
@@ -377,7 +377,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Check if an address is CMAccount created by the manager
+     * @notice Check if an address is CMAccount created by the manager.
      * @param account The account address to check
      */
     function isCMAccount(address account) public view returns (bool) {
@@ -390,7 +390,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Returns the CMAccount implementation address
+     * @notice Returns the CMAccount implementation address.
      */
     function getAccountImplementation() public view returns (address) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -398,7 +398,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Set a new CMAccount implementation address
+     * @notice Set a new CMAccount implementation address.
      * @param newImplementation The new implementation address
      */
     function setAccountImplementation(address newImplementation) public onlyRole(VERSIONER_ROLE) {
@@ -421,7 +421,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Get prefund amount
+     * @notice Returns the prefund amount.
      */
     function getPrefundAmount() public view returns (uint256) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -429,7 +429,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Set pre fund amount
+     * @notice Sets the prefund amount.
      */
     function setPrefundAmount(uint256 newPrefundAmount) public onlyRole(PREFUND_ADMIN_ROLE) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -441,7 +441,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Returns the booking token address.
+     * @notice Returns the booking token address.
      */
     function getBookingTokenAddress() public view returns (address) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -449,7 +449,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Sets booking token address.
+     * @notice Sets booking token address.
      */
     function setBookingTokenAddress(address token) public onlyRole(VERSIONER_ROLE) {
         if (token.code.length == 0) {
@@ -471,7 +471,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Returns developer wallet address.
+     * @notice Returns developer wallet address.
      */
     function getDeveloperWallet() public view returns (address developerWallet) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -479,7 +479,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Sets developer wallet address.
+     * @notice Sets developer wallet address.
      */
     function setDeveloperWallet(address developerWallet) public onlyRole(DEVELOPER_WALLET_ADMIN_ROLE) {
         if (developerWallet == address(0)) {
@@ -497,7 +497,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Returns developer fee in basis points.
+     * @notice Returns developer fee in basis points.
      */
     function getDeveloperFeeBp() public view returns (uint256 developerFeeBp) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
@@ -505,7 +505,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Sets developer fee in basis points.
+     * @notice Sets developer fee in basis points.
      *
      * A basis point (bp) is one hundredth of 1 percentage point.
      *
@@ -529,7 +529,7 @@ contract CMAccountManager is
      ***************************************************/
 
     /**
-     * @dev Registers a given service name. CM Accounts can only register services
+     * @notice Registers a given service name. CM Accounts can only register services
      * if they are also registered in the service registry on the manager contract.
      *
      * @param serviceName Name of the service
@@ -539,7 +539,7 @@ contract CMAccountManager is
     }
 
     /**
-     * @dev Unregisters a given service name. CM Accounts will not be able to register
+     * @notice Unregisters a given service name. CM Accounts will not be able to register
      * the service anymore.
      *
      * @param serviceName Name of the service

@@ -49,12 +49,12 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Upgrader role can upgrade the contract to a new implementation.
+     * @notice Upgrader role can upgrade the contract to a new implementation.
      */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /**
-     * @dev This role can set the mininum allowed expiration timestamp difference.
+     * @notice This role can set the mininum allowed expiration timestamp difference.
      */
     bytes32 public constant MIN_EXPIRATION_ADMIN_ROLE = keccak256("MIN_EXPIRATION_ADMIN_ROLE");
 
@@ -98,7 +98,7 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Event emitted when a token is reserved
+     * @notice Event emitted when a token is reserved.
      *
      * @param tokenId token id
      * @param reservedFor reserved for address
@@ -117,7 +117,7 @@ contract BookingToken is
     );
 
     /**
-     * @dev Event emitted when a token is bought
+     * @notice Event emitted when a token is bought.
      *
      * @param tokenId token id
      * @param buyer buyer address
@@ -129,20 +129,20 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Error for expiration timestamp too soon. It must be at least
-     * `_minExpirationTimestampDiff` seconds in the future
+     * @notice Error for expiration timestamp too soon. It must be at least
+     * `_minExpirationTimestampDiff` seconds in the future.
      */
     error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff);
 
     /**
-     * @dev Address is not a CM Account
+     * @notice Address is not a CM Account.
      *
      * @param account account address
      */
     error NotCMAccount(address account);
 
     /**
-     * @dev ReservedFor and buyer mismatch
+     * @notice ReservedFor and buyer mismatch.
      *
      * @param reservedFor reserved for address
      * @param buyer buyer address
@@ -150,7 +150,7 @@ contract BookingToken is
     error ReservationMismatch(address reservedFor, address buyer);
 
     /**
-     * @dev Reservation expired
+     * @notice Reservation expired.
      *
      * @param tokenId token id
      * @param expirationTimestamp expiration timestamp
@@ -158,7 +158,7 @@ contract BookingToken is
     error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp);
 
     /**
-     * @dev Incorrect price
+     * @notice Incorrect price.
      *
      * @param price price of the token
      * @param reservationPrice reservation price
@@ -166,7 +166,7 @@ contract BookingToken is
     error IncorrectPrice(uint256 price, uint256 reservationPrice);
 
     /**
-     * @dev Supplier is not the owner
+     * @notice Supplier is not the owner.
      *
      * @param tokenId token id
      * @param supplier supplier address
@@ -174,7 +174,7 @@ contract BookingToken is
     error SupplierIsNotOwner(uint256 tokenId, address supplier);
 
     /**
-     * @dev Token is reserved and can not be transferred
+     * @notice Token is reserved and can not be transferred.
      *
      * @param tokenId token id
      * @param reservedFor reserved for address
@@ -182,7 +182,7 @@ contract BookingToken is
     error TokenIsReserved(uint256 tokenId, address reservedFor);
 
     /**
-     * @dev Insufficient allowance to transfer the ERC20 token to the supplier
+     * @notice Insufficient allowance to transfer the ERC20 token to the supplier.
      *
      * @param sender msg.sender
      * @param paymentToken payment token address
@@ -196,7 +196,7 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Only CMAccount modifier
+     * @notice Only CMAccount modifier.
      */
     modifier onlyCMAccount(address account) {
         requireCMAccount(account);
@@ -223,7 +223,10 @@ contract BookingToken is
         $._minExpirationTimestampDiff = 60;
     }
 
-    // Function to authorize an upgrade for UUPS proxy
+    /**
+     * @notice Function to authorize an upgrade for UUPS proxy.
+     */
+
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 
     /***************************************************
@@ -231,7 +234,7 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Mints a new token with a reservation for a specific address.
+     * @notice Mints a new token with a reservation for a specific address.
      *
      * @param reservedFor The CM Account address that can buy the token
      * @param uri The URI of the token
@@ -272,7 +275,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Buys a reserved token. The reservation must be for the message sender.
+     * @notice Buys a reserved token. The reservation must be for the message sender.
      *
      * Also the message sender should set allowance for the payment token to this
      * contract to at least the reservation price. (only for ERC20 tokens)
@@ -342,7 +345,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Reserve a token for a specific address with an expiration timestamp
+     * @notice Reserve a token for a specific address with an expiration timestamp
      */
     function _reserve(
         uint256 tokenId,
@@ -357,7 +360,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Check if the token is transferable
+     * @notice Check if the token is transferable
      */
     function checkTransferable(uint256 tokenId) internal {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -379,16 +382,17 @@ contract BookingToken is
     }
 
     /**
-     * @dev Checks if an address is a CM Account.
+     * @notice Checks if an address is a CM Account.
      *
      * @param account The address to check
+     * @return true if the address is a CM Account
      */
     function isCMAccount(address account) public view returns (bool) {
         return ICMAccountManager(getManagerAddress()).isCMAccount(account);
     }
 
     /**
-     * @dev Checks if the address is a CM Account and reverts if not.
+     * @notice Checks if the address is a CM Account and reverts if not.
      *
      * @param account The address to check
      */
@@ -399,7 +403,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Sets for the manager address
+     * @notice Sets for the manager address.
      *
      * @param manager The address of the manager
      */
@@ -409,7 +413,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Returns for the manager address.
+     * @notice Returns for the manager address.
      */
     function getManagerAddress() public view returns (address) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -417,7 +421,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Sets minimum expiration timestamp difference in seconds.
+     * @notice Sets minimum expiration timestamp difference in seconds.
      *
      * @param minExpirationTimestampDiff Minimum expiration timestamp difference in seconds
      */
@@ -429,7 +433,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Returns minimum expiration timestamp difference in seconds
+     * @notice Returns minimum expiration timestamp difference in seconds.
      */
     function getMinExpirationTimestampDiff() public view returns (uint256) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -437,7 +441,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Returns the token reservation price for a specific token.
+     * @notice Returns the token reservation price for a specific token.
      *
      * @param tokenId The token id
      */
@@ -451,7 +455,7 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Override transferFrom to check if token is reserved. It reverts if
+     * @notice Override transferFrom to check if token is reserved. It reverts if
      * the token is reserved.
      */
     function transferFrom(address from, address to, uint256 tokenId) public override(ERC721Upgradeable, IERC721) {
@@ -461,7 +465,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Override safeTransferFrom to check if token is reserved. It reverts if
+     * @notice Override safeTransferFrom to check if token is reserved. It reverts if
      * the token is reserved.
      */
     function safeTransferFrom(
