@@ -37,7 +37,7 @@ library BookingTokenOperator {
      * @param price price of the token
      * @param paymentToken payment token address
      */
-    function _mintBookingToken(
+    function mintBookingToken(
         address bookingToken,
         address reservedFor,
         string memory uri,
@@ -55,7 +55,7 @@ library BookingTokenOperator {
      * @param bookingToken booking token contract address
      * @param tokenId token id
      */
-    function _buyBookingToken(address bookingToken, uint256 tokenId) public {
+    function buyBookingToken(address bookingToken, uint256 tokenId) public {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 

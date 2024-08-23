@@ -379,7 +379,7 @@ contract CMAccount is
         IERC20 paymentToken
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        BookingTokenOperator._mintBookingToken(
+        BookingTokenOperator.mintBookingToken(
             getBookingTokenAddress(),
             reservedFor,
             uri,
@@ -395,7 +395,7 @@ contract CMAccount is
      * @param tokenId The token id
      */
     function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator._buyBookingToken(getBookingTokenAddress(), tokenId);
+        BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
     /**
