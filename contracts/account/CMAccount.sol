@@ -356,7 +356,7 @@ contract CMAccount is
      * spam by forcing user to spend the full prefund for cheques, so they can not just create an account
      * and withdraw the prefund.
      */
-    function withdraw(address payable recipient, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
+    function withdraw(address payable recipient, uint256 amount) external nonReentrant onlyRole(WITHDRAWER_ROLE) {
         // Check if amount is withdrawable according to the prefund spent amount
         _checkPrefundSpent(amount);
 
@@ -400,7 +400,7 @@ contract CMAccount is
      *
      * @param tokenId The token id
      */
-    function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+    function buyBookingToken(uint256 tokenId) external nonReentrant onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
@@ -734,7 +734,7 @@ contract CMAccount is
      *
      * @param amount The amount to withdraw in aCAM (wei)
      */
-    function withdrawGasMoney(uint256 amount) public onlyRole(GAS_WITHDRAWER_ROLE) {
+    function withdrawGasMoney(uint256 amount) public nonReentrant onlyRole(GAS_WITHDRAWER_ROLE) {
         _checkPrefundSpent(amount);
         _withdrawGasMoney(amount);
     }

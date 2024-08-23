@@ -73,8 +73,8 @@ library BookingTokenOperator {
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
         } else {
-            // Payment is in native currency. Buy the token sending the payment in
-            // native currency to the BookingToken contract.
+            // Payment is in native currency. Buy the token by sending the payment
+            // in native currency to the BookingToken contract.
             IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }

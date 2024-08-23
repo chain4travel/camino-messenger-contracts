@@ -20,6 +20,8 @@ import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 /**
  * @title BookingToken
  * @notice Booking Token contract represents a booking done on the Camino Messenger.
@@ -39,6 +41,7 @@ contract BookingToken is
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
     AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     using Address for address payable;
@@ -286,7 +289,7 @@ contract BookingToken is
      *
      * @param tokenId The token id
      */
-    function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
+    function buyReservedToken(uint256 tokenId) external payable nonReentrant onlyCMAccount(msg.sender) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
 
         // Get the reservation for the token
@@ -308,6 +311,15 @@ contract BookingToken is
             revert SupplierIsNotOwner(tokenId, reservation.supplier);
         }
 
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Delete the reservation
+        delete $._reservations[tokenId];
+
+        // Do the payment at the end
         if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
             // Payment is in ERC20.
             //
@@ -331,14 +343,6 @@ contract BookingToken is
             // Transfer payment to the supplier
             payable(reservation.supplier).sendValue(msg.value);
         }
-
-        // Transfer the token. We are using `_transfer` instead of
-        // `safeTransferFrom` because this is special transfer without a auth check.
-        // Only in this function and only for buying a reserved token
-        _transfer(reservation.supplier, msg.sender, tokenId);
-
-        // Delete the reservation
-        delete $._reservations[tokenId];
 
         // Emit event
         emit TokenBought(tokenId, msg.sender);
