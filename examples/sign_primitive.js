@@ -74,7 +74,7 @@ async function main() {
         fromCMAccount: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
         toCMAccount: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
         toBot: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        counter: 1,
+        counter: 1n,
         amount: ethers.parseUnits("1.0", "ether"), // 1 ETH
         createdAt: Math.floor(Date.now() / 1000), // Unix timestamp
         expiresAt: Math.floor(Date.now() / 1000) + 120, // Unix timestamp
@@ -178,12 +178,12 @@ async function main() {
     // because the transaction creating it is the same. (same nonce, same owner
     // etc..)
     console.log("* Getting CMAccountManager and creating a CMAccount...");
-    const cmAccountManagerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+    const cmAccountManagerAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
     const manager = await ethers.getContractAt("CMAccountManager", cmAccountManagerAddress);
 
     // Create a CMAccount
-    const tx = await manager.createCMAccount(wallet.address, wallet.address, wallet.address, {
-        value: ethers.parseEther("100"),
+    const tx = await manager.createCMAccount(wallet.address, wallet.address, {
+        value: ethers.parseEther("200"),
     });
 
     // Get the tx receipt
@@ -206,12 +206,28 @@ async function main() {
     // Get newly created CM Account contract using the parsed address
     const cmAccount = await ethers.getContractAt("CMAccount", cmAccountAddress);
 
-    console.log("* Calling CMAccount.recoverSigner(cheque, signature)...");
+    console.log("* Calling CMAccount.recoverSigner...");
 
     // Call `recoverSigner` to verify if the recovered signer is the same as our
     // original signer's address
-    const res = await cmAccount.recoverSigner(cheque, signature.serialized);
-    console.log("Recovered (on-chain):", res, "(Should be same as the 'Signer')");
+
+    // Update: We changed the recoverSigner function to internal. So it's not
+    // visible anymore on the CMAccount contract. If you really want to test it
+    // change the visibility to public, redeploy the contracts and enable the
+    // following lines below. Then the run this script again.
+    console.log("**** Visibility of recoverSigner is switched to internal. Read the comments in the file. ****");
+
+    // const res = await cmAccount.recoverSigner(
+    //     cheque.fromCMAccount,
+    //     cheque.toCMAccount,
+    //     cheque.toBot,
+    //     cheque.counter,
+    //     cheque.amount,
+    //     cheque.createdAt,
+    //     cheque.expiresAt,
+    //     signature.serialized,
+    // );
+    // console.log("Recovered (on-chain):", res, "(Should be same as the 'Signer')");
 }
 
 main().catch(console.error);
