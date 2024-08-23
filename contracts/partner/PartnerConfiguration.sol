@@ -20,6 +20,9 @@ abstract contract PartnerConfiguration is Initializable {
      *                   STORAGE                       *
      ***************************************************/
 
+    /**
+     * @notice Struct for storing supported service details for suppliers
+     */
     struct Service {
         uint256 _fee;
         /**
@@ -116,7 +119,12 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Adds a supported Service object for a given hash.
+     * @notice Adds a supported Service object for a given hash.
+     *
+     * @param serviceHash Hash of the service
+     * @param fee Fee for the service
+     * @param capabilities Capabilities for the service
+     * @param restrictedRate If the service is restricted to pre-agreement
      */
     function _addService(
         bytes32 serviceHash,
@@ -141,7 +149,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Removes a supported Service object for a given hash.
+     * @notice Removes a supported Service object for a given hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -160,7 +168,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Set the Service fee for a given hash.
+     * @notice Sets the Service fee for a given hash.
      *
      * @param serviceHash Hash of the service
      * @param fee Fee
@@ -177,7 +185,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Set the Service restricted rate for a given hash.
+     * @notice Sets the Service restricted rate for a given hash.
      *
      * @param serviceHash Hash of the service
      * @param restrictedRate Restricted rate
@@ -194,7 +202,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Set the Service capabilities for a given hash.
+     * @notice Sets the Service capabilities for a given hash.
      *
      * @param serviceHash Hash of the service
      * @param capabilities Capabilities
@@ -211,7 +219,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Add a capability to the service.
+     * @notice Adds a capability to the service.
      *
      * @param serviceHash Hash of the service
      * @param capability Capability
@@ -228,7 +236,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Remove a capability from the service.
+     * @notice Removes a capability from the service.
      *
      * @param serviceHash Hash of the service
      * @param capability Capability
@@ -251,7 +259,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns all supported service hashes
+     * @notice Returns all supported service hashes.
      */
     function getAllServiceHashes() public view returns (bytes32[] memory serviceHashes) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -259,12 +267,18 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the Service object for a given hash. Service object contains fee and capabilities.
+     * @notice Returns the Service object for a given hash. Service object contains fee and capabilities.
      *
-     * {serviceHash} is keccak256 hash of the pkg + service name as:
+     * `serviceHash` is keccak256 hash of the pkg + service name as:
      *
+     * ```text
      *            ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
      * keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")
+     * ```
+     * @dev These services are coming from the Camino Messenger Protocol's protobuf
+     * definitions.
+     *
+     * @param serviceHash Hash of the service
      */
     function getService(bytes32 serviceHash) public view virtual returns (Service memory service) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -276,7 +290,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the fee for a given service hash.
+     * @notice Returns the fee for a given service hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -290,7 +304,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the restricted rate for a given service hash.
+     * @notice Returns the restricted rate for a given service hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -304,7 +318,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the capabilities for a given service hash.
+     * @notice Returns the capabilities for a given service hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -318,7 +332,9 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Checks if the service exists.
+     * @notice Checks if the service exists.
+     *
+     * @param serviceHash Hash of the service
      */
     function _checkServiceExists(bytes32 serviceHash, PartnerConfigurationStorage storage $) private view {
         // Check if the service exists
@@ -332,7 +348,7 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Adds a wanted service hash to the wanted services set.
+     * @notice Adds a wanted service hash to the wanted services set.
      *
      * Reverts if the service already exists.
      *
@@ -351,7 +367,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Removes a wanted service hash from the wanted services set.
+     * @notice Removes a wanted service hash from the wanted services set.
      *
      * Reverts if the service does not exist.
      *
@@ -370,7 +386,9 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns all wanted service hashes.
+     * @notice Returns all wanted service hashes.
+     *
+     * @return serviceHashes Wanted service hashes
      */
     function getWantedServiceHashes() public view virtual returns (bytes32[] memory serviceHashes) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -384,7 +402,7 @@ abstract contract PartnerConfiguration is Initializable {
     // PAYMENT INFO: SUPPORTED TOKENS
 
     /**
-     * @dev Adds a supported payment token.
+     * @notice Adds a supported payment token.
      *
      * @param _token Payment token address to be added
      */
@@ -400,7 +418,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Removes a supported payment token.
+     * @notice Removes a supported payment token.
      *
      * @param _token Payment token address to be removed
      */
@@ -416,7 +434,9 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns supported token addresses.
+     * @notice Returns supported token addresses.
+     *
+     * @return tokens Supported token addresses
      */
     function getSupportedTokens() public view virtual returns (address[] memory tokens) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -426,7 +446,7 @@ abstract contract PartnerConfiguration is Initializable {
     // PAYMENT INFO: OFF-CHAIN PAYMENT SUPPORT
 
     /**
-     * @dev Set the off-chain payment support is supported.
+     * @notice Sets the off-chain payment support is supported.
      */
     function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -435,7 +455,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Return true if off-chain payment is supported for the given service
+     * @notice Returns true if off-chain payment is supported for the given service.
      */
     function offChainPaymentSupported() public view virtual returns (bool) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -447,7 +467,7 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Adds public key with an address. Reverts if the public key already
+     * @notice Adds public key with an address. Reverts if the public key already
      * exists.
      *
      * Beware: This functions does not check if the public key is actually for the
@@ -468,7 +488,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Removes the public key for a given address
+     * @notice Removes the public key for a given address
      *
      * Reverts if the public key does not exist
      */
@@ -486,7 +506,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the addresses of all public keys. These can then be used to
+     * @notice Returns the addresses of all public keys. These can then be used to
      * retrieve the public keys the `getPublicKey(address)` function.
      */
     function getPublicKeysAddresses() public view virtual returns (address[] memory pubKeyAddresses) {
@@ -495,7 +515,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Returns the public key for a given address.
+     * @notice Returns the public key for a given address.
      *
      * Reverts if the public key does not exist
      *
