@@ -59,6 +59,28 @@ wallet.
 
 This is a base contract that is inherited by the `CMAccount` contract.
 
+### PartnerConfiguration
+
+The `PartnerConfiguration` contract is used by the `CMAccount` and implements
+features to register supported (supplier) and wanted (distributor) services,
+register public keys that would be used to encrypt private data, off-chain payment
+support, and on-chain supported payment token addresses.
+
+### ServiceRegistry
+
+The `ServiceRegistry` contract is used by the `CMAccountManager` contract and
+implements a registry that is used to hash service names to keccak256 hashes and
+store them in a mapping as `hash => service name`. `CMAccount` use these to resolve
+hashes to service names and service names to hashes.
+
+### BookingToken
+
+The `BookingToken` contract is an ERC-721 NFT contract that is used by the partners
+to mint and buy Booking Tokens. A Booking Token represents a booking done on the
+Camino Messenger ecosystem.
+
+Only the `CMAccount` contracts are allowed to mint and buy the tokens.
+
 ### KYCUtils
 
 The `KYCUtils` contract provides utility functions for KYC (Know Your Customer).
@@ -80,22 +102,6 @@ Calling `managerProxy.createCMAccount(...)` with the necessary arguments creates
 `ERC1967Proxy` and sets the implementation address to the recorded account
 implementation address in the manager. After it is deployed, it is immediately (same
 transaction) initialized with the given arguments.
-
-#### Relation of contracts with each other
-
-```mermaid
-flowchart TD
-    nm{"Manager {ERC1967Proxy}"} --> no{"Implementation {CMAccountManager}"}
-    no o--o n1{"Implementation {CMAccount}<br>"}
-    no --> n4{{"createCMAccoun()"}}
-    n4 --> ns{"<span style="color: rgb(0, 0, 0); background-color: rgb(255, 109, 0);">CMAccount {ERC1967Proxy}</span><br>"}
-    ns --> n1
-    style nm stroke-width:1px,stroke-dasharray: 0,fill:#FF6D00,color:#000000
-    style no fill:#C8E6C9,color:#000000
-    style n1 stroke:#E1BEE7,fill:#FFF9C4,color:#000000
-    style n4 color:#FFFFFF,fill:#2962FF
-    style ns color:#000000,fill:#FF6D00
-```
 
 ## Deploy Contracts Locally
 
@@ -122,11 +128,12 @@ Deploying [ CMAccountManagerModule ]
 
 Batch #1
   Executed BookingTokenProxyModule#BookingToken
-  Executed CMAccountManagerModule#CMAccount
+  Executed CMAccountManagerModule#BookingTokenOperator
   Executed ManagerProxyModule#CMAccountManager
 
 Batch #2
   Executed BookingTokenProxyModule#ERC1967Proxy
+  Executed CMAccountManagerModule#CMAccount
   Executed ManagerProxyModule#ERC1967Proxy
 
 Batch #3
@@ -137,20 +144,21 @@ Batch #4
   Executed CMAccountManagerModule#BookingToken.initialize
   Executed CMAccountManagerModule#CMAccountManager.initialize
   Executed CMAccountManagerModule#CMAccountManager.setAccountImplementation
-  Executed CMAccountManagerModule#CMAccountManager.setBookingToken
+  Executed CMAccountManagerModule#CMAccountManager.setBookingTokenAddress
 
 [ CMAccountManagerModule ] successfully deployed 🚀
 
 Deployed Addresses
 
 BookingTokenProxyModule#BookingToken - 0x5FbDB2315678afecb367f032d93F642f64180aa3
-CMAccountManagerModule#CMAccount - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+CMAccountManagerModule#BookingTokenOperator - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
 ManagerProxyModule#CMAccountManager - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 BookingTokenProxyModule#ERC1967Proxy - 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
-ManagerProxyModule#ERC1967Proxy - 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+CMAccountManagerModule#CMAccount - 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+ManagerProxyModule#ERC1967Proxy - 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707
 CMAccountManagerModule#BookingToken - 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
-CMAccountManagerModule#CMAccountManager - 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
-Done in 2.79s.
+CMAccountManagerModule#CMAccountManager - 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707
+Done in 3.78s.
 ```
 
 You can also see your deployed contract addresses in the
@@ -387,8 +395,8 @@ Ethers.js, check out the [`test/ChequeManager.test.js`](test/ChequeManager.test.
 
 #### Go
 
-**TODO:** Coming soon...
+**TODO:** WIP
 
 #### Python
 
-**TODO:** Coming soon...
+**TODO:** WIP
