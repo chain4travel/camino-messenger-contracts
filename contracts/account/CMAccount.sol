@@ -32,9 +32,30 @@ import "../partner/PartnerConfiguration.sol";
 import "./GasMoneyManager.sol";
 
 /**
- * @dev CM Account manages multiple bots for distributors and suppliers on Camino Messenger.
+ * @title Camino Messenger Account
+ * @notice A CM Account manages funds, minting/buying of booking tokens, provided
+ * or wanted services, and multiple bots for distributors and suppliers on
+ * Camino Messenger ecosystem.
  *
- * This account holds funds that will be paid to the cheque beneficiaries.
+ * Registering bots is done by role based access control. Bot's with
+ * `CHEQUE_OPERATOR_ROLE` can issue cheques to paid by the {CMAccount} contract.
+ * Bot can also have `GAS_WITHDRAWER_ROLE` and `BOOKING_OPERATOR_ROLE`.
+ *
+ * `GAS_WITHDRAWER_ROLE` enables a bot to withdraw native coins (CAM) from the
+ * contract to be used as gas money. This restricted with a `limit`
+ * (wei/aCAM) and `period` (seconds) by the `BOT_ADMIN_ROLE`. Default starting
+ * values are 10 CAM per 24 hours.
+ *
+ * `BOOKING_OPERATOR_ROLE` enables a bot to mint and buy Booking Tokens by
+ * calling the corresponding functions on the {BookingToken} contract. The buy
+ * operation pays the price of the Booking Token with the funds on the
+ * {CMAccount} contract.
+ *
+ * @dev This contract uses UUPS style upgradability. The authorization function
+ * `_authorizeUpgrade(address)` can be called by the `UPGRADER_ROLE` and is
+ * restricted to only upgrade to the implementation address registered on the
+ * {CMAccountManager} contract.
+ * @custom:security-contact https://r.xyz/program/camino-network
  */
 contract CMAccount is
     Initializable,
@@ -52,18 +73,52 @@ contract CMAccount is
      *                    ROLES                        *
      ***************************************************/
 
+    /**
+     * @dev Upgrader role can upgrade the contract to a new implementation.
+     */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /**
+     * @dev Bot admin role can add & remove bots and set gas money withdrawal
+     * parameters.
+     */
     bytes32 public constant BOT_ADMIN_ROLE = keccak256("BOT_ADMIN_ROLE");
+
+    /**
+     * @dev Cheque operator role can issue cheques to be paid by this CMAccount
+     * contract.
+     */
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
+
+    /**
+     * @dev Gas withdrawer role can withdraw gas money from the contract. This is
+     * intended to be used by the bots and is granted when `addMessengerBot` is
+     * called.
+     */
     bytes32 public constant GAS_WITHDRAWER_ROLE = keccak256("GAS_WITHDRAWER_ROLE");
+
+    /**
+     * @dev Withdrawer role can withdraw funds from the contract.
+     */
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+
+    /**
+     * @dev Booking operator role can mint and buy booking tokens using the
+     * functions on this contract. This is generally used by the bots. The
+     * price for the booking token is paid by this contract.
+     */
     bytes32 public constant BOOKING_OPERATOR_ROLE = keccak256("BOOKING_OPERATOR_ROLE");
+
+    /**
+     * @dev Service admin role can add & remove supported & wanted services.
+     */
     bytes32 public constant SERVICE_ADMIN_ROLE = keccak256("SERVICE_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
+    /// @custom:storage-location erc7201:camino.messenger.storage.CMAccount
     struct CMAccountStorage {
         /**
          * @dev Address of the CMAccountManager
@@ -195,16 +250,31 @@ contract CMAccount is
      *                    Getters                      *
      ***************************************************/
 
+    /**
+     * @dev Returns the CMAccountManager address.
+     *
+     * @return CMAccountManager address
+     */
     function getManagerAddress() public view override returns (address) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._manager;
     }
 
+    /**
+     * @dev Returns the booking token address.
+     *
+     * @return BookingToken address
+     */
     function getBookingTokenAddress() public view returns (address) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._bookingToken;
     }
 
+    /**
+     * @dev Returns the prefund amount.
+     *
+     * @return prefund amount
+     */
     function getPrefundAmount() public view returns (uint256) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._prefundAmount;
@@ -215,12 +285,12 @@ contract CMAccount is
      ***************************************************/
 
     /**
-     * @dev Upgrades the CMAccount implementation.
+     * @dev Authorizes the upgrade of the CMAccount..
      *
      * Reverts if the new implementation is the same as the old one.
      *
-     * Reverts if the new implementation does not match the implementation address in the manager.
-     * Only implementations registered at the manager are allowed.
+     * Reverts if the new implementation does not match the implementation address
+     * in the manager. Only implementations registered at the manager are allowed.
      *
      * Emits a {CMAccountUpgraded} event.
      */
@@ -293,7 +363,7 @@ contract CMAccount is
      ***************************************************/
 
     /**
-     * @dev Mint booking token
+     * @dev Mints booking token.
      *
      * @param reservedFor The account to reserve the token for
      * @param uri The URI of the token
@@ -320,7 +390,9 @@ contract CMAccount is
     }
 
     /**
-     * @dev Buy booking token
+     * @dev Buys booking token.
+     *
+     * @param tokenId The token id
      */
     function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator._buyBookingToken(getBookingTokenAddress(), tokenId);
@@ -339,6 +411,15 @@ contract CMAccount is
      *                ERC20 & ERC721                   *
      ***************************************************/
 
+    /**
+     * @dev Transfers ERC20 tokens.
+     *
+     * This function reverts if `to` is the zero address.
+     *
+     * @param token The ERC20 token
+     * @param to The address to transfer the tokens to
+     * @param amount The amount of tokens to transfer
+     */
     function transferERC20(IERC20 token, address to, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
         if (to == address(0)) {
             revert TransferToZeroAddress();
@@ -346,6 +427,15 @@ contract CMAccount is
         token.safeTransfer(to, amount);
     }
 
+    /**
+     * @dev Transfers ERC721 tokens.
+     *
+     * This function reverts if `to` is the zero address.
+     *
+     * @param token The ERC721 token
+     * @param to The address to transfer the tokens to
+     * @param tokenId The token id of the token
+     */
     function transferERC721(IERC721 token, address to, uint256 tokenId) external onlyRole(WITHDRAWER_ROLE) {
         if (to == address(0)) {
             revert TransferToZeroAddress();
@@ -360,7 +450,7 @@ contract CMAccount is
     /**
      * @dev Add a service to the account
      *
-     * {serviceName} is defined as pkg + service name in protobuf. For example:
+     * `serviceName` is defined as pkg + service name in protobuf. For example:
      *
      *  ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
      * "cmp.services.accommodation.v1alpha.AccommodationSearchService")
@@ -494,6 +584,11 @@ contract CMAccount is
      *                WANTED SERVICES                  *
      ***************************************************/
 
+    /**
+     * @dev Adds wanted services.
+     *
+     * @param serviceNames List of service names
+     */
     function addWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
             bytes32 serviceHash = getServiceHash(serviceNames[i]);
@@ -501,6 +596,11 @@ contract CMAccount is
         }
     }
 
+    /**
+     * @dev Removes wanted services.
+     *
+     * @param serviceNames List of service names
+     */
     function removeWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
             bytes32 serviceHash = getServiceHash(serviceNames[i]);
@@ -508,6 +608,11 @@ contract CMAccount is
         }
     }
 
+    /**
+     * @dev Get all wanted services.
+     *
+     * @return serviceNames List of service names
+     */
     function getWantedServices() public view returns (string[] memory serviceNames) {
         bytes32[] memory _wantedServiceHashes = getWantedServiceHashes();
 
@@ -526,14 +631,29 @@ contract CMAccount is
      *                   PAYMENT                       *
      ***************************************************/
 
+    /**
+     * @dev Sets if off-chain payment is supported.
+     *
+     * @param _isSupported true if off-chain payment is supported
+     */
     function setOffChainPaymentSupported(bool _isSupported) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setOffChainPaymentSupported(_isSupported);
     }
 
+    /**
+     * @dev Adds a supported payment token.
+     *
+     * @param _supportedToken address of the token
+     */
     function addSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
         _addSupportedToken(_supportedToken);
     }
 
+    /**
+     * @dev Removes a supported payment token.
+     *
+     * @param _supportedToken address of the token
+     */
     function removeSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeSupportedToken(_supportedToken);
     }
@@ -566,7 +686,7 @@ contract CMAccount is
      ***************************************************/
 
     /**
-     * @dev Add messenger bot with initial gas money
+     * @dev Adds messenger bot with initial gas money.
      */
     function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
         // Check if we can spend the gasMoney to send it to the bot
@@ -584,7 +704,7 @@ contract CMAccount is
     }
 
     /**
-     * @dev Remove messenger bot
+     * @dev Removes messenger bot by revoking the roles.
      */
     function removeMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
         _revokeRole(CHEQUE_OPERATOR_ROLE, bot);
@@ -598,11 +718,22 @@ contract CMAccount is
      *              GAS MONEY WITHDRAW                 *
      ***************************************************/
 
+    /**
+     * @dev Withdraw gas money. Requires the `GAS_WITHDRAWER_ROLE`.
+     *
+     * @param amount The amount to withdraw in aCAM (wei)
+     */
     function withdrawGasMoney(uint256 amount) public onlyRole(GAS_WITHDRAWER_ROLE) {
         _checkPrefundSpent(amount);
         _withdrawGasMoney(amount);
     }
 
+    /**
+     * @dev Set gas money withdrawal parameters. Requires the `BOT_ADMIN_ROLE`.
+     *
+     * @param limit Amount of gas money to withdraw in wei per period
+     * @param period Duration of the withdrawal period in seconds
+     */
     function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
         _setGasMoneyWithdrawal(limit, period);
     }

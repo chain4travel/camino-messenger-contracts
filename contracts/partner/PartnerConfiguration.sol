@@ -7,18 +7,23 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+/**
+ * @title PartnerConfiguration
+ * @notice Partner Configuration is used by the {CMAccount} contract to register
+ * supported and wanted services by the partner.
+ */
 abstract contract PartnerConfiguration is Initializable {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
-    using EnumerableSet for EnumerableSet.Bytes32Set;
-    using EnumerableSet for EnumerableSet.AddressSet;
-
     struct Service {
         uint256 _fee;
         /**
-         * @dev  If set to true, this means the service is restricted to pre-aggreement
+         * @dev  If set to true, this means the service is restricted to pre-agreement
          * with the partner. (Not a rack rate)
          */
         bool _restrictedRate;
@@ -40,7 +45,7 @@ abstract contract PartnerConfiguration is Initializable {
         PaymentInfo _paymentInfo;
         // Public keys, keep a enumerable list of public key addresses
         EnumerableSet.AddressSet _publicKeyAddressesSet;
-        // Public keys for ecrypting private data for Booking Token
+        // Public keys for encrypting private data for Booking Token
         mapping(address publicKeyAddress => bytes publicKey) _publicKeys;
         // Services that this distributors want to buy
         EnumerableSet.Bytes32Set _wantedServicesHashSet;
@@ -270,6 +275,11 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash];
     }
 
+    /**
+     * @dev Returns the fee for a given service hash.
+     *
+     * @param serviceHash Hash of the service
+     */
     function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -279,6 +289,11 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash]._fee;
     }
 
+    /**
+     * @dev Returns the restricted rate for a given service hash.
+     *
+     * @param serviceHash Hash of the service
+     */
     function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -288,6 +303,11 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash]._restrictedRate;
     }
 
+    /**
+     * @dev Returns the capabilities for a given service hash.
+     *
+     * @param serviceHash Hash of the service
+     */
     function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] memory capabilities) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -297,6 +317,9 @@ abstract contract PartnerConfiguration is Initializable {
         return $._supportedServices[serviceHash]._capabilities;
     }
 
+    /**
+     * @dev Checks if the service exists.
+     */
     function _checkServiceExists(bytes32 serviceHash, PartnerConfigurationStorage storage $) private view {
         // Check if the service exists
         if (!$._servicesHashSet.contains(serviceHash)) {
@@ -308,6 +331,13 @@ abstract contract PartnerConfiguration is Initializable {
      *               WANTED SERVICES                   *
      ***************************************************/
 
+    /**
+     * @dev Adds a wanted service hash to the wanted services set.
+     *
+     * Reverts if the service already exists.
+     *
+     * @param serviceHash Hash of the service
+     */
     function _addWantedService(bytes32 serviceHash) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -320,6 +350,13 @@ abstract contract PartnerConfiguration is Initializable {
         emit WantedServiceAdded(serviceHash);
     }
 
+    /**
+     * @dev Removes a wanted service hash from the wanted services set.
+     *
+     * Reverts if the service does not exist.
+     *
+     * @param serviceHash Hash of the service
+     */
     function _removeWantedService(bytes32 serviceHash) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
 
@@ -332,6 +369,9 @@ abstract contract PartnerConfiguration is Initializable {
         emit WantedServiceRemoved(serviceHash);
     }
 
+    /**
+     * @dev Returns all wanted service hashes.
+     */
     function getWantedServiceHashes() public view virtual returns (bytes32[] memory serviceHashes) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         return $._wantedServicesHashSet.values();
@@ -343,6 +383,11 @@ abstract contract PartnerConfiguration is Initializable {
 
     // PAYMENT INFO: SUPPORTED TOKENS
 
+    /**
+     * @dev Adds a supported payment token.
+     *
+     * @param _token Payment token address to be added
+     */
     function _addSupportedToken(address _token) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         bool added = $._paymentInfo._supportedTokens.add(_token);
@@ -354,6 +399,11 @@ abstract contract PartnerConfiguration is Initializable {
         emit PaymentTokenAdded(_token);
     }
 
+    /**
+     * @dev Removes a supported payment token.
+     *
+     * @param _token Payment token address to be removed
+     */
     function _removeSupportedToken(address _token) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         bool removed = $._paymentInfo._supportedTokens.remove(_token);
@@ -366,7 +416,7 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Return supported tokens
+     * @dev Returns supported token addresses.
      */
     function getSupportedTokens() public view virtual returns (address[] memory tokens) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -375,6 +425,9 @@ abstract contract PartnerConfiguration is Initializable {
 
     // PAYMENT INFO: OFF-CHAIN PAYMENT SUPPORT
 
+    /**
+     * @dev Set the off-chain payment support is supported.
+     */
     function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
         $._paymentInfo._supportsOffChainPayment = _supportsOffChainPayment;
@@ -394,7 +447,11 @@ abstract contract PartnerConfiguration is Initializable {
      ***************************************************/
 
     /**
-     * @dev Add public key with an address
+     * @dev Adds public key with an address. Reverts if the public key already
+     * exists.
+     *
+     * Beware: This functions does not check if the public key is actually for the
+     * given address.
      */
     function _addPublicKey(address pubKeyAddress, bytes memory publicKeyData) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -411,7 +468,9 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Remove public key by address
+     * @dev Removes the public key for a given address
+     *
+     * Reverts if the public key does not exist
      */
     function _removePublicKey(address pubKeyAddress) internal virtual {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -427,7 +486,8 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Return addresses of all public keys
+     * @dev Returns the addresses of all public keys. These can then be used to
+     * retrieve the public keys the `getPublicKey(address)` function.
      */
     function getPublicKeysAddresses() public view virtual returns (address[] memory pubKeyAddresses) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();
@@ -435,7 +495,11 @@ abstract contract PartnerConfiguration is Initializable {
     }
 
     /**
-     * @dev Return public key data for a given address
+     * @dev Returns the public key for a given address.
+     *
+     * Reverts if the public key does not exist
+     *
+     * @param pubKeyAddress Address of the public key
      */
     function getPublicKey(address pubKeyAddress) public view virtual returns (bytes memory data) {
         PartnerConfigurationStorage storage $ = _getPartnerConfigurationStorage();

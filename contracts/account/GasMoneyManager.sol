@@ -7,6 +7,12 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/**
+ * @title GasMoneyManager
+ * @dev GasMoneyManager manages gas money withdrawals for a {CMAccount}.
+ *
+ * Gas money withdrawals are restricted to a withdrawal limit and period.
+ */
 abstract contract GasMoneyManager is Initializable {
     using Address for address payable;
 
@@ -14,6 +20,7 @@ abstract contract GasMoneyManager is Initializable {
      *                   STORAGE                       *
      ***************************************************/
 
+    /// @custom:storage-location erc7201:camino.messenger.storage.GasMoneyManager
     struct GasMoneyStorage {
         mapping(address => uint256) _withdrawalPeriodStart;
         mapping(address => uint256) _withdrawnAmount;
@@ -35,9 +42,21 @@ abstract contract GasMoneyManager is Initializable {
      *                   EVENTS                        *
      ***************************************************/
 
+    /**
+     * @dev Gas money withdrawal event
+     *
+     * @param withdrawer the address of the withdrawer
+     * @param amount the amount withdrawn
+     */
     event GasMoneyWithdrawal(address indexed withdrawer, uint256 amount);
+
+    /**
+     * @dev Gas money withdrawal limit and period updated event
+     *
+     * @param limit the withdrawal limit for the period
+     * @param period the withdrawal period in seconds
+     */
     event GasMoneyWithdrawalUpdated(uint256 limit, uint256 period);
-    //event GasMoneyWithdrawalPeriodUpdated(uint256 period);
 
     /***************************************************
      *                   ERRORS                        *
@@ -61,10 +80,10 @@ abstract contract GasMoneyManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Withdraw gas money
+     * @dev Withdraws gas money.
      *
      * This functions is intended to be called by the bot to withdraw gas money.
-     * Inheriting contract should restrict who can call this within a public
+     * Inheriting contract should restrict who can call this with a public
      * function.
      */
     function _withdrawGasMoney(uint256 amount) internal {
@@ -104,7 +123,7 @@ abstract contract GasMoneyManager is Initializable {
     }
 
     /**
-     * @dev Set the gas money withdrawal limit and period
+     * @dev Sets the gas money withdrawal limit and period.
      *
      * @param limit the withdrawal limit for the period
      * @param period the withdrawal period in seconds
@@ -117,13 +136,19 @@ abstract contract GasMoneyManager is Initializable {
         emit GasMoneyWithdrawalUpdated(limit, period);
     }
 
-    function getGasMoneyWithdrawal() public view returns (uint256, uint256) {
+    /**
+     * @dev Returns the gas money withdrawal restrictions.
+     *
+     * @return withdrawalLimit
+     * @return withdrawalPeriod
+     */
+    function getGasMoneyWithdrawal() public view returns (uint256 withdrawalLimit, uint256 withdrawalPeriod) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
         return ($._withdrawalLimit, $._withdrawalPeriod);
     }
 
     /**
-     * @dev Get the gas money withdrawal details for an account
+     * @dev Returns the gas money withdrawal details for an account.
      *
      * @param account address of the account
      * @return periodStart timestamp of the withdrawal period start

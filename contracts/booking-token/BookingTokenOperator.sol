@@ -6,11 +6,37 @@ import "./IBookingToken.sol";
 // ERC-20 Utils
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title BookingTokenOperator
+ * @dev Booking token operator contract is used by the {CMAccount} contract to mint
+ * and buy booking tokens.
+ *
+ * We made this a library so that we can use it in the {CMAccount} contract without
+ * increasing the size of the contract.
+ */
 library BookingTokenOperator {
     using SafeERC20 for IERC20;
 
+    /**
+     * @dev Token approval for the BookingToken address failed.
+     *
+     * @param token token address
+     * @param spender spender address (the BookingToken contract address)
+     * @param amount amount of tokens to approve
+     */
     error TokenApprovalFailed(address token, address spender, uint256 amount);
 
+    /**
+     * @dev Mints a booking token.
+     *
+     * @param bookingToken booking token contract address
+     * @param reservedFor address of the CM Account that can buy the token
+     * (generally the distributor)
+     * @param uri URI of the token
+     * @param expirationTimestamp expiration timestamp of the token in seconds
+     * @param price price of the token
+     * @param paymentToken payment token address
+     */
     function _mintBookingToken(
         address bookingToken,
         address reservedFor,
@@ -23,7 +49,11 @@ library BookingTokenOperator {
     }
 
     /**
-     * @dev Buy a booking token with the specified price
+     * @dev Buys a booking token with the specified price and payment token in the
+     * reservation.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
      */
     function _buyBookingToken(address bookingToken, uint256 tokenId) public {
         // Get the price from the booking token contract

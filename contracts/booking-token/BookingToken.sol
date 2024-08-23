@@ -20,6 +20,19 @@ import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title BookingToken
+ * @notice Booking Token contract represents a booking done on the Camino Messenger.
+ *
+ * Suppliers can mint Booking Tokens and reserve them for a distributor address to
+ * buy.
+ *
+ * Booking Tokens can have zero price, meaning that the payment will be done
+ * off-chain.
+ *
+ * When a token is minted with a reservation, it can not transferred until the
+ * expiration timestamp is reached or the token is bought.
+ */
 contract BookingToken is
     Initializable,
     ERC721Upgradeable,
@@ -36,9 +49,13 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Roles
+     * @dev Upgrader role can upgrade the contract to a new implementation.
      */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /**
+     * @dev This role can set the mininum allowed expiration timestamp difference.
+     */
     bytes32 public constant MIN_EXPIRATION_ADMIN_ROLE = keccak256("MIN_EXPIRATION_ADMIN_ROLE");
 
     /***************************************************
@@ -54,6 +71,7 @@ contract BookingToken is
         IERC20 paymentToken; // Token used to pay for the reserved token
     }
 
+    /// @custom:storage-location erc7201:camino.messenger.storage.BookingToken
     struct BookingTokenStorage {
         // CMAccountManager address
         address _manager;
@@ -79,7 +97,16 @@ contract BookingToken is
      *                    EVENTS                       *
      ***************************************************/
 
-    // Events for logging significant actions
+    /**
+     * @dev Event emitted when a token is reserved
+     *
+     * @param tokenId token id
+     * @param reservedFor reserved for address
+     * @param supplier supplier address
+     * @param expirationTimestamp expiration timestamp
+     * @param price price of the token
+     * @param paymentToken payment token address
+     */
     event TokenReserved(
         uint256 indexed tokenId,
         address indexed reservedFor,
@@ -89,7 +116,12 @@ contract BookingToken is
         IERC20 paymentToken
     );
 
-    // Reserved token bought
+    /**
+     * @dev Event emitted when a token is bought
+     *
+     * @param tokenId token id
+     * @param buyer buyer address
+     */
     event TokenBought(uint256 indexed tokenId, address indexed buyer);
 
     /***************************************************
@@ -98,42 +130,64 @@ contract BookingToken is
 
     /**
      * @dev Error for expiration timestamp too soon. It must be at least
-       {_minExpirationTimestampDiff} seconds in the future
+     * `_minExpirationTimestampDiff` seconds in the future
      */
     error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff);
 
     /**
      * @dev Address is not a CM Account
+     *
+     * @param account account address
      */
     error NotCMAccount(address account);
 
     /**
      * @dev ReservedFor and buyer mismatch
+     *
+     * @param reservedFor reserved for address
+     * @param buyer buyer address
      */
     error ReservationMismatch(address reservedFor, address buyer);
 
     /**
      * @dev Reservation expired
+     *
+     * @param tokenId token id
+     * @param expirationTimestamp expiration timestamp
      */
     error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp);
 
     /**
      * @dev Incorrect price
+     *
+     * @param price price of the token
+     * @param reservationPrice reservation price
      */
     error IncorrectPrice(uint256 price, uint256 reservationPrice);
 
     /**
      * @dev Supplier is not the owner
+     *
+     * @param tokenId token id
+     * @param supplier supplier address
      */
     error SupplierIsNotOwner(uint256 tokenId, address supplier);
 
     /**
      * @dev Token is reserved and can not be transferred
+     *
+     * @param tokenId token id
+     * @param reservedFor reserved for address
      */
     error TokenIsReserved(uint256 tokenId, address reservedFor);
 
     /**
      * @dev Insufficient allowance to transfer the ERC20 token to the supplier
+     *
+     * @param sender msg.sender
+     * @param paymentToken payment token address
+     * @param price price of the token
+     * @param allowance allowance amount
      */
     error InsufficientAllowance(address sender, IERC20 paymentToken, uint256 price, uint256 allowance);
 
@@ -141,6 +195,9 @@ contract BookingToken is
      *                  MODIFIERS                      *
      ***************************************************/
 
+    /**
+     * @dev Only CMAccount modifier
+     */
     modifier onlyCMAccount(address account) {
         requireCMAccount(account);
         _;
@@ -174,7 +231,7 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Mints a new token with a reservation for a specific address
+     * @dev Mints a new token with a reservation for a specific address.
      *
      * @param reservedFor The CM Account address that can buy the token
      * @param uri The URI of the token
@@ -194,7 +251,8 @@ contract BookingToken is
 
         BookingTokenStorage storage $ = _getBookingTokenStorage();
 
-        // Expiration timestamp should be at least _minExpirationTimestampDiff seconds in the future
+        // Expiration timestamp should be at least `_minExpirationTimestampDiff`
+        // seconds in the future
         uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
         if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
             revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
@@ -213,13 +271,25 @@ contract BookingToken is
         emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
     }
 
+    /**
+     * @dev Buys a reserved token. The reservation must be for the message sender.
+     *
+     * Also the message sender should set allowance for the payment token to this
+     * contract to at least the reservation price. (only for ERC20 tokens)
+     *
+     * For native coin, the message sender should send the exact amount.
+     *
+     * Only CM Accounts can call this function
+     *
+     * @param tokenId The token id
+     */
     function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
 
         // Get the reservation for the token
         TokenReservation memory reservation = $._reservations[tokenId];
 
-        // Check reservationedFor and msg.sender match
+        // Check if `reservedFor` and `msg.sender` match
         if (reservation.reservedFor != msg.sender) {
             revert ReservationMismatch(reservation.reservedFor, msg.sender);
         }
@@ -309,14 +379,18 @@ contract BookingToken is
     }
 
     /**
-     * @dev Check if an address is a CM Account
+     * @dev Checks if an address is a CM Account.
+     *
+     * @param account The address to check
      */
     function isCMAccount(address account) public view returns (bool) {
         return ICMAccountManager(getManagerAddress()).isCMAccount(account);
     }
 
     /**
-     * @dev Check if the address is a CM Account and revert if not
+     * @dev Checks if the address is a CM Account and reverts if not.
+     *
+     * @param account The address to check
      */
     function requireCMAccount(address account) internal view {
         if (!isCMAccount(account)) {
@@ -325,7 +399,9 @@ contract BookingToken is
     }
 
     /**
-     * @dev Setter for _manager
+     * @dev Sets for the manager address
+     *
+     * @param manager The address of the manager
      */
     function setManagerAddress(address manager) public onlyRole(DEFAULT_ADMIN_ROLE) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -333,7 +409,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Getter for _manager
+     * @dev Returns for the manager address.
      */
     function getManagerAddress() public view returns (address) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -341,7 +417,9 @@ contract BookingToken is
     }
 
     /**
-     * @dev Setter for _minExpirationTimestampDiff
+     * @dev Sets minimum expiration timestamp difference in seconds.
+     *
+     * @param minExpirationTimestampDiff Minimum expiration timestamp difference in seconds
      */
     function setMinExpirationTimestampDiff(
         uint256 minExpirationTimestampDiff
@@ -351,7 +429,7 @@ contract BookingToken is
     }
 
     /**
-     * @dev Getter for _minExpirationTimestampDiff
+     * @dev Returns minimum expiration timestamp difference in seconds
      */
     function getMinExpirationTimestampDiff() public view returns (uint256) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -359,7 +437,9 @@ contract BookingToken is
     }
 
     /**
-     * @dev Get token reservation price for a specific token
+     * @dev Returns the token reservation price for a specific token.
+     *
+     * @param tokenId The token id
      */
     function getReservationPrice(uint256 tokenId) public view returns (uint256 price, IERC20 paymentToken) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -371,7 +451,8 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @dev Override transferFrom to check if token is reserved
+     * @dev Override transferFrom to check if token is reserved. It reverts if
+     * the token is reserved.
      */
     function transferFrom(address from, address to, uint256 tokenId) public override(ERC721Upgradeable, IERC721) {
         // Verify that the token is transferable (i.e. not reserved)
@@ -379,6 +460,10 @@ contract BookingToken is
         super.transferFrom(from, to, tokenId);
     }
 
+    /**
+     * @dev Override safeTransferFrom to check if token is reserved. It reverts if
+     * the token is reserved.
+     */
     function safeTransferFrom(
         address from,
         address to,
