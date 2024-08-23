@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title GasMoneyManager
- * @dev GasMoneyManager manages gas money withdrawals for a {CMAccount}.
+ * @notice GasMoneyManager manages gas money withdrawals for a {CMAccount}.
  *
  * Gas money withdrawals are restricted to a withdrawal limit and period.
  */
@@ -43,7 +43,7 @@ abstract contract GasMoneyManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Gas money withdrawal event
+     * @notice Gas money withdrawal event
      *
      * @param withdrawer the address of the withdrawer
      * @param amount the amount withdrawn
@@ -51,7 +51,7 @@ abstract contract GasMoneyManager is Initializable {
     event GasMoneyWithdrawal(address indexed withdrawer, uint256 amount);
 
     /**
-     * @dev Gas money withdrawal limit and period updated event
+     * @notice Gas money withdrawal limit and period updated event
      *
      * @param limit the withdrawal limit for the period
      * @param period the withdrawal period in seconds
@@ -80,7 +80,7 @@ abstract contract GasMoneyManager is Initializable {
      ***************************************************/
 
     /**
-     * @dev Withdraws gas money.
+     * @notice Withdraws gas money.
      *
      * This functions is intended to be called by the bot to withdraw gas money.
      * Inheriting contract should restrict who can call this with a public
@@ -120,7 +120,7 @@ abstract contract GasMoneyManager is Initializable {
     }
 
     /**
-     * @dev Sets the gas money withdrawal limit and period.
+     * @notice Sets the gas money withdrawal limit and period.
      *
      * @param limit the withdrawal limit for the period
      * @param period the withdrawal period in seconds
@@ -134,7 +134,7 @@ abstract contract GasMoneyManager is Initializable {
     }
 
     /**
-     * @dev Returns the gas money withdrawal restrictions.
+     * @notice Returns the gas money withdrawal restrictions.
      *
      * @return withdrawalLimit
      * @return withdrawalPeriod
@@ -145,7 +145,7 @@ abstract contract GasMoneyManager is Initializable {
     }
 
     /**
-     * @dev Returns the gas money withdrawal details for an account.
+     * @notice Returns the gas money withdrawal details for an account.
      *
      * @param account address of the account
      * @return periodStart timestamp of the withdrawal period start

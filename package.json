@@ -9,6 +9,7 @@
         "test": "REPORT_GAS=true yarn hardhat test",
         "compile": "yarn hardhat compile",
         "format": "yarn prettier --write .",
+        "docgen": "yarn hardhat docgen && yarn prettier --write docs/",
         "lint": "yarn lint:prettier && yarn lint:eslint && yarn lint:solhint",
         "lint:prettier": "yarn prettier --check .",
         "lint:eslint": "yarn eslint .",
@@ -35,6 +36,7 @@
         "prettier": "^3.3.3",
         "prettier-plugin-solidity": "^1.3.1",
         "solidity-coverage": "^0.8.0",
+        "solidity-docgen": "^0.6.0-beta.36",
         "typechain": "^8.3.0"
     }
 }

@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title BookingTokenOperator
- * @dev Booking token operator contract is used by the {CMAccount} contract to mint
+ * @notice Booking token operator contract is used by the {CMAccount} contract to mint
  * and buy booking tokens.
  *
  * We made this a library so that we can use it in the {CMAccount} contract without
