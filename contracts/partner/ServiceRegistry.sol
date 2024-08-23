@@ -7,6 +7,12 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+/**
+ * @title ServiceRegistry
+ * @dev Service registry is used by the {CMAccountManager} contract to register
+ * services by hashing (keccak256) the service name (string) and creating a mapping
+ * as keccak256(serviceName) => serviceName.
+ */
 abstract contract ServiceRegistry is Initializable {
     /***************************************************
      *                   STORAGE                       *
@@ -58,7 +64,7 @@ abstract contract ServiceRegistry is Initializable {
      ***************************************************/
 
     /**
-     * @dev Add a new service by its name. This function calculates the hash of the
+     * @dev Adds a new service by its name. This function calculates the hash of the
      * service name and adds it to the registry
      *
      * {serviceName} is the pkg + service name as:
@@ -87,8 +93,8 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @dev Remove a service by its name. This function calculates the hash of the
-     * service name and removes it from the registry
+     * @dev Removes a service by its name. This function calculates the hash of the
+     * service name and removes it from the registry.
      *
      * @param serviceName Name of the service
      */
@@ -111,7 +117,7 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @dev Get the name of a service by its hash
+     * @dev Returns the name of a service by its hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -126,7 +132,7 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @dev Get the hash of a service by its name
+     * @dev Returns the hash of a service by its name.
      *
      * @param serviceName Name of the service
      */
@@ -142,7 +148,7 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @dev Get all registered service hashes
+     * @dev Returns all registered service hashes.
      */
     function getAllRegisteredServiceHashes() public view returns (bytes32[] memory services) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -150,7 +156,7 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @dev Get all registered service names
+     * @dev Returns all registered service names.
      */
     function getAllRegisteredServiceNames() public view returns (string[] memory services) {
         ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
@@ -165,12 +171,5 @@ abstract contract ServiceRegistry is Initializable {
         }
 
         return serviceNames;
-    }
-
-    /**
-     * @dev Get all registered services as a string list
-     */
-    function getAllRegisteredServices() public view returns (string[] memory services) {
-        return getAllRegisteredServiceNames();
     }
 }

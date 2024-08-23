@@ -24,8 +24,8 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
             const expectedPeriod = 24 * 60 * 60; // 24 hours
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(expectedLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([expectedLimit, expectedPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
         });
 
         it("should set gas money limit and period correctly", async function () {
@@ -34,22 +34,22 @@ describe("GasMoneyManager", function () {
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
             const expectedPeriod = 24 * 60 * 60; // 24 hours
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(expectedLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([expectedLimit, expectedPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(expectedPeriod);
 
             const newLimit = ethers.parseEther("20"); // 20 CAM
             const newPeriod = 48 * 60 * 60; // 48 hours
 
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalLimit(newLimit))
-                .to.emit(cmAccount, "GasMoneyWithdrawalLimitUpdated")
-                .withArgs(newLimit);
+            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawal(newLimit, newPeriod))
+                .to.emit(cmAccount, "GasMoneyWithdrawalUpdated")
+                .withArgs(newLimit, newPeriod);
 
-            await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalPeriod(newPeriod))
-                .to.emit(cmAccount, "GasMoneyWithdrawalPeriodUpdated")
-                .withArgs(newPeriod);
+            // await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalPeriod(newPeriod))
+            //     .to.emit(cmAccount, "GasMoneyWithdrawalPeriodUpdated")
+            //     .withArgs(newPeriod);
 
-            expect(await cmAccount.getGasMoneyWithdrawalLimit()).to.be.equal(newLimit);
-            expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(newPeriod);
+            expect(await cmAccount.getGasMoneyWithdrawal()).to.be.deep.equal([newLimit, newPeriod]);
+            //expect(await cmAccount.getGasMoneyWithdrawalPeriod()).to.be.equal(newPeriod);
         });
 
         it("should withdraw gas money", async function () {
@@ -57,8 +57,19 @@ describe("GasMoneyManager", function () {
 
             const withdrawer = signers.withdrawer;
 
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -77,6 +88,17 @@ describe("GasMoneyManager", function () {
 
             const withdrawer = signers.withdrawer;
 
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             // Do not add withdrawer as a bot.
 
             // Withdraw
@@ -91,10 +113,22 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -110,10 +144,22 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 
@@ -151,10 +197,22 @@ describe("GasMoneyManager", function () {
             const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
             const withdrawer = signers.withdrawer;
+
+            // Add more funds to the cmAccount so we are not under the prefund spent
+            const depositAmount = ethers.parseEther("100");
+
+            const depositTx = {
+                to: cmAccount.getAddress(),
+                value: depositAmount,
+            };
+
+            const txResponse = await signers.depositor.sendTransaction(depositTx);
+            await txResponse.wait();
+
             const expectedLimit = ethers.parseEther("10"); // 10 CAM
 
             // Register withdrawer as a bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(withdrawer.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(withdrawer.address);
 

@@ -32,9 +32,30 @@ import "../partner/PartnerConfiguration.sol";
 import "./GasMoneyManager.sol";
 
 /**
- * @dev CM Account manages multiple bots for distributors and suppliers on Camino Messenger.
+ * @title Camino Messenger Account
+ * @notice A CM Account manages funds, minting/buying of booking tokens, provided
+ * or wanted services, and multiple bots for distributors and suppliers on
+ * Camino Messenger ecosystem.
  *
- * This account holds funds that will be paid to the cheque beneficiaries.
+ * Registering bots is done by role based access control. Bot's with
+ * `CHEQUE_OPERATOR_ROLE` can issue cheques to paid by the {CMAccount} contract.
+ * Bot can also have `GAS_WITHDRAWER_ROLE` and `BOOKING_OPERATOR_ROLE`.
+ *
+ * `GAS_WITHDRAWER_ROLE` enables a bot to withdraw native coins (CAM) from the
+ * contract to be used as gas money. This restricted with a `limit`
+ * (wei/aCAM) and `period` (seconds) by the `BOT_ADMIN_ROLE`. Default starting
+ * values are 10 CAM per 24 hours.
+ *
+ * `BOOKING_OPERATOR_ROLE` enables a bot to mint and buy Booking Tokens by
+ * calling the corresponding functions on the {BookingToken} contract. The buy
+ * operation pays the price of the Booking Token with the funds on the
+ * {CMAccount} contract.
+ *
+ * @dev This contract uses UUPS style upgradability. The authorization function
+ * `_authorizeUpgrade(address)` can be called by the `UPGRADER_ROLE` and is
+ * restricted to only upgrade to the implementation address registered on the
+ * {CMAccountManager} contract.
+ * @custom:security-contact https://r.xyz/program/camino-network
  */
 contract CMAccount is
     Initializable,
@@ -42,7 +63,6 @@ contract CMAccount is
     UUPSUpgradeable,
     IERC721Receiver,
     ChequeManager,
-    BookingTokenOperator,
     PartnerConfiguration,
     GasMoneyManager
 {
@@ -53,18 +73,52 @@ contract CMAccount is
      *                    ROLES                        *
      ***************************************************/
 
+    /**
+     * @dev Upgrader role can upgrade the contract to a new implementation.
+     */
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /**
+     * @dev Bot admin role can add & remove bots and set gas money withdrawal
+     * parameters.
+     */
     bytes32 public constant BOT_ADMIN_ROLE = keccak256("BOT_ADMIN_ROLE");
+
+    /**
+     * @dev Cheque operator role can issue cheques to be paid by this CMAccount
+     * contract.
+     */
     bytes32 public constant CHEQUE_OPERATOR_ROLE = keccak256("CHEQUE_OPERATOR_ROLE");
+
+    /**
+     * @dev Gas withdrawer role can withdraw gas money from the contract. This is
+     * intended to be used by the bots and is granted when `addMessengerBot` is
+     * called.
+     */
     bytes32 public constant GAS_WITHDRAWER_ROLE = keccak256("GAS_WITHDRAWER_ROLE");
+
+    /**
+     * @dev Withdrawer role can withdraw funds from the contract.
+     */
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+
+    /**
+     * @dev Booking operator role can mint and buy booking tokens using the
+     * functions on this contract. This is generally used by the bots. The
+     * price for the booking token is paid by this contract.
+     */
     bytes32 public constant BOOKING_OPERATOR_ROLE = keccak256("BOOKING_OPERATOR_ROLE");
+
+    /**
+     * @dev Service admin role can add & remove supported & wanted services.
+     */
     bytes32 public constant SERVICE_ADMIN_ROLE = keccak256("SERVICE_ADMIN_ROLE");
 
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
+    /// @custom:storage-location erc7201:camino.messenger.storage.CMAccount
     struct CMAccountStorage {
         /**
          * @dev Address of the CMAccountManager
@@ -196,16 +250,31 @@ contract CMAccount is
      *                    Getters                      *
      ***************************************************/
 
-    function getManagerAddress() public view returns (address) {
+    /**
+     * @dev Returns the CMAccountManager address.
+     *
+     * @return CMAccountManager address
+     */
+    function getManagerAddress() public view override returns (address) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._manager;
     }
 
+    /**
+     * @dev Returns the booking token address.
+     *
+     * @return BookingToken address
+     */
     function getBookingTokenAddress() public view returns (address) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._bookingToken;
     }
 
+    /**
+     * @dev Returns the prefund amount.
+     *
+     * @return prefund amount
+     */
     function getPrefundAmount() public view returns (uint256) {
         CMAccountStorage storage $ = _getCMAccountStorage();
         return $._prefundAmount;
@@ -216,12 +285,12 @@ contract CMAccount is
      ***************************************************/
 
     /**
-     * @dev Upgrades the CMAccount implementation.
+     * @dev Authorizes the upgrade of the CMAccount..
      *
      * Reverts if the new implementation is the same as the old one.
      *
-     * Reverts if the new implementation does not match the implementation address in the manager.
-     * Only implementations registered at the manager are allowed.
+     * Reverts if the new implementation does not match the implementation address
+     * in the manager. Only implementations registered at the manager are allowed.
      *
      * Emits a {CMAccountUpgraded} event.
      */
@@ -244,33 +313,10 @@ contract CMAccount is
     }
 
     /**
-     * @dev Returns true if an address is authorized bot
+     * @dev Returns true if an address is authorized to sign cheques
      */
     function isBotAllowed(address bot) public view override returns (bool) {
         return hasRole(CHEQUE_OPERATOR_ROLE, bot);
-    }
-
-    /**
-     * @dev Return true if address is a registered CMAccount on the CMAccountManager
-     */
-    function isCMAccount(address account) internal view override returns (bool) {
-        return ICMAccountManager(getManagerAddress()).isCMAccount(account);
-    }
-
-    /**
-     * @dev Return developer wallet address
-     */
-    function getDeveloperWallet() public view override returns (address) {
-        address developerWallet = ICMAccountManager(getManagerAddress()).getDeveloperWallet();
-        return developerWallet;
-    }
-
-    /**
-     * @dev Return developer fee in basis points
-     */
-    function getDeveloperFeeBp() public view override returns (uint256) {
-        uint256 developerFeeBp = ICMAccountManager(getManagerAddress()).getDeveloperFeeBp();
-        return developerFeeBp;
     }
 
     /**
@@ -317,7 +363,7 @@ contract CMAccount is
      ***************************************************/
 
     /**
-     * @dev Mint booking token
+     * @dev Mints booking token.
      *
      * @param reservedFor The account to reserve the token for
      * @param uri The URI of the token
@@ -331,16 +377,25 @@ contract CMAccount is
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken
-    ) external override onlyRole(BOOKING_OPERATOR_ROLE) {
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
-        _mintBookingToken(getBookingTokenAddress(), reservedFor, uri, expirationTimestamp, price, paymentToken);
+        BookingTokenOperator.mintBookingToken(
+            getBookingTokenAddress(),
+            reservedFor,
+            uri,
+            expirationTimestamp,
+            price,
+            paymentToken
+        );
     }
 
     /**
-     * @dev Buy booking token
+     * @dev Buys booking token.
+     *
+     * @param tokenId The token id
      */
-    function buyBookingToken(uint256 tokenId) external override onlyRole(BOOKING_OPERATOR_ROLE) {
-        _buyBookingToken(getBookingTokenAddress(), tokenId);
+    function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
     /**
@@ -356,6 +411,15 @@ contract CMAccount is
      *                ERC20 & ERC721                   *
      ***************************************************/
 
+    /**
+     * @dev Transfers ERC20 tokens.
+     *
+     * This function reverts if `to` is the zero address.
+     *
+     * @param token The ERC20 token
+     * @param to The address to transfer the tokens to
+     * @param amount The amount of tokens to transfer
+     */
     function transferERC20(IERC20 token, address to, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
         if (to == address(0)) {
             revert TransferToZeroAddress();
@@ -363,6 +427,15 @@ contract CMAccount is
         token.safeTransfer(to, amount);
     }
 
+    /**
+     * @dev Transfers ERC721 tokens.
+     *
+     * This function reverts if `to` is the zero address.
+     *
+     * @param token The ERC721 token
+     * @param to The address to transfer the tokens to
+     * @param tokenId The token id of the token
+     */
     function transferERC721(IERC721 token, address to, uint256 tokenId) external onlyRole(WITHDRAWER_ROLE) {
         if (to == address(0)) {
             revert TransferToZeroAddress();
@@ -377,7 +450,7 @@ contract CMAccount is
     /**
      * @dev Add a service to the account
      *
-     * {serviceName} is defined as pkg + service name in protobuf. For example:
+     * `serviceName` is defined as pkg + service name in protobuf. For example:
      *
      *  ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
      * "cmp.services.accommodation.v1alpha.AccommodationSearchService")
@@ -392,55 +465,26 @@ contract CMAccount is
         bool restrictedRate,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        // Check if the service is registered. This function reverts if the service is not registered
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-
-        // Create the service object
-        Service memory service = Service({ _fee: fee, _capabilities: capabilities, _restrictedRate: restrictedRate });
-
-        _addService(serviceHash, service);
-    }
-
-    /**
-     * @dev Remove a service from the account by its hash
-     */
-    function removeService(bytes32 serviceHash) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _removeService(serviceHash);
+        _addService(getServiceHash(serviceName), fee, capabilities, restrictedRate);
     }
 
     /**
      * @dev Remove a service from the account by its name
      */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _removeService(serviceHash);
+        _removeService(getServiceHash(serviceName));
     }
 
     // FEE
 
     /**
-     * @dev Set the fee of a service by hash
-     */
-    function setServiceFee(bytes32 serviceHash, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceFee(serviceHash, fee);
-    }
-
-    /**
      * @dev Set the fee of a service by name
      */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceFee(serviceHash, fee);
+        _setServiceFee(getServiceHash(serviceName), fee);
     }
 
     // RESTRICTED RATE
-
-    /**
-     * @dev Set the restricted rate of a service by hash
-     */
-    function setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceRestrictedRate(serviceHash, restrictedRate);
-    }
 
     /**
      * @dev Set the restricted rate of a service by name
@@ -449,21 +493,10 @@ contract CMAccount is
         string memory serviceName,
         bool restrictedRate
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceRestrictedRate(serviceHash, restrictedRate);
+        _setServiceRestrictedRate(getServiceHash(serviceName), restrictedRate);
     }
 
     // ALL CAPABILITIES
-
-    /**
-     * @dev Set all capabilities for a service by hash
-     */
-    function setServiceCapabilities(
-        bytes32 serviceHash,
-        string[] memory capabilities
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _setServiceCapabilities(serviceHash, capabilities);
-    }
 
     /**
      * @dev Set all capabilities for a service by name
@@ -472,18 +505,10 @@ contract CMAccount is
         string memory serviceName,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _setServiceCapabilities(serviceHash, capabilities);
+        _setServiceCapabilities(getServiceHash(serviceName), capabilities);
     }
 
     // SINGLE CAPABILITY
-
-    /**
-     * @dev Add a single capability to the service by hash
-     */
-    function addServiceCapability(bytes32 serviceHash, string memory capability) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addServiceCapability(serviceHash, capability);
-    }
 
     /**
      * @dev Add a single capability to the service by name
@@ -492,18 +517,7 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _addServiceCapability(serviceHash, capability);
-    }
-
-    /**
-     * @dev Remove a single capability from the service by hash
-     */
-    function removeServiceCapability(
-        bytes32 serviceHash,
-        string memory capability
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _removeServiceCapability(serviceHash, capability);
+        _addServiceCapability(getServiceHash(serviceName), capability);
     }
 
     /**
@@ -513,8 +527,15 @@ contract CMAccount is
         string memory serviceName,
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        _removeServiceCapability(serviceHash, capability);
+        _removeServiceCapability(getServiceHash(serviceName), capability);
+    }
+
+    /**
+     * @dev Get service hash by name. Returns the keccak256 hash of the service name
+     * from the account manager
+     */
+    function getServiceHash(string memory serviceName) private view returns (bytes32 serviceHash) {
+        return ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
     }
 
     /***************************************************
@@ -542,48 +563,56 @@ contract CMAccount is
      * @dev Get service fee by name. Overloading the getServiceFee function.
      */
     function getServiceFee(string memory serviceName) public view returns (uint256 fee) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceFee(serviceHash);
+        return getServiceFee(getServiceHash(serviceName));
     }
 
     /**
      * @dev Get service restricted rate by name. Overloading the getServiceRestrictedRate function.
      */
     function getServiceRestrictedRate(string memory serviceName) public view returns (bool restrictedRate) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceRestrictedRate(serviceHash);
+        return getServiceRestrictedRate(getServiceHash(serviceName));
     }
 
     /**
      * @dev Get service capabilities by name. Overloading the getServiceCapabilities function.
      */
     function getServiceCapabilities(string memory serviceName) public view returns (string[] memory capabilities) {
-        bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
-        return getServiceCapabilities(serviceHash);
+        return getServiceCapabilities(getServiceHash(serviceName));
     }
 
     /***************************************************
      *                WANTED SERVICES                  *
      ***************************************************/
 
+    /**
+     * @dev Adds wanted services.
+     *
+     * @param serviceNames List of service names
+     */
     function addWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
-            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
-                serviceNames[i]
-            );
+            bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _addWantedService(serviceHash);
         }
     }
 
+    /**
+     * @dev Removes wanted services.
+     *
+     * @param serviceNames List of service names
+     */
     function removeWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
-            bytes32 serviceHash = ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(
-                serviceNames[i]
-            );
+            bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _removeWantedService(serviceHash);
         }
     }
 
+    /**
+     * @dev Get all wanted services.
+     *
+     * @return serviceNames List of service names
+     */
     function getWantedServices() public view returns (string[] memory serviceNames) {
         bytes32[] memory _wantedServiceHashes = getWantedServiceHashes();
 
@@ -602,14 +631,29 @@ contract CMAccount is
      *                   PAYMENT                       *
      ***************************************************/
 
+    /**
+     * @dev Sets if off-chain payment is supported.
+     *
+     * @param _isSupported true if off-chain payment is supported
+     */
     function setOffChainPaymentSupported(bool _isSupported) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setOffChainPaymentSupported(_isSupported);
     }
 
+    /**
+     * @dev Adds a supported payment token.
+     *
+     * @param _supportedToken address of the token
+     */
     function addSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
         _addSupportedToken(_supportedToken);
     }
 
+    /**
+     * @dev Removes a supported payment token.
+     *
+     * @param _supportedToken address of the token
+     */
     function removeSupportedToken(address _supportedToken) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeSupportedToken(_supportedToken);
     }
@@ -625,10 +669,9 @@ contract CMAccount is
      *
      * @param pubKeyAddress address of the public key
      * @param data public key data
-     * @param use type of public key, enum is defined in PartnerConfiguration contract
      */
-    function addPublicKey(address pubKeyAddress, bytes memory data, uint8 use) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addPublicKey(pubKeyAddress, data, use);
+    function addPublicKey(address pubKeyAddress, bytes memory data) public onlyRole(SERVICE_ADMIN_ROLE) {
+        _addPublicKey(pubKeyAddress, data);
     }
 
     /**
@@ -642,32 +685,27 @@ contract CMAccount is
      *                MESSENGER BOTS                   *
      ***************************************************/
 
-    // FIXME: Should we allow all bots to be able to mint booking tokens?
-    // TODO: Create tests for this
-
     /**
-     * @dev Add messenger bot
+     * @dev Adds messenger bot with initial gas money.
      */
-    function addMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
+    function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
+        // Check if we can spend the gasMoney to send it to the bot
+        _checkPrefundSpent(gasMoney);
+
         // Grant roles to bot
         _grantRole(CHEQUE_OPERATOR_ROLE, bot);
         _grantRole(BOOKING_OPERATOR_ROLE, bot);
         _grantRole(GAS_WITHDRAWER_ROLE, bot);
 
         emit MessengerBotAdded(bot);
-    }
-
-    function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
-        // Check if we can spend the gasMoney to send it to the bot
-        _checkPrefundSpent(gasMoney);
-
-        // Grant roles to bot
-        addMessengerBot(bot);
 
         // Send gasMoney to bot
         payable(bot).sendValue(gasMoney);
     }
 
+    /**
+     * @dev Removes messenger bot by revoking the roles.
+     */
     function removeMessengerBot(address bot) public onlyRole(BOT_ADMIN_ROLE) {
         _revokeRole(CHEQUE_OPERATOR_ROLE, bot);
         _revokeRole(BOOKING_OPERATOR_ROLE, bot);
@@ -680,15 +718,23 @@ contract CMAccount is
      *              GAS MONEY WITHDRAW                 *
      ***************************************************/
 
+    /**
+     * @dev Withdraw gas money. Requires the `GAS_WITHDRAWER_ROLE`.
+     *
+     * @param amount The amount to withdraw in aCAM (wei)
+     */
     function withdrawGasMoney(uint256 amount) public onlyRole(GAS_WITHDRAWER_ROLE) {
+        _checkPrefundSpent(amount);
         _withdrawGasMoney(amount);
     }
 
-    function setGasMoneyWithdrawalLimit(uint256 limit) public onlyRole(BOT_ADMIN_ROLE) {
-        _setGasMoneyWithdrawalLimit(limit);
-    }
-
-    function setGasMoneyWithdrawalPeriod(uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
-        _setGasMoneyWithdrawalPeriod(period);
+    /**
+     * @dev Set gas money withdrawal parameters. Requires the `BOT_ADMIN_ROLE`.
+     *
+     * @param limit Amount of gas money to withdraw in wei per period
+     * @param period Duration of the withdrawal period in seconds
+     */
+    function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
+        _setGasMoneyWithdrawal(limit, period);
     }
 }

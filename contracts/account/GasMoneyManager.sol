@@ -7,6 +7,12 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/**
+ * @title GasMoneyManager
+ * @dev GasMoneyManager manages gas money withdrawals for a {CMAccount}.
+ *
+ * Gas money withdrawals are restricted to a withdrawal limit and period.
+ */
 abstract contract GasMoneyManager is Initializable {
     using Address for address payable;
 
@@ -14,6 +20,7 @@ abstract contract GasMoneyManager is Initializable {
      *                   STORAGE                       *
      ***************************************************/
 
+    /// @custom:storage-location erc7201:camino.messenger.storage.GasMoneyManager
     struct GasMoneyStorage {
         mapping(address => uint256) _withdrawalPeriodStart;
         mapping(address => uint256) _withdrawnAmount;
@@ -35,9 +42,21 @@ abstract contract GasMoneyManager is Initializable {
      *                   EVENTS                        *
      ***************************************************/
 
+    /**
+     * @dev Gas money withdrawal event
+     *
+     * @param withdrawer the address of the withdrawer
+     * @param amount the amount withdrawn
+     */
     event GasMoneyWithdrawal(address indexed withdrawer, uint256 amount);
-    event GasMoneyWithdrawalLimitUpdated(uint256 limit);
-    event GasMoneyWithdrawalPeriodUpdated(uint256 period);
+
+    /**
+     * @dev Gas money withdrawal limit and period updated event
+     *
+     * @param limit the withdrawal limit for the period
+     * @param period the withdrawal period in seconds
+     */
+    event GasMoneyWithdrawalUpdated(uint256 limit, uint256 period);
 
     /***************************************************
      *                   ERRORS                        *
@@ -60,31 +79,34 @@ abstract contract GasMoneyManager is Initializable {
      *                   LOGIC                        *
      ***************************************************/
 
+    /**
+     * @dev Withdraws gas money.
+     *
+     * This functions is intended to be called by the bot to withdraw gas money.
+     * Inheriting contract should restrict who can call this with a public
+     * function.
+     */
     function _withdrawGasMoney(uint256 amount) internal {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
 
-        uint256 withdrawalLimit = $._withdrawalLimit;
-        uint256 withdrawalPeriod = $._withdrawalPeriod;
-
         // Ensure the withdrawal does not exceed the allowed limit
-        if (amount > withdrawalLimit) {
-            revert WithdrawalLimitExceeded(withdrawalLimit, amount);
+        if (amount > $._withdrawalLimit) {
+            revert WithdrawalLimitExceeded($._withdrawalLimit, amount);
         }
 
         // Get timestamps
         uint256 currentTime = block.timestamp;
-        uint256 withdrawalPeriodStart = $._withdrawalPeriodStart[msg.sender];
 
         // Reset the withdrawn amount if a new period has started. If more time then
         // the withdrawal period has passed, it is allowed to withdraw full amount.
-        if (currentTime > withdrawalPeriodStart + withdrawalPeriod) {
+        if (currentTime > $._withdrawalPeriodStart[msg.sender] + $._withdrawalPeriod) {
             $._withdrawnAmount[msg.sender] = 0;
             $._withdrawalPeriodStart[msg.sender] = currentTime;
         }
 
         // Ensure the withdrawal does not exceed the allowed limit for the period
-        if ($._withdrawnAmount[msg.sender] + amount > withdrawalLimit) {
-            revert WithdrawalLimitExceededForPeriod(withdrawalLimit, amount);
+        if ($._withdrawnAmount[msg.sender] + amount > $._withdrawalLimit) {
+            revert WithdrawalLimitExceededForPeriod($._withdrawalLimit, amount);
         }
 
         // Update the withdrawn amount
@@ -97,37 +119,42 @@ abstract contract GasMoneyManager is Initializable {
         emit GasMoneyWithdrawal(msg.sender, amount);
     }
 
-    function _setGasMoneyWithdrawalLimit(uint256 limit) internal {
+    /**
+     * @dev Sets the gas money withdrawal limit and period.
+     *
+     * @param limit the withdrawal limit for the period
+     * @param period the withdrawal period in seconds
+     */
+    function _setGasMoneyWithdrawal(uint256 limit, uint256 period) internal {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
         $._withdrawalLimit = limit;
-
-        emit GasMoneyWithdrawalLimitUpdated(limit);
-    }
-
-    function _setGasMoneyWithdrawalPeriod(uint256 period) internal {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
         $._withdrawalPeriod = period;
 
-        emit GasMoneyWithdrawalPeriodUpdated(period);
+        emit GasMoneyWithdrawalUpdated(limit, period);
     }
 
-    function getGasMoneyWithdrawalLimit() public view returns (uint256) {
+    /**
+     * @dev Returns the gas money withdrawal restrictions.
+     *
+     * @return withdrawalLimit
+     * @return withdrawalPeriod
+     */
+    function getGasMoneyWithdrawal() public view returns (uint256 withdrawalLimit, uint256 withdrawalPeriod) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalLimit;
+        return ($._withdrawalLimit, $._withdrawalPeriod);
     }
 
-    function getGasMoneyWithdrawalPeriod() public view returns (uint256) {
+    /**
+     * @dev Returns the gas money withdrawal details for an account.
+     *
+     * @param account address of the account
+     * @return periodStart timestamp of the withdrawal period start
+     * @return withdrawnAmount amount withdrawn within the period
+     */
+    function getGasMoneyWithdrawalForAccount(
+        address account
+    ) public view returns (uint256 periodStart, uint256 withdrawnAmount) {
         GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalPeriod;
-    }
-
-    function getGasMoneyWithdrawalPeriodStart(address account) public view returns (uint256) {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawalPeriodStart[account];
-    }
-
-    function getGasMoneyWithdrawnAmount(address account) public view returns (uint256) {
-        GasMoneyStorage storage $ = _getGasMoneyStorage();
-        return $._withdrawnAmount[account];
+        return ($._withdrawalPeriodStart[account], $._withdrawnAmount[account]);
     }
 }

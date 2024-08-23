@@ -142,7 +142,7 @@ describe("ServiceRegistry", function () {
                 .withArgs(serviceName3, serviceHash3);
 
             // Check all registered service names
-            const registeredServices = await cmAccountManager.getAllRegisteredServices();
+            const registeredServices = await cmAccountManager.getAllRegisteredServiceNames();
             expect(registeredServices).to.be.deep.equal([serviceName1, serviceName2, serviceName3]);
 
             // Check all registered service hashes

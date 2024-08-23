@@ -26,7 +26,11 @@ describe("CMAccount", function () {
             const oldImplementationAddress = await cmAccountManager.getAccountImplementation();
 
             // Create a new implementation for CMAccount
-            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount");
+            const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+            const bookingTokenOperator = await BookingTokenOperator.deploy();
+            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount", {
+                libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+            });
             const cmAccountImplV2 = await CMAccountImplV2.deploy();
             await cmAccountImplV2.waitForDeployment();
             const newImplementationAddress = await cmAccountImplV2.getAddress();
@@ -48,7 +52,11 @@ describe("CMAccount", function () {
             const oldImplementationAddress = await cmAccountManager.getAccountImplementation();
 
             // Create a new implementation for CMAccount
-            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount");
+            const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+            const bookingTokenOperator = await BookingTokenOperator.deploy();
+            const CMAccountImplV2 = await ethers.getContractFactory("CMAccount", {
+                libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+            });
             const cmAccountImplV2 = await CMAccountImplV2.deploy();
             await cmAccountImplV2.waitForDeployment();
             const newImplementationAddress = await cmAccountImplV2.getAddress();
@@ -202,23 +210,6 @@ describe("CMAccount", function () {
         });
     });
 
-    describe("Developer Fee", function () {
-        it("should get the correct developer fee", async function () {
-            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
-
-            // Set new fee basis points
-            const newFeeBp = 1337;
-            await cmAccountManager.connect(signers.feeAdmin).setDeveloperFeeBp(newFeeBp);
-
-            // Get fee basis points from manager
-            const managerFeeBp = await cmAccountManager.getDeveloperFeeBp();
-            expect(managerFeeBp).to.equal(newFeeBp);
-
-            // Get fee basis points from account, should be same as manager fee basis points
-            expect(await cmAccount.getDeveloperFeeBp()).to.equal(managerFeeBp);
-        });
-    });
-
     describe("Enumerable", function () {
         it("should get role counts correctly", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
@@ -252,7 +243,7 @@ describe("CMAccount", function () {
             const bot = signers.otherAccount1;
 
             // Register bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(bot.address);
 
@@ -271,7 +262,7 @@ describe("CMAccount", function () {
             const bot = signers.otherAccount1;
 
             // Register bot
-            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address))
+            await expect(cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(bot.address, 0n))
                 .to.emit(cmAccount, "MessengerBotAdded")
                 .withArgs(bot.address);
 
@@ -325,9 +316,9 @@ describe("CMAccount", function () {
 
             // Transfer
             await expect(
-                supplierCMAccount
+                await supplierCMAccount
                     .connect(signers.withdrawer)
-                    .transferERC20(nullUSD.getAddress(), signers.otherAccount1.address, amount),
+                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount1.address, amount),
             ).to.changeTokenBalances(
                 nullUSD,
                 [await supplierCMAccount.getAddress(), signers.otherAccount1],

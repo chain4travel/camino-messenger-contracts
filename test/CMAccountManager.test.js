@@ -112,7 +112,7 @@ describe("CMAccountManager", function () {
                 .withArgs(ethers.ZeroAddress);
         });
 
-        it("should set developer fee bassis points", async function () {
+        it("should set developer fee basis points", async function () {
             // Set up signers
             await setupSigners();
 

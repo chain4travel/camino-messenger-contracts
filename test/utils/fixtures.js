@@ -73,7 +73,11 @@ async function deployCMAccountManagerFixture() {
 }
 
 async function deployCMAccountImplFixture() {
-    const CMAccount = await ethers.getContractFactory("CMAccount");
+    const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+    const bookingTokenOperator = await BookingTokenOperator.deploy();
+    const CMAccount = await ethers.getContractFactory("CMAccount", {
+        libraries: { BookingTokenOperator: await bookingTokenOperator.getAddress() },
+    });
     const cmAccountImpl = await CMAccount.deploy();
     await cmAccountImpl.waitForDeployment();
 
@@ -110,6 +114,7 @@ async function deployAndConfigureAllFixture() {
     await cmAccountManager.grantRole(await cmAccountManager.FEE_ADMIN_ROLE(), signers.feeAdmin.address);
 
     // Deploy BookingToken
+
     const BookingToken = await ethers.getContractFactory("BookingToken");
     const bookingToken = await upgrades.deployProxy(
         BookingToken,
@@ -232,9 +237,9 @@ async function deployBookingTokenWithNullUSDFixture() {
     const nullUSD = await NullUSD.deploy();
 
     // Fund NullUSD to the CM accounts
-    const fundAmount = ethers.parseEther("10000");
-    nullUSD.transfer(supplierCMAccount.getAddress(), fundAmount);
-    nullUSD.transfer(distributorCMAccount.getAddress(), fundAmount);
+    const fundAmount = ethers.parseEther("1000");
+    await nullUSD.transfer(await supplierCMAccount.getAddress(), fundAmount);
+    await nullUSD.transfer(await distributorCMAccount.getAddress(), fundAmount);
 
     return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount, nullUSD };
 }

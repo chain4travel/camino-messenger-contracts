@@ -39,8 +39,13 @@ const CMAccountManagerModule = buildModule("CMAccountManagerModule", (m) => {
     // Initialize the manager
     m.call(managerProxy, "initialize", [admin, pauser, upgrader, versioner, developerWallet, developerFeeBp]);
 
+    // BookingTokenOperator library
+    const bookingTokenOperator = m.library("BookingTokenOperator");
+
     // Deploy CMAccount implementation
-    const CMAccountImpl = m.contract("CMAccount");
+    const CMAccountImpl = m.contract("CMAccount", [], {
+        libraries: { BookingTokenOperator: bookingTokenOperator },
+    });
 
     // Set the CMAccount implementation
     m.call(managerProxy, "setAccountImplementation", [CMAccountImpl]);
@@ -55,7 +60,7 @@ const CMAccountManagerModule = buildModule("CMAccountManagerModule", (m) => {
     m.call(bookingTokenProxy, "initialize", [managerProxy.address, admin, upgrader]);
 
     // Set the booking token address in the manager
-    m.call(managerProxy, "setBookingToken", [bookingTokenProxy.address]);
+    m.call(managerProxy, "setBookingTokenAddress", [bookingTokenProxy.address]);
 
     return { managerProxy };
 });
