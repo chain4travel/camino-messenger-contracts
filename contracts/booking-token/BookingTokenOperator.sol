@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "./IBookingToken.sol";
 
 // ERC-20 Utils
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title BookingTokenOperator
@@ -73,8 +73,8 @@ library BookingTokenOperator {
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
         } else {
-            // Payment is in native currency. Buy the token sending the payment in
-            // native currency to the BookingToken contract.
+            // Payment is in native currency. Buy the token by sending the payment
+            // in native currency to the BookingToken contract.
             IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }

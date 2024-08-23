@@ -4,32 +4,21 @@
 
 pragma solidity ^0.8.24;
 
-// UUPS Proxy
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
-// Access
-import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-
-// ERC721
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
-// Manager Interface
-import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
-
-// Cheques
-import "./ChequeManager.sol";
-
-// Booking Token
-import "../booking-token/BookingTokenOperator.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
-// Partner Config
-import "../partner/PartnerConfiguration.sol";
-
-// Partner Config
-import "./GasMoneyManager.sol";
+import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
+import { ChequeManager } from "./ChequeManager.sol";
+import { BookingTokenOperator } from "../booking-token/BookingTokenOperator.sol";
+import { PartnerConfiguration } from "../partner/PartnerConfiguration.sol";
+import { GasMoneyManager } from "./GasMoneyManager.sol";
 
 /**
  * @title Camino Messenger Account
@@ -356,7 +345,7 @@ contract CMAccount is
      * spam by forcing user to spend the full prefund for cheques, so they can not just create an account
      * and withdraw the prefund.
      */
-    function withdraw(address payable recipient, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
+    function withdraw(address payable recipient, uint256 amount) external nonReentrant onlyRole(WITHDRAWER_ROLE) {
         // Check if amount is withdrawable according to the prefund spent amount
         _checkPrefundSpent(amount);
 
@@ -400,7 +389,7 @@ contract CMAccount is
      *
      * @param tokenId The token id
      */
-    function buyBookingToken(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+    function buyBookingToken(uint256 tokenId) external nonReentrant onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
     }
 
@@ -734,7 +723,7 @@ contract CMAccount is
      *
      * @param amount The amount to withdraw in aCAM (wei)
      */
-    function withdrawGasMoney(uint256 amount) public onlyRole(GAS_WITHDRAWER_ROLE) {
+    function withdrawGasMoney(uint256 amount) public nonReentrant onlyRole(GAS_WITHDRAWER_ROLE) {
         _checkPrefundSpent(amount);
         _withdrawGasMoney(amount);
     }

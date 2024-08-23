@@ -2,23 +2,25 @@
 pragma solidity ^0.8.20;
 
 // UUPS Proxy
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // ERC721
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import { ERC721Upgradeable, IERC721 } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { ERC721URIStorageUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import { ERC721EnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 // Access
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 // Manager Interface
 import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
 
 // Utils
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title BookingToken
@@ -39,6 +41,7 @@ contract BookingToken is
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
     AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     using Address for address payable;
@@ -286,7 +289,7 @@ contract BookingToken is
      *
      * @param tokenId The token id
      */
-    function buyReservedToken(uint256 tokenId) external payable onlyCMAccount(msg.sender) {
+    function buyReservedToken(uint256 tokenId) external payable nonReentrant onlyCMAccount(msg.sender) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
 
         // Get the reservation for the token
@@ -308,6 +311,15 @@ contract BookingToken is
             revert SupplierIsNotOwner(tokenId, reservation.supplier);
         }
 
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Delete the reservation
+        delete $._reservations[tokenId];
+
+        // Do the payment at the end
         if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
             // Payment is in ERC20.
             //
@@ -331,14 +343,6 @@ contract BookingToken is
             // Transfer payment to the supplier
             payable(reservation.supplier).sendValue(msg.value);
         }
-
-        // Transfer the token. We are using `_transfer` instead of
-        // `safeTransferFrom` because this is special transfer without a auth check.
-        // Only in this function and only for buying a reserved token
-        _transfer(reservation.supplier, msg.sender, tokenId);
-
-        // Delete the reservation
-        delete $._reservations[tokenId];
 
         // Emit event
         emit TokenBought(tokenId, msg.sender);

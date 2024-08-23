@@ -4,9 +4,10 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 // Manager Interface
 import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
@@ -18,7 +19,7 @@ import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
  *   DOMAIN_NAME = "CaminoMessenger"
  *   DOMAIN_VERSION= "1"
  */
-abstract contract ChequeManager is Initializable {
+abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     using ECDSA for bytes32;
     using Address for address payable;
 
@@ -367,7 +368,7 @@ abstract contract ChequeManager is Initializable {
         uint256 createdAt,
         uint256 expiresAt,
         bytes memory signature
-    ) public {
+    ) public nonReentrant {
         // Verify the cheque and get the signer and payment amount
         (address signer, uint256 paymentAmount) = verifyCheque(
             fromCMAccount,
@@ -391,17 +392,17 @@ abstract contract ChequeManager is Initializable {
         // Subtract developer fee from payment amount
         uint256 chequePaymentAmount = paymentAmount - developerFee;
 
-        // Transfer developer fee to the developer wallet
-        payable(ICMAccountManager(getManagerAddress()).getDeveloperWallet()).sendValue(developerFee);
-
-        // Transfer the cheque payment amount to the `toCMAccount`
-        payable(toCMAccount).sendValue(chequePaymentAmount);
-
         // Update total cheque payments excluding cheques to the same account
         if (fromCMAccount != toCMAccount) {
             ChequeManagerStorage storage $ = _getChequeManagerStorage();
             $._totalChequePayments += paymentAmount;
         }
+
+        // Transfer developer fee to the developer wallet
+        payable(ICMAccountManager(getManagerAddress()).getDeveloperWallet()).sendValue(developerFee);
+
+        // Transfer the cheque payment amount to the `toCMAccount`
+        payable(toCMAccount).sendValue(chequePaymentAmount);
 
         // Emit cash-in event
         emit ChequeCashedIn(signer, toBot, counter, chequePaymentAmount, developerFee);
