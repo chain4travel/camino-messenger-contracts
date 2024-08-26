@@ -1069,418 +1069,6 @@ Returns the gas money withdrawal details for an account.
 function initialize(address manager, address bookingToken, uint256 prefundAmount, address owner, address upgrader) external
 ```
 
-## BookingToken
-
-Booking Token contract represents a booking done on the Camino Messenger.
-
-Suppliers can mint Booking Tokens and reserve them for a distributor address to
-buy.
-
-Booking Tokens can have zero price, meaning that the payment will be done
-off-chain.
-
-When a token is minted with a reservation, it can not transferred until the
-expiration timestamp is reached or the token is bought.
-
-### UPGRADER_ROLE
-
-```solidity
-bytes32 UPGRADER_ROLE
-```
-
-Upgrader role can upgrade the contract to a new implementation.
-
-### MIN_EXPIRATION_ADMIN_ROLE
-
-```solidity
-bytes32 MIN_EXPIRATION_ADMIN_ROLE
-```
-
-This role can set the mininum allowed expiration timestamp difference.
-
-### TokenReservation
-
-```solidity
-struct TokenReservation {
-  address reservedFor;
-  address supplier;
-  uint256 expirationTimestamp;
-  uint256 price;
-  contract IERC20 paymentToken;
-}
-```
-
-### BookingTokenStorage
-
-```solidity
-struct BookingTokenStorage {
-  address _manager;
-  uint256 _nextTokenId;
-  uint256 _minExpirationTimestampDiff;
-  mapping(uint256 => struct BookingToken.TokenReservation) _reservations;
-}
-```
-
-### TokenReserved
-
-```solidity
-event TokenReserved(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken)
-```
-
-Event emitted when a token is reserved.
-
-#### Parameters
-
-| Name                | Type            | Description           |
-| ------------------- | --------------- | --------------------- |
-| tokenId             | uint256         | token id              |
-| reservedFor         | address         | reserved for address  |
-| supplier            | address         | supplier address      |
-| expirationTimestamp | uint256         | expiration timestamp  |
-| price               | uint256         | price of the token    |
-| paymentToken        | contract IERC20 | payment token address |
-
-### TokenBought
-
-```solidity
-event TokenBought(uint256 tokenId, address buyer)
-```
-
-Event emitted when a token is bought.
-
-#### Parameters
-
-| Name    | Type    | Description   |
-| ------- | ------- | ------------- |
-| tokenId | uint256 | token id      |
-| buyer   | address | buyer address |
-
-### ExpirationTimestampTooSoon
-
-```solidity
-error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff)
-```
-
-Error for expiration timestamp too soon. It must be at least
-`_minExpirationTimestampDiff` seconds in the future.
-
-### NotCMAccount
-
-```solidity
-error NotCMAccount(address account)
-```
-
-Address is not a CM Account.
-
-#### Parameters
-
-| Name    | Type    | Description     |
-| ------- | ------- | --------------- |
-| account | address | account address |
-
-### ReservationMismatch
-
-```solidity
-error ReservationMismatch(address reservedFor, address buyer)
-```
-
-ReservedFor and buyer mismatch.
-
-#### Parameters
-
-| Name        | Type    | Description          |
-| ----------- | ------- | -------------------- |
-| reservedFor | address | reserved for address |
-| buyer       | address | buyer address        |
-
-### ReservationExpired
-
-```solidity
-error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp)
-```
-
-Reservation expired.
-
-#### Parameters
-
-| Name                | Type    | Description          |
-| ------------------- | ------- | -------------------- |
-| tokenId             | uint256 | token id             |
-| expirationTimestamp | uint256 | expiration timestamp |
-
-### IncorrectPrice
-
-```solidity
-error IncorrectPrice(uint256 price, uint256 reservationPrice)
-```
-
-Incorrect price.
-
-#### Parameters
-
-| Name             | Type    | Description        |
-| ---------------- | ------- | ------------------ |
-| price            | uint256 | price of the token |
-| reservationPrice | uint256 | reservation price  |
-
-### SupplierIsNotOwner
-
-```solidity
-error SupplierIsNotOwner(uint256 tokenId, address supplier)
-```
-
-Supplier is not the owner.
-
-#### Parameters
-
-| Name     | Type    | Description      |
-| -------- | ------- | ---------------- |
-| tokenId  | uint256 | token id         |
-| supplier | address | supplier address |
-
-### TokenIsReserved
-
-```solidity
-error TokenIsReserved(uint256 tokenId, address reservedFor)
-```
-
-Token is reserved and can not be transferred.
-
-#### Parameters
-
-| Name        | Type    | Description          |
-| ----------- | ------- | -------------------- |
-| tokenId     | uint256 | token id             |
-| reservedFor | address | reserved for address |
-
-### InsufficientAllowance
-
-```solidity
-error InsufficientAllowance(address sender, contract IERC20 paymentToken, uint256 price, uint256 allowance)
-```
-
-Insufficient allowance to transfer the ERC20 token to the supplier.
-
-#### Parameters
-
-| Name         | Type            | Description           |
-| ------------ | --------------- | --------------------- |
-| sender       | address         | msg.sender            |
-| paymentToken | contract IERC20 | payment token address |
-| price        | uint256         | price of the token    |
-| allowance    | uint256         | allowance amount      |
-
-### onlyCMAccount
-
-```solidity
-modifier onlyCMAccount(address account)
-```
-
-Only CMAccount modifier.
-
-### initialize
-
-```solidity
-function initialize(address manager, address defaultAdmin, address upgrader) public
-```
-
-### \_authorizeUpgrade
-
-```solidity
-function _authorizeUpgrade(address newImplementation) internal
-```
-
-Function to authorize an upgrade for UUPS proxy.
-
-### safeMintWithReservation
-
-```solidity
-function safeMintWithReservation(address reservedFor, string uri, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken) public
-```
-
-Mints a new token with a reservation for a specific address.
-
-#### Parameters
-
-| Name                | Type            | Description                                                           |
-| ------------------- | --------------- | --------------------------------------------------------------------- |
-| reservedFor         | address         | The CM Account address that can buy the token                         |
-| uri                 | string          | The URI of the token                                                  |
-| expirationTimestamp | uint256         | The expiration timestamp                                              |
-| price               | uint256         | The price of the token                                                |
-| paymentToken        | contract IERC20 | The token used to pay for the reservation. If address(0) then native. |
-
-### buyReservedToken
-
-```solidity
-function buyReservedToken(uint256 tokenId) external payable
-```
-
-Buys a reserved token. The reservation must be for the message sender.
-
-Also the message sender should set allowance for the payment token to this
-contract to at least the reservation price. (only for ERC20 tokens)
-
-For native coin, the message sender should send the exact amount.
-
-Only CM Accounts can call this function
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-### \_reserve
-
-```solidity
-function _reserve(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken) internal
-```
-
-Reserve a token for a specific address with an expiration timestamp
-
-### checkTransferable
-
-```solidity
-function checkTransferable(uint256 tokenId) internal
-```
-
-Check if the token is transferable
-
-### isCMAccount
-
-```solidity
-function isCMAccount(address account) public view returns (bool)
-```
-
-Checks if an address is a CM Account.
-
-#### Parameters
-
-| Name    | Type    | Description          |
-| ------- | ------- | -------------------- |
-| account | address | The address to check |
-
-#### Return Values
-
-| Name | Type | Description                         |
-| ---- | ---- | ----------------------------------- |
-| [0]  | bool | true if the address is a CM Account |
-
-### requireCMAccount
-
-```solidity
-function requireCMAccount(address account) internal view
-```
-
-Checks if the address is a CM Account and reverts if not.
-
-#### Parameters
-
-| Name    | Type    | Description          |
-| ------- | ------- | -------------------- |
-| account | address | The address to check |
-
-### setManagerAddress
-
-```solidity
-function setManagerAddress(address manager) public
-```
-
-Sets for the manager address.
-
-#### Parameters
-
-| Name    | Type    | Description                |
-| ------- | ------- | -------------------------- |
-| manager | address | The address of the manager |
-
-### getManagerAddress
-
-```solidity
-function getManagerAddress() public view returns (address)
-```
-
-Returns for the manager address.
-
-### setMinExpirationTimestampDiff
-
-```solidity
-function setMinExpirationTimestampDiff(uint256 minExpirationTimestampDiff) public
-```
-
-Sets minimum expiration timestamp difference in seconds.
-
-#### Parameters
-
-| Name                       | Type    | Description                                        |
-| -------------------------- | ------- | -------------------------------------------------- |
-| minExpirationTimestampDiff | uint256 | Minimum expiration timestamp difference in seconds |
-
-### getMinExpirationTimestampDiff
-
-```solidity
-function getMinExpirationTimestampDiff() public view returns (uint256)
-```
-
-Returns minimum expiration timestamp difference in seconds.
-
-### getReservationPrice
-
-```solidity
-function getReservationPrice(uint256 tokenId) public view returns (uint256 price, contract IERC20 paymentToken)
-```
-
-Returns the token reservation price for a specific token.
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-### transferFrom
-
-```solidity
-function transferFrom(address from, address to, uint256 tokenId) public
-```
-
-Override transferFrom to check if token is reserved. It reverts if
-the token is reserved.
-
-### safeTransferFrom
-
-```solidity
-function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) public
-```
-
-Override safeTransferFrom to check if token is reserved. It reverts if
-the token is reserved.
-
-### \_update
-
-```solidity
-function _update(address to, uint256 tokenId, address auth) internal returns (address)
-```
-
-### \_increaseBalance
-
-```solidity
-function _increaseBalance(address account, uint128 value) internal
-```
-
-### tokenURI
-
-```solidity
-function tokenURI(uint256 tokenId) public view returns (string)
-```
-
-### supportsInterface
-
-```solidity
-function supportsInterface(bytes4 interfaceId) public view returns (bool)
-```
-
 ## BookingTokenOperator
 
 Booking token operator contract is used by the {CMAccount} contract to mint
@@ -2103,6 +1691,8 @@ supported and wanted services by the partner.
 
 ### Service
 
+Struct for storing supported service details for suppliers
+
 ```solidity
 struct Service {
     uint256 _fee;
@@ -2289,7 +1879,16 @@ function __PartnerConfiguration_init_unchained() internal
 function _addService(bytes32 serviceHash, uint256 fee, string[] capabilities, bool restrictedRate) internal virtual
 ```
 
-_Adds a supported Service object for a given hash._
+Adds a supported Service object for a given hash.
+
+#### Parameters
+
+| Name           | Type     | Description                                   |
+| -------------- | -------- | --------------------------------------------- |
+| serviceHash    | bytes32  | Hash of the service                           |
+| fee            | uint256  | Fee for the service                           |
+| capabilities   | string[] | Capabilities for the service                  |
+| restrictedRate | bool     | If the service is restricted to pre-agreement |
 
 ### \_removeService
 
@@ -2297,7 +1896,7 @@ _Adds a supported Service object for a given hash._
 function _removeService(bytes32 serviceHash) internal virtual
 ```
 
-_Removes a supported Service object for a given hash._
+Removes a supported Service object for a given hash.
 
 #### Parameters
 
@@ -2311,7 +1910,7 @@ _Removes a supported Service object for a given hash._
 function _setServiceFee(bytes32 serviceHash, uint256 fee) internal virtual
 ```
 
-_Set the Service fee for a given hash._
+Sets the Service fee for a given hash.
 
 #### Parameters
 
@@ -2326,7 +1925,7 @@ _Set the Service fee for a given hash._
 function _setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) internal virtual
 ```
 
-_Set the Service restricted rate for a given hash._
+Sets the Service restricted rate for a given hash.
 
 #### Parameters
 
@@ -2341,7 +1940,7 @@ _Set the Service restricted rate for a given hash._
 function _setServiceCapabilities(bytes32 serviceHash, string[] capabilities) internal virtual
 ```
 
-_Set the Service capabilities for a given hash._
+Sets the Service capabilities for a given hash.
 
 #### Parameters
 
@@ -2356,7 +1955,7 @@ _Set the Service capabilities for a given hash._
 function _addServiceCapability(bytes32 serviceHash, string capability) internal virtual
 ```
 
-_Add a capability to the service._
+Adds a capability to the service.
 
 #### Parameters
 
@@ -2371,7 +1970,7 @@ _Add a capability to the service._
 function _removeServiceCapability(bytes32 serviceHash, string capability) internal virtual
 ```
 
-_Remove a capability from the service._
+Removes a capability from the service.
 
 #### Parameters
 
@@ -2386,7 +1985,7 @@ _Remove a capability from the service._
 function getAllServiceHashes() public view returns (bytes32[] serviceHashes)
 ```
 
-_Returns all supported service hashes_
+Returns all supported service hashes.
 
 ### getService
 
@@ -2394,13 +1993,23 @@ _Returns all supported service hashes_
 function getService(bytes32 serviceHash) public view virtual returns (struct PartnerConfiguration.Service service)
 ```
 
-\_Returns the Service object for a given hash. Service object contains fee and capabilities.
+Returns the Service object for a given hash. Service object contains fee and capabilities.
 
-{serviceHash} is keccak256 hash of the pkg + service name as:
+`serviceHash` is keccak256 hash of the pkg + service name as:
 
+```text
            ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")
+```
 
-keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")\_
+_These services are coming from the Camino Messenger Protocol's protobuf
+definitions._
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
 
 ### getServiceFee
 
@@ -2408,7 +2017,7 @@ keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")\_
 function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee)
 ```
 
-_Returns the fee for a given service hash._
+Returns the fee for a given service hash.
 
 #### Parameters
 
@@ -2422,7 +2031,7 @@ _Returns the fee for a given service hash._
 function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate)
 ```
 
-_Returns the restricted rate for a given service hash._
+Returns the restricted rate for a given service hash.
 
 #### Parameters
 
@@ -2436,7 +2045,7 @@ _Returns the restricted rate for a given service hash._
 function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] capabilities)
 ```
 
-_Returns the capabilities for a given service hash._
+Returns the capabilities for a given service hash.
 
 #### Parameters
 
@@ -2450,9 +2059,9 @@ _Returns the capabilities for a given service hash._
 function _addWantedService(bytes32 serviceHash) internal virtual
 ```
 
-\_Adds a wanted service hash to the wanted services set.
+Adds a wanted service hash to the wanted services set.
 
-Reverts if the service already exists.\_
+Reverts if the service already exists.
 
 #### Parameters
 
@@ -2466,9 +2075,9 @@ Reverts if the service already exists.\_
 function _removeWantedService(bytes32 serviceHash) internal virtual
 ```
 
-\_Removes a wanted service hash from the wanted services set.
+Removes a wanted service hash from the wanted services set.
 
-Reverts if the service does not exist.\_
+Reverts if the service does not exist.
 
 #### Parameters
 
@@ -2482,7 +2091,13 @@ Reverts if the service does not exist.\_
 function getWantedServiceHashes() public view virtual returns (bytes32[] serviceHashes)
 ```
 
-_Returns all wanted service hashes._
+Returns all wanted service hashes.
+
+#### Return Values
+
+| Name          | Type      | Description           |
+| ------------- | --------- | --------------------- |
+| serviceHashes | bytes32[] | Wanted service hashes |
 
 ### \_addSupportedToken
 
@@ -2490,7 +2105,7 @@ _Returns all wanted service hashes._
 function _addSupportedToken(address _token) internal virtual
 ```
 
-_Adds a supported payment token._
+Adds a supported payment token.
 
 #### Parameters
 
@@ -2504,7 +2119,7 @@ _Adds a supported payment token._
 function _removeSupportedToken(address _token) internal virtual
 ```
 
-_Removes a supported payment token._
+Removes a supported payment token.
 
 #### Parameters
 
@@ -2518,7 +2133,13 @@ _Removes a supported payment token._
 function getSupportedTokens() public view virtual returns (address[] tokens)
 ```
 
-_Returns supported token addresses._
+Returns supported token addresses.
+
+#### Return Values
+
+| Name   | Type      | Description               |
+| ------ | --------- | ------------------------- |
+| tokens | address[] | Supported token addresses |
 
 ### \_setOffChainPaymentSupported
 
@@ -2526,7 +2147,7 @@ _Returns supported token addresses._
 function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual
 ```
 
-_Set the off-chain payment support is supported._
+Sets the off-chain payment support is supported.
 
 ### offChainPaymentSupported
 
@@ -2534,7 +2155,7 @@ _Set the off-chain payment support is supported._
 function offChainPaymentSupported() public view virtual returns (bool)
 ```
 
-_Return true if off-chain payment is supported for the given service_
+Returns true if off-chain payment is supported for the given service.
 
 ### \_addPublicKey
 
@@ -2542,11 +2163,11 @@ _Return true if off-chain payment is supported for the given service_
 function _addPublicKey(address pubKeyAddress, bytes publicKeyData) internal virtual
 ```
 
-\_Adds public key with an address. Reverts if the public key already
+Adds public key with an address. Reverts if the public key already
 exists.
 
 Beware: This functions does not check if the public key is actually for the
-given address.\_
+given address.
 
 ### \_removePublicKey
 
@@ -2554,9 +2175,9 @@ given address.\_
 function _removePublicKey(address pubKeyAddress) internal virtual
 ```
 
-\_Removes the public key for a given address
+Removes the public key for a given address
 
-Reverts if the public key does not exist\_
+Reverts if the public key does not exist
 
 ### getPublicKeysAddresses
 
@@ -2564,8 +2185,8 @@ Reverts if the public key does not exist\_
 function getPublicKeysAddresses() public view virtual returns (address[] pubKeyAddresses)
 ```
 
-_Returns the addresses of all public keys. These can then be used to
-retrieve the public keys the `getPublicKey(address)` function._
+Returns the addresses of all public keys. These can then be used to
+retrieve the public keys the `getPublicKey(address)` function.
 
 ### getPublicKey
 
@@ -2573,9 +2194,9 @@ retrieve the public keys the `getPublicKey(address)` function._
 function getPublicKey(address pubKeyAddress) public view virtual returns (bytes data)
 ```
 
-\_Returns the public key for a given address.
+Returns the public key for a given address.
 
-Reverts if the public key does not exist\_
+Reverts if the public key does not exist
 
 #### Parameters
 
@@ -2585,9 +2206,9 @@ Reverts if the public key does not exist\_
 
 ## ServiceRegistry
 
-_Service registry is used by the {CMAccountManager} contract to register
+Service registry is used by the {CMAccountManager} contract to register
 services by hashing (keccak256) the service name (string) and creating a mapping
-as keccak256(serviceName) => serviceName._
+as keccak256(serviceName) => serviceName.
 
 ### ServiceRegistryStorage
 
@@ -2641,13 +2262,18 @@ function __ServiceRegistry_init_unchained() internal
 function _registerServiceName(string serviceName) internal virtual
 ```
 
-\_Adds a new service by its name. This function calculates the hash of the
+Adds a new service by its name. This function calculates the hash of the
 service name and adds it to the registry
 
 {serviceName} is the pkg + service name as:
 
-┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
-"cmp.services.accommodation.v1alpha.AccommodationSearchService"\_
+```text
+ ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+"cmp.services.accommodation.v1alpha.AccommodationSearchService"
+```
+
+_These services are coming from the Camino Messenger Protocol's protobuf
+definitions._
 
 #### Parameters
 
@@ -2661,8 +2287,8 @@ service name and adds it to the registry
 function _unregisterServiceName(string serviceName) internal virtual
 ```
 
-_Removes a service by its name. This function calculates the hash of the
-service name and removes it from the registry._
+Removes a service by its name. This function calculates the hash of the
+service name and removes it from the registry.
 
 #### Parameters
 
@@ -2676,7 +2302,7 @@ service name and removes it from the registry._
 function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
 ```
 
-_Returns the name of a service by its hash._
+Returns the name of a service by its hash.
 
 #### Parameters
 
@@ -2690,7 +2316,7 @@ _Returns the name of a service by its hash._
 function getRegisteredServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
 ```
 
-_Returns the hash of a service by its name._
+Returns the hash of a service by its name.
 
 #### Parameters
 
@@ -2704,7 +2330,13 @@ _Returns the hash of a service by its name._
 function getAllRegisteredServiceHashes() public view returns (bytes32[] services)
 ```
 
-_Returns all registered service hashes._
+Returns all registered service **hashes**.
+
+#### Return Values
+
+| Name     | Type      | Description                   |
+| -------- | --------- | ----------------------------- |
+| services | bytes32[] | All registered service hashes |
 
 ### getAllRegisteredServiceNames
 
@@ -2712,15 +2344,13 @@ _Returns all registered service hashes._
 function getAllRegisteredServiceNames() public view returns (string[] services)
 ```
 
-_Returns all registered service names._
+Returns all registered service **names**.
 
-## Dummy
+#### Return Values
 
-### getVersion
-
-```solidity
-function getVersion() public pure returns (string)
-```
+| Name     | Type     | Description                  |
+| -------- | -------- | ---------------------------- |
+| services | string[] | All registered service names |
 
 ## NullUSD
 
@@ -2728,6 +2358,426 @@ function getVersion() public pure returns (string)
 
 ```solidity
 constructor() public
+```
+
+## BookingToken
+
+Booking Token contract represents a booking done on the Camino Messenger.
+
+Suppliers can mint Booking Tokens and reserve them for a distributor address to
+buy.
+
+Booking Tokens can have zero price, meaning that the payment will be done
+off-chain.
+
+When a token is minted with a reservation, it can not transferred until the
+expiration timestamp is reached or the token is bought.
+
+### UPGRADER_ROLE
+
+```solidity
+bytes32 UPGRADER_ROLE
+```
+
+Upgrader role can upgrade the contract to a new implementation.
+
+### MIN_EXPIRATION_ADMIN_ROLE
+
+```solidity
+bytes32 MIN_EXPIRATION_ADMIN_ROLE
+```
+
+This role can set the mininum allowed expiration timestamp difference.
+
+### TokenReservation
+
+```solidity
+struct TokenReservation {
+  address reservedFor;
+  address supplier;
+  uint256 expirationTimestamp;
+  uint256 price;
+  contract IERC20 paymentToken;
+}
+```
+
+### BookingTokenStorage
+
+```solidity
+struct BookingTokenStorage {
+  address _manager;
+  uint256 _nextTokenId;
+  uint256 _minExpirationTimestampDiff;
+  mapping(uint256 => struct BookingToken.TokenReservation) _reservations;
+}
+```
+
+### TokenReserved
+
+```solidity
+event TokenReserved(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken)
+```
+
+Event emitted when a token is reserved.
+
+#### Parameters
+
+| Name                | Type            | Description           |
+| ------------------- | --------------- | --------------------- |
+| tokenId             | uint256         | token id              |
+| reservedFor         | address         | reserved for address  |
+| supplier            | address         | supplier address      |
+| expirationTimestamp | uint256         | expiration timestamp  |
+| price               | uint256         | price of the token    |
+| paymentToken        | contract IERC20 | payment token address |
+
+### TokenBought
+
+```solidity
+event TokenBought(uint256 tokenId, address buyer)
+```
+
+Event emitted when a token is bought.
+
+#### Parameters
+
+| Name    | Type    | Description   |
+| ------- | ------- | ------------- |
+| tokenId | uint256 | token id      |
+| buyer   | address | buyer address |
+
+### ExpirationTimestampTooSoon
+
+```solidity
+error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff)
+```
+
+Error for expiration timestamp too soon. It must be at least
+`_minExpirationTimestampDiff` seconds in the future.
+
+### NotCMAccount
+
+```solidity
+error NotCMAccount(address account)
+```
+
+Address is not a CM Account.
+
+#### Parameters
+
+| Name    | Type    | Description     |
+| ------- | ------- | --------------- |
+| account | address | account address |
+
+### ReservationMismatch
+
+```solidity
+error ReservationMismatch(address reservedFor, address buyer)
+```
+
+ReservedFor and buyer mismatch.
+
+#### Parameters
+
+| Name        | Type    | Description          |
+| ----------- | ------- | -------------------- |
+| reservedFor | address | reserved for address |
+| buyer       | address | buyer address        |
+
+### ReservationExpired
+
+```solidity
+error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp)
+```
+
+Reservation expired.
+
+#### Parameters
+
+| Name                | Type    | Description          |
+| ------------------- | ------- | -------------------- |
+| tokenId             | uint256 | token id             |
+| expirationTimestamp | uint256 | expiration timestamp |
+
+### IncorrectPrice
+
+```solidity
+error IncorrectPrice(uint256 price, uint256 reservationPrice)
+```
+
+Incorrect price.
+
+#### Parameters
+
+| Name             | Type    | Description        |
+| ---------------- | ------- | ------------------ |
+| price            | uint256 | price of the token |
+| reservationPrice | uint256 | reservation price  |
+
+### SupplierIsNotOwner
+
+```solidity
+error SupplierIsNotOwner(uint256 tokenId, address supplier)
+```
+
+Supplier is not the owner.
+
+#### Parameters
+
+| Name     | Type    | Description      |
+| -------- | ------- | ---------------- |
+| tokenId  | uint256 | token id         |
+| supplier | address | supplier address |
+
+### TokenIsReserved
+
+```solidity
+error TokenIsReserved(uint256 tokenId, address reservedFor)
+```
+
+Token is reserved and can not be transferred.
+
+#### Parameters
+
+| Name        | Type    | Description          |
+| ----------- | ------- | -------------------- |
+| tokenId     | uint256 | token id             |
+| reservedFor | address | reserved for address |
+
+### InsufficientAllowance
+
+```solidity
+error InsufficientAllowance(address sender, contract IERC20 paymentToken, uint256 price, uint256 allowance)
+```
+
+Insufficient allowance to transfer the ERC20 token to the supplier.
+
+#### Parameters
+
+| Name         | Type            | Description           |
+| ------------ | --------------- | --------------------- |
+| sender       | address         | msg.sender            |
+| paymentToken | contract IERC20 | payment token address |
+| price        | uint256         | price of the token    |
+| allowance    | uint256         | allowance amount      |
+
+### onlyCMAccount
+
+```solidity
+modifier onlyCMAccount(address account)
+```
+
+Only CMAccount modifier.
+
+### initialize
+
+```solidity
+function initialize(address manager, address defaultAdmin, address upgrader) public
+```
+
+### \_authorizeUpgrade
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal
+```
+
+Function to authorize an upgrade for UUPS proxy.
+
+### safeMintWithReservation
+
+```solidity
+function safeMintWithReservation(address reservedFor, string uri, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken) public
+```
+
+Mints a new token with a reservation for a specific address.
+
+#### Parameters
+
+| Name                | Type            | Description                                                           |
+| ------------------- | --------------- | --------------------------------------------------------------------- |
+| reservedFor         | address         | The CM Account address that can buy the token                         |
+| uri                 | string          | The URI of the token                                                  |
+| expirationTimestamp | uint256         | The expiration timestamp                                              |
+| price               | uint256         | The price of the token                                                |
+| paymentToken        | contract IERC20 | The token used to pay for the reservation. If address(0) then native. |
+
+### buyReservedToken
+
+```solidity
+function buyReservedToken(uint256 tokenId) external payable
+```
+
+Buys a reserved token. The reservation must be for the message sender.
+
+Also the message sender should set allowance for the payment token to this
+contract to at least the reservation price. (only for ERC20 tokens)
+
+For native coin, the message sender should send the exact amount.
+
+Only CM Accounts can call this function
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### \_reserve
+
+```solidity
+function _reserve(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken) internal
+```
+
+Reserve a token for a specific address with an expiration timestamp
+
+### checkTransferable
+
+```solidity
+function checkTransferable(uint256 tokenId) internal
+```
+
+Check if the token is transferable
+
+### isCMAccount
+
+```solidity
+function isCMAccount(address account) public view returns (bool)
+```
+
+Checks if an address is a CM Account.
+
+#### Parameters
+
+| Name    | Type    | Description          |
+| ------- | ------- | -------------------- |
+| account | address | The address to check |
+
+#### Return Values
+
+| Name | Type | Description                         |
+| ---- | ---- | ----------------------------------- |
+| [0]  | bool | true if the address is a CM Account |
+
+### requireCMAccount
+
+```solidity
+function requireCMAccount(address account) internal view
+```
+
+Checks if the address is a CM Account and reverts if not.
+
+#### Parameters
+
+| Name    | Type    | Description          |
+| ------- | ------- | -------------------- |
+| account | address | The address to check |
+
+### setManagerAddress
+
+```solidity
+function setManagerAddress(address manager) public
+```
+
+Sets for the manager address.
+
+#### Parameters
+
+| Name    | Type    | Description                |
+| ------- | ------- | -------------------------- |
+| manager | address | The address of the manager |
+
+### getManagerAddress
+
+```solidity
+function getManagerAddress() public view returns (address)
+```
+
+Returns for the manager address.
+
+### setMinExpirationTimestampDiff
+
+```solidity
+function setMinExpirationTimestampDiff(uint256 minExpirationTimestampDiff) public
+```
+
+Sets minimum expiration timestamp difference in seconds.
+
+#### Parameters
+
+| Name                       | Type    | Description                                        |
+| -------------------------- | ------- | -------------------------------------------------- |
+| minExpirationTimestampDiff | uint256 | Minimum expiration timestamp difference in seconds |
+
+### getMinExpirationTimestampDiff
+
+```solidity
+function getMinExpirationTimestampDiff() public view returns (uint256)
+```
+
+Returns minimum expiration timestamp difference in seconds.
+
+### getReservationPrice
+
+```solidity
+function getReservationPrice(uint256 tokenId) public view returns (uint256 price, contract IERC20 paymentToken)
+```
+
+Returns the token reservation price for a specific token.
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### transferFrom
+
+```solidity
+function transferFrom(address from, address to, uint256 tokenId) public
+```
+
+Override transferFrom to check if token is reserved. It reverts if
+the token is reserved.
+
+### safeTransferFrom
+
+```solidity
+function safeTransferFrom(address from, address to, uint256 tokenId, bytes data) public
+```
+
+Override safeTransferFrom to check if token is reserved. It reverts if
+the token is reserved.
+
+### \_update
+
+```solidity
+function _update(address to, uint256 tokenId, address auth) internal returns (address)
+```
+
+### \_increaseBalance
+
+```solidity
+function _increaseBalance(address account, uint128 value) internal
+```
+
+### tokenURI
+
+```solidity
+function tokenURI(uint256 tokenId) public view returns (string)
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view returns (bool)
+```
+
+## Dummy
+
+### getVersion
+
+```solidity
+function getVersion() public pure returns (string)
 ```
 
 ## ICaminoAdmin
