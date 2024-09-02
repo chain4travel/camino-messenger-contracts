@@ -9,7 +9,8 @@ const CaminoMessengerModule = buildModule("CaminoMessengerModule", (m) => {
     // from hardhat's example accounts. For Camino (mainnet) and Columbus (testnet)
     // this is the vars from hardhat's config vars CAMINO_DEPLOYER_PRIVATE_KEY and
     // COLUMBUS_DEPLOYER_PRIVATE_KEY (defined in hardhat.config.js).
-    const admin = m.getParameter("managerAdmin", m.getAccount(0));
+    //const admin = m.getParameter("managerAdmin", m.getAccount(0));
+    const admin = m.getAccount(0);
 
     const pauser = m.getParameter("managerPauser", admin);
     const upgrader = m.getParameter("managerUpgrader", admin);
