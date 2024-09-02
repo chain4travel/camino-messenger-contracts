@@ -15,7 +15,7 @@ module.exports = {
         },
     },
     contractSizer: {
-        runOnCompile: true,
+        runOnCompile: false,
     },
     ignition: {
         requiredConfirmations: 1,
