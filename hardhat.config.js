@@ -3,6 +3,9 @@ require("@openzeppelin/hardhat-upgrades");
 require("hardhat-contract-sizer");
 require("solidity-docgen");
 
+// Tasks
+require("./tasks/manager");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {

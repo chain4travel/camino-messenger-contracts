@@ -1,0 +1,17 @@
+[
+    "cmp.services.info.v1.CountryEntryRequirementsService",
+    "cmp.services.seat_map.v1.SeatMapService",
+    "cmp.services.seat_map.v1.SeatMapAvailabilityService",
+    "cmp.services.network.v1.GetNetworkFeeService",
+    "cmp.services.accommodation.v1.AccommodationSearchService",
+    "cmp.services.accommodation.v1.AccommodationProductInfoService",
+    "cmp.services.accommodation.v1.AccommodationProductListService",
+    "cmp.services.activity.v1.ActivitySearchService",
+    "cmp.services.activity.v1.ActivityProductInfoService",
+    "cmp.services.activity.v1.ActivityProductListService",
+    "cmp.services.partner.v1.GetPartnerConfigurationService",
+    "cmp.services.transport.v1.TransportSearchService",
+    "cmp.services.book.v1.MintService",
+    "cmp.services.book.v1.ValidationService",
+    "cmp.services.ping.v1.PingService"
+]
