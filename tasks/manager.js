@@ -145,4 +145,22 @@ MANAGER_SCOPE.task("role:has", "Check if address has role")
         console.log(`${hasRole ? "🟢" : "🔴"}`, hasRole);
     });
 
+MANAGER_SCOPE.task("role:members", "List role members")
+    .addParam("role", "Role to list. Ex: SERVICE_REGISTRY_ADMIN_ROLE")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        const role = await manager[taskArgs.role]();
+        const count = await manager.getRoleMemberCount(role);
+        console.log("Role:", taskArgs.role);
+        console.log("Total Members:", count);
+
+        // Iterate over the members of the role
+        const members = [];
+        for (let i = 0; i < count; i++) {
+            const member = await manager.getRoleMember(role, i);
+            members.push(member);
+        }
+        console.log(members);
+    });
+
 module.exports = {};
