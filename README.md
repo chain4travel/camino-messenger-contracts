@@ -11,6 +11,16 @@ Messenger](https://camino.network/camino-messenger-sets-the-global-standard-in-t
 > These contracts are currently in the development phase. The ABI is
 > subject to change frequently until they are released into production.
 
+## Columbus Deployed Contracts
+
+Below is a table of deployed contracts and their addresses on Columbus testnet.
+
+| Contract                   | Address                                                                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| CMAccountManager           | [0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F](https://columbus.caminoscan.com/address/0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F?tab=contract) |
+| BookingToken               | [0xe55E387F5474a012D1b048155E25ea78C7DBfBBC](https://columbus.caminoscan.com/address/0xe55E387F5474a012D1b048155E25ea78C7DBfBBC?tab=contract) |
+| CMAccount (Implementation) | [0xCB43DabB6d579d5a6067aB06575601D3D77882CA](https://columbus.caminoscan.com/address/0xCB43DabB6d579d5a6067aB06575601D3D77882CA?tab=contract) |
+
 ## Quickstart
 
 ### Clone the repo and change directory into
