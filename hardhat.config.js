@@ -5,6 +5,7 @@ require("solidity-docgen");
 
 // Tasks
 require("./tasks/manager");
+require("./tasks/account");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
