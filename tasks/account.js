@@ -3,6 +3,9 @@ const { types } = require("hardhat/config");
 
 const ACCOUNT_SCOPE = scope("account", "CMAccount Tasks");
 
+// TODO: Handle transaction failures
+// TODO: Get private key from .env or hardhat vars
+
 function getAddressesForNetwork(hre) {
     let addresses;
 
