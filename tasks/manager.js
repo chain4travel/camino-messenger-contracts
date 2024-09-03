@@ -1,6 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 
-const MANAGER_SCOPE = scope("manager", "CMAccountManager Tasks");
+const MANAGER_SCOPE = scope("manager", "CM Account Manager Tasks");
 
 // TODO: Handle transaction failures
 
@@ -162,5 +162,9 @@ MANAGER_SCOPE.task("role:members", "List role members")
         }
         console.log(members);
     });
+
+MANAGER_SCOPE.task("accounts:list", "List CM Accounts").setAction(async (taskArgs, hre) => {
+    await hre.run({ scope: "manager", task: "role:members" }, { role: "CMACCOUNT_ROLE" });
+});
 
 module.exports = {};

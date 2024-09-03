@@ -1,7 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 const { types } = require("hardhat/config");
 
-const ACCOUNT_SCOPE = scope("account", "CMAccount Tasks");
+const ACCOUNT_SCOPE = scope("account", "CM Account Tasks");
 
 // TODO: Get private key from .env or hardhat vars
 
