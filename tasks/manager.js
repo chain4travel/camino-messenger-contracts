@@ -115,8 +115,8 @@ MANAGER_SCOPE.task("services:unregister", "Unregister services")
 MANAGER_SCOPE.task("services:list", "List registered services").setAction(async (taskArgs, hre) => {
     const addresses = getAddressesForNetwork(hre);
     const manager = await ethers.getContractAt("CMAccountManager", addresses["CaminoMessengerModule#ManagerProxy"]);
+    console.log("Getting all registered services...");
     const services = await manager.getAllRegisteredServiceNames();
-
     console.log(services);
 });
 
