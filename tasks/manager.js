@@ -32,7 +32,7 @@ async function handleRoles(taskArgs, hre, action) {
     const manager = await getManager(hre);
 
     console.log(
-        `${action === "grant" ? "Granting" : "Revoking"} role ${taskArgs.role} for address ${taskArgs.address}...`,
+        `${action === "grantRole" ? "Granting" : "Revoking"} role ${taskArgs.role} for address ${taskArgs.address}...`,
     );
 
     const role = await manager[taskArgs.role]();
