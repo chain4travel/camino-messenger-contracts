@@ -9,7 +9,7 @@ function getAddressesForNetwork(hre) {
 
     if (hre.network.name === "columbus") {
         console.log("Running on columbus");
-        addresses = require("../ignition/deployments/chain-50 1/deployed_addresses.json");
+        addresses = require("../ignition/deployments/chain-501/deployed_addresses.json");
     } else if (hre.network.name === "camino") {
         console.log("Running on camino");
         addresses = require("../ignition/deployments/chain-500/deployed_addresses.json");
