@@ -3,6 +3,10 @@ require("@openzeppelin/hardhat-upgrades");
 require("hardhat-contract-sizer");
 require("solidity-docgen");
 
+// Tasks
+require("./tasks/manager");
+require("./tasks/account");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {
@@ -12,10 +16,11 @@ module.exports = {
                 enabled: true,
                 runs: 1,
             },
+            evmVersion: "paris",
         },
     },
     contractSizer: {
-        runOnCompile: true,
+        runOnCompile: false,
     },
     ignition: {
         requiredConfirmations: 1,
