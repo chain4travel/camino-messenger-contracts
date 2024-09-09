@@ -181,22 +181,7 @@ describe("ChequeManager", function () {
                 signature,
             );
 
-            // Should emit ChequeVerified event with correct data
-            await expect(await verifyResponse)
-                .to.emit(cmAccount, "ChequeVerified")
-                .withArgs(
-                    cheque.fromCMAccount,
-                    cheque.toCMAccount,
-                    signers.chequeOperator,
-                    cheque.toBot,
-                    cheque.counter,
-                    cheque.amount,
-                    cheque.amount, // payment
-                );
-
-            // Sanity checks: balances should not change
-            await expect(await verifyResponse).to.changeEtherBalance(signers.chequeOperator, 0, { includeFee: true });
-            await expect(await verifyResponse).to.changeEtherBalance(cmAccount, 0, { includeFee: true });
+            expect(verifyResponse).to.be.deep.equal([signers.chequeOperator.address, ethers.parseEther("1")]);
         });
 
         it("Should not verify a cheque with an invalid signature", async function () {
@@ -457,9 +442,12 @@ describe("ChequeManager", function () {
             await expect(await cashInResponse)
                 .to.emit(cmAccount, "ChequeCashedIn")
                 .withArgs(
-                    signers.chequeOperator.address,
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    signers.chequeOperator.address, // fromBot
                     cheque.toBot,
                     cheque.counter,
+                    cheque.amount,
                     cheque.amount - developerFee, // paid amount
                     developerFee, // developer cut
                 );
@@ -507,7 +495,7 @@ describe("ChequeManager", function () {
                 signature2,
             );
 
-            // CMAccount balance descrease by (cheque2 amount - cheque amount)
+            // CMAccount balance decrease by (cheque2 amount - cheque amount)
             await expect(await cashInResponse2).to.changeEtherBalance(
                 cmAccount,
                 -cheque2.amount + cheque.amount, // Weird calculation but it works
@@ -526,9 +514,12 @@ describe("ChequeManager", function () {
             await expect(await cashInResponse2)
                 .to.emit(cmAccount, "ChequeCashedIn")
                 .withArgs(
-                    signers.chequeOperator.address,
+                    cheque2.fromCMAccount,
+                    cheque2.toCMAccount,
+                    signers.chequeOperator.address, // fromBot
                     cheque2.toBot,
                     cheque2.counter,
+                    cheque2.amount,
                     cheque2.amount - cheque.amount - developerFee2, // paid amount for this cheque
                     developerFee2,
                 );

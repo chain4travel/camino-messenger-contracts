@@ -112,27 +112,17 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      ***************************************************/
 
     /**
-     * @notice Cheque verified event. Emitted when a cheque is verified.
+     * @notice Cash-in event. Emitted when a cheque is cashed in.
      */
-    event ChequeVerified(
+    event ChequeCashedIn(
         address indexed fromCMAccount,
         address indexed toCMAccount,
         address fromBot,
         address toBot,
         uint256 counter,
         uint256 amount,
-        uint256 payment
-    );
-
-    /**
-     * @notice Cash-in event. Emitted when a cheque is cashed in.
-     */
-    event ChequeCashedIn(
-        address indexed fromBot,
-        address indexed toBot,
-        uint256 counter,
-        uint256 paid,
-        uint256 developerFee
+        uint256 paidChequeAmount,
+        uint256 paidDeveloperFee
     );
 
     /***************************************************
@@ -288,7 +278,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 createdAt,
         uint256 expiresAt,
         bytes memory signature
-    ) public returns (address signer, uint256 paymentAmount) {
+    ) public view returns (address signer, uint256 paymentAmount) {
         // Revert if cheque is not for this contract
         if (fromCMAccount != address(this)) {
             revert InvalidFromCMAccount(fromCMAccount);
@@ -327,17 +317,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
 
         // Everything is valid. Calculate payment amount.
         paymentAmount = amount - lastCashIn.amount;
-
-        // Emit event
-        emit ChequeVerified(
-            fromCMAccount,
-            toCMAccount,
-            signer, // fromBot
-            toBot,
-            counter,
-            amount,
-            paymentAmount
-        );
 
         return (signer, paymentAmount);
     }
@@ -405,7 +384,16 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         payable(toCMAccount).sendValue(chequePaymentAmount);
 
         // Emit cash-in event
-        emit ChequeCashedIn(signer, toBot, counter, chequePaymentAmount, developerFee);
+        emit ChequeCashedIn(
+            fromCMAccount,
+            toCMAccount,
+            signer, // fromBot
+            toBot,
+            counter,
+            amount, // Amount of the cheque
+            chequePaymentAmount, // Paid cheque amount to the `toCMAccount`
+            developerFee // Paid developer fee (cut from the cheque amount)
+        );
     }
 
     /**
