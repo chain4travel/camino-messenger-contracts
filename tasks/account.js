@@ -171,6 +171,86 @@ ACCOUNT_SCOPE.task("create", "Create CMAccount")
         }
     });
 
+ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
+    .addParam("privateKey", "Private key to use")
+    .addParam("cmAccount", "CMAccount address")
+    .addParam("bot", "Bot address")
+    .addOptionalParam(
+        "gasMoney",
+        "Gas money in CAM. This amount will be transferred from the CMAccount to the bot address (Ex: 1 or 0.1)",
+        "0",
+        types.string,
+    )
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Bot:", taskArgs.bot);
+        console.log(
+            "Gas:",
+            taskArgs.gasMoney,
+            "(This amount will be transferred from the CMAccount to the bot address)",
+        );
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Adding bot to CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const gasMoney = ethers.parseEther(taskArgs.gasMoney);
+
+            const tx = await cmAccount.connect(signer).addMessengerBot(taskArgs.bot, gasMoney);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
+    .addParam("privateKey", "Private key to use")
+    .addParam("cmAccount", "CMAccount address")
+    .addParam("bot", "Bot address")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Bot:", taskArgs.bot);
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Removing bot from CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const tx = await cmAccount.connect(signer).removeMessengerBot(taskArgs.bot);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
+    .addParam("cmAccount", "CMAccount address")
+    .setAction(async (taskArgs, hre) => {
+        console.log("CMAccount:", taskArgs.cmAccount, "\n");
+
+        console.log("📢 A bot is an address that has been granted some special roles on the CMAccount.");
+
+        const role1 = "CHEQUE_OPERATOR_ROLE";
+        console.log("\n🤖", role1, "(Can sign cheques that are valid for the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role1, cmAccount: taskArgs.cmAccount });
+
+        const role2 = "BOOKING_OPERATOR_ROLE";
+        console.log("\n🤖", role2, "(Can mint and buy Booking Tokens for the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role2, cmAccount: taskArgs.cmAccount });
+
+        const role3 = "GAS_WITHDRAWER_ROLE";
+        console.log("\n🤖", role3, "(Can withdraw gas from the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role3, cmAccount: taskArgs.cmAccount });
+    });
+
 ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
     .addParam("privateKey", "Private key to use")
     .addParam("cmAccount", "CMAccount address")
