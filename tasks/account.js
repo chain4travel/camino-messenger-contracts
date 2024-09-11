@@ -404,7 +404,7 @@ ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
         }
     });
 
-ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount implementation")
+ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount to latest implementation")
     .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
