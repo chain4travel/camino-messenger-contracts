@@ -705,18 +705,10 @@ struct ChequeManagerStorage {
 }
 ```
 
-### ChequeVerified
-
-```solidity
-event ChequeVerified(address fromCMAccount, address toCMAccount, address fromBot, address toBot, uint256 counter, uint256 amount, uint256 payment)
-```
-
-Cheque verified event. Emitted when a cheque is verified.
-
 ### ChequeCashedIn
 
 ```solidity
-event ChequeCashedIn(address fromBot, address toBot, uint256 counter, uint256 paid, uint256 developerFee)
+event ChequeCashedIn(address fromCMAccount, address toCMAccount, address fromBot, address toBot, uint256 counter, uint256 amount, uint256 paidChequeAmount, uint256 paidDeveloperFee)
 ```
 
 Cash-in event. Emitted when a cheque is cashed in.
@@ -823,7 +815,7 @@ recover the signer.
 ### verifyCheque
 
 ```solidity
-function verifyCheque(address fromCMAccount, address toCMAccount, address toBot, uint256 counter, uint256 amount, uint256 createdAt, uint256 expiresAt, bytes signature) public returns (address signer, uint256 paymentAmount)
+function verifyCheque(address fromCMAccount, address toCMAccount, address toBot, uint256 counter, uint256 amount, uint256 createdAt, uint256 expiresAt, bytes signature) public view returns (address signer, uint256 paymentAmount)
 ```
 
 Returns signer and payment amount if the signature is valid for the
@@ -1061,14 +1053,6 @@ Returns the gas money withdrawal details for an account.
 | periodStart     | uint256 | timestamp of the withdrawal period start |
 | withdrawnAmount | uint256 | amount withdrawn within the period       |
 
-## ICMAccount
-
-### initialize
-
-```solidity
-function initialize(address manager, address bookingToken, uint256 prefundAmount, address owner, address upgrader) external
-```
-
 ## BookingTokenOperator
 
 Booking token operator contract is used by the {CMAccount} contract to mint
@@ -1148,496 +1132,6 @@ function buyReservedToken(uint256 tokenId) external payable
 function getReservationPrice(uint256 tokenId) external view returns (uint256 price, contract IERC20 paymentToken)
 ```
 
-## CMAccountManager
-
-This contract manages the creation of the Camino Messenger accounts by
-deploying {ERC1967Proxy} proxies that point to the{CMAccount} implementation
-address.
-
-Create CM Account: Users who want to create an account should call
-`createCMAccount(address admin, address upgrader)` function with addresses of
-the accounts admin and upgrader roles and also send the pre fund amount,
-which is currently set as 100 CAMs. When the manager contract is paused,
-account creation is stopped.
-
-Developer Fee: This contracts also keeps the info about the developer wallet
-and fee basis points. Which are used during the cheque cash in to pay for the
-developer fee.
-
-Service Registry: {CMAccountManager} also acts as a registry for the services
-that {CMAccount} contracts add as a supported or wanted service. Registry
-works by hashing (keccak256) the service name (string) and creating a mapping
-as keccak256(serviceName) => serviceName. And provides functions that
-{CMAccount} function uses to register services. The {CMAccount} only keeps
-the hashes (byte32) of the registered services.
-
-### PAUSER_ROLE
-
-```solidity
-bytes32 PAUSER_ROLE
-```
-
-Pauser role can pause the contract. Currently this only affects the
-creation of CM Accounts. When paused, account creation is stopped.
-
-### UPGRADER_ROLE
-
-```solidity
-bytes32 UPGRADER_ROLE
-```
-
-Upgrader role can upgrade the contract to a new implementation.
-
-### VERSIONER_ROLE
-
-```solidity
-bytes32 VERSIONER_ROLE
-```
-
-Versioner role can set new {CMAccount} implementation address. When a
-new implementation address is set, it is used for the new {CMAccount}
-creations.
-
-The old {CMAccount} contracts are not affected by this. Owners of those
-should do the upgrade manually by calling the `upgradeToAndCall(address)`
-function on the account.
-
-### FEE_ADMIN_ROLE
-
-```solidity
-bytes32 FEE_ADMIN_ROLE
-```
-
-Fee admin role can set the developer fee basis points which used for
-calculating the developer fee that is cut from the cheque payments.
-
-### DEVELOPER_WALLET_ADMIN_ROLE
-
-```solidity
-bytes32 DEVELOPER_WALLET_ADMIN_ROLE
-```
-
-Developer wallet admin role can set the developer wallet address
-which is used to receive the developer fee.
-
-### PREFUND_ADMIN_ROLE
-
-```solidity
-bytes32 PREFUND_ADMIN_ROLE
-```
-
-Prefund admin role can set the mandatory prefund amount for {CMAccount}
-contracts.
-
-### SERVICE_REGISTRY_ADMIN_ROLE
-
-```solidity
-bytes32 SERVICE_REGISTRY_ADMIN_ROLE
-```
-
-Service registry admin role can add and remove services to the service
-registry mapping. Implemented by {ServiceRegistry} contract.
-
-### CMACCOUNT_ROLE
-
-```solidity
-bytes32 CMACCOUNT_ROLE
-```
-
-This role is granted to the created CM Accounts. It is used to keep
-an enumerable list of CM Accounts.
-
-### CMAccountInfo
-
-CMAccount info struct, to keep track of created CM Accounts and their
-creators.
-
-```solidity
-struct CMAccountInfo {
-    bool isCMAccount;
-    address creator;
-}
-```
-
-### CMAccountManagerStorage
-
-```solidity
-struct CMAccountManagerStorage {
-  address _latestAccountImplementation;
-  uint256 _prefundAmount;
-  address _developerWallet;
-  uint256 _developerFeeBp;
-  address _bookingToken;
-  mapping(address => struct CMAccountManager.CMAccountInfo) _cmAccountInfo;
-}
-```
-
-### CMAccountCreated
-
-```solidity
-event CMAccountCreated(address account)
-```
-
-CM Account created event.
-
-#### Parameters
-
-| Name    | Type    | Description                      |
-| ------- | ------- | -------------------------------- |
-| account | address | The address of the new CMAccount |
-
-### CMAccountImplementationUpdated
-
-```solidity
-event CMAccountImplementationUpdated(address oldImplementation, address newImplementation)
-```
-
-CM Account implementation address updated event.
-
-#### Parameters
-
-| Name              | Type    | Description                    |
-| ----------------- | ------- | ------------------------------ |
-| oldImplementation | address | The old implementation address |
-| newImplementation | address | The new implementation address |
-
-### DeveloperWalletUpdated
-
-```solidity
-event DeveloperWalletUpdated(address oldDeveloperWallet, address newDeveloperWallet)
-```
-
-Developer wallet address updated event.
-
-#### Parameters
-
-| Name               | Type    | Description                      |
-| ------------------ | ------- | -------------------------------- |
-| oldDeveloperWallet | address | The old developer wallet address |
-| newDeveloperWallet | address | The new developer wallet address |
-
-### DeveloperFeeBpUpdated
-
-```solidity
-event DeveloperFeeBpUpdated(uint256 oldDeveloperFeeBp, uint256 newDeveloperFeeBp)
-```
-
-Developer fee basis points updated event.
-
-#### Parameters
-
-| Name              | Type    | Description                        |
-| ----------------- | ------- | ---------------------------------- |
-| oldDeveloperFeeBp | uint256 | The old developer fee basis points |
-| newDeveloperFeeBp | uint256 | The new developer fee basis points |
-
-### BookingTokenAddressUpdated
-
-```solidity
-event BookingTokenAddressUpdated(address oldBookingToken, address newBookingToken)
-```
-
-Booking token address updated event.
-
-#### Parameters
-
-| Name            | Type    | Description                   |
-| --------------- | ------- | ----------------------------- |
-| oldBookingToken | address | The old booking token address |
-| newBookingToken | address | The new booking token address |
-
-### CMAccountInvalidImplementation
-
-```solidity
-error CMAccountInvalidImplementation(address implementation)
-```
-
-The implementation of the CMAccount is invalid.
-
-#### Parameters
-
-| Name           | Type    | Description                                 |
-| -------------- | ------- | ------------------------------------------- |
-| implementation | address | The implementation address of the CMAccount |
-
-### CMAccountInvalidAdmin
-
-```solidity
-error CMAccountInvalidAdmin(address admin)
-```
-
-The admin address is invalid.
-
-#### Parameters
-
-| Name  | Type    | Description       |
-| ----- | ------- | ----------------- |
-| admin | address | The admin address |
-
-### InvalidDeveloperWallet
-
-```solidity
-error InvalidDeveloperWallet(address developerWallet)
-```
-
-Invalid developer address.
-
-#### Parameters
-
-| Name            | Type    | Description                  |
-| --------------- | ------- | ---------------------------- |
-| developerWallet | address | The developer wallet address |
-
-### InvalidBookingTokenAddress
-
-```solidity
-error InvalidBookingTokenAddress(address bookingToken)
-```
-
-Invalid booking token address.
-
-#### Parameters
-
-| Name         | Type    | Description               |
-| ------------ | ------- | ------------------------- |
-| bookingToken | address | The booking token address |
-
-### IncorrectPrefundAmount
-
-```solidity
-error IncorrectPrefundAmount(uint256 expected, uint256 sended)
-```
-
-Incorrect pre fund amount.
-
-#### Parameters
-
-| Name     | Type    | Description                  |
-| -------- | ------- | ---------------------------- |
-| expected | uint256 | The expected pre fund amount |
-| sended   | uint256 |                              |
-
-### constructor
-
-```solidity
-constructor() public
-```
-
-### initialize
-
-```solidity
-function initialize(address defaultAdmin, address pauser, address upgrader, address versioner, address developerWallet, uint256 developerFeeBp) public
-```
-
-### pause
-
-```solidity
-function pause() public
-```
-
-Pauses the CMAccountManager contract. Currently this only affects the
-creation of CMAccount. When paused, account creation is stopped.
-
-### unpause
-
-```solidity
-function unpause() public
-```
-
-Unpauses the CMAccountManager contract.
-
-### \_authorizeUpgrade
-
-```solidity
-function _authorizeUpgrade(address newImplementation) internal
-```
-
-Authorization for the CMAccountManager contract upgrade.
-
-### createCMAccount
-
-```solidity
-function createCMAccount(address admin, address upgrader) external payable returns (address)
-```
-
-Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
-implementation from the manager.
-
-Because this function is deploying a contract, it reverts if the caller is
-not KYC or KYB verified. (For EOAs only)
-
-Caller must send the pre-fund amount with the transaction.
-
-_Emits a {CMAccountCreated} event._
-
-### \_setCMAccountInfo
-
-```solidity
-function _setCMAccountInfo(address account, struct CMAccountManager.CMAccountInfo info) internal
-```
-
-### getCMAccountCreator
-
-```solidity
-function getCMAccountCreator(address account) public view returns (address)
-```
-
-Returns the given account's creator.
-
-#### Parameters
-
-| Name    | Type    | Description         |
-| ------- | ------- | ------------------- |
-| account | address | The account address |
-
-### isCMAccount
-
-```solidity
-function isCMAccount(address account) public view returns (bool)
-```
-
-Check if an address is CMAccount created by the manager.
-
-#### Parameters
-
-| Name    | Type    | Description                  |
-| ------- | ------- | ---------------------------- |
-| account | address | The account address to check |
-
-### getAccountImplementation
-
-```solidity
-function getAccountImplementation() public view returns (address)
-```
-
-Returns the CMAccount implementation address.
-
-### setAccountImplementation
-
-```solidity
-function setAccountImplementation(address newImplementation) public
-```
-
-Set a new CMAccount implementation address.
-
-#### Parameters
-
-| Name              | Type    | Description                    |
-| ----------------- | ------- | ------------------------------ |
-| newImplementation | address | The new implementation address |
-
-### \_setAccountImplementation
-
-```solidity
-function _setAccountImplementation(address newImplementation) internal
-```
-
-### getPrefundAmount
-
-```solidity
-function getPrefundAmount() public view returns (uint256)
-```
-
-Returns the prefund amount.
-
-### setPrefundAmount
-
-```solidity
-function setPrefundAmount(uint256 newPrefundAmount) public
-```
-
-Sets the prefund amount.
-
-### getBookingTokenAddress
-
-```solidity
-function getBookingTokenAddress() public view returns (address)
-```
-
-Returns the booking token address.
-
-### setBookingTokenAddress
-
-```solidity
-function setBookingTokenAddress(address token) public
-```
-
-Sets booking token address.
-
-### \_setBookingTokenAddress
-
-```solidity
-function _setBookingTokenAddress(address token) internal
-```
-
-### getDeveloperWallet
-
-```solidity
-function getDeveloperWallet() public view returns (address developerWallet)
-```
-
-Returns developer wallet address.
-
-### setDeveloperWallet
-
-```solidity
-function setDeveloperWallet(address developerWallet) public
-```
-
-Sets developer wallet address.
-
-### getDeveloperFeeBp
-
-```solidity
-function getDeveloperFeeBp() public view returns (uint256 developerFeeBp)
-```
-
-Returns developer fee in basis points.
-
-### setDeveloperFeeBp
-
-```solidity
-function setDeveloperFeeBp(uint256 bp) public
-```
-
-Sets developer fee in basis points.
-
-A basis point (bp) is one hundredth of 1 percentage point.
-
-1 bp = 0.01%, 1/10,000⁠, or 0.0001.
-10 bp = 0.1%, 1/1,000⁠, or 0.001.
-100 bp = 1%, ⁠1/100⁠, or 0.01.
-
-### registerService
-
-```solidity
-function registerService(string serviceName) public
-```
-
-Registers a given service name. CM Accounts can only register services
-if they are also registered in the service registry on the manager contract.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### unregisterService
-
-```solidity
-function unregisterService(string serviceName) public
-```
-
-Unregisters a given service name. CM Accounts will not be able to register
-the service anymore.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
 ## ICMAccountManager
 
 ### getAccountImplementation
@@ -1674,14 +1168,6 @@ function getRegisteredServiceHashByName(string serviceName) external view return
 
 ```solidity
 function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string serviceName)
-```
-
-## CMAccountManagerV2
-
-### getVersion
-
-```solidity
-function getVersion() public pure returns (string)
 ```
 
 ## PartnerConfiguration
@@ -2204,160 +1690,12 @@ Reverts if the public key does not exist
 | ------------- | ------- | ------------------------- |
 | pubKeyAddress | address | Address of the public key |
 
-## ServiceRegistry
+## ICMAccount
 
-Service registry is used by the {CMAccountManager} contract to register
-services by hashing (keccak256) the service name (string) and creating a mapping
-as keccak256(serviceName) => serviceName.
-
-### ServiceRegistryStorage
+### initialize
 
 ```solidity
-struct ServiceRegistryStorage {
-  struct EnumerableSet.Bytes32Set _servicesHashSet;
-  mapping(bytes32 => string) _serviceNameByHash;
-  mapping(string => bytes32) _hashByServiceName;
-}
-```
-
-### ServiceRegistered
-
-```solidity
-event ServiceRegistered(string serviceName, bytes32 serviceHash)
-```
-
-### ServiceUnregistered
-
-```solidity
-event ServiceUnregistered(string serviceName, bytes32 serviceHash)
-```
-
-### ServiceAlreadyRegistered
-
-```solidity
-error ServiceAlreadyRegistered(string serviceName)
-```
-
-### ServiceNotRegistered
-
-```solidity
-error ServiceNotRegistered()
-```
-
-### \_\_ServiceRegistry_init
-
-```solidity
-function __ServiceRegistry_init() internal
-```
-
-### \_\_ServiceRegistry_init_unchained
-
-```solidity
-function __ServiceRegistry_init_unchained() internal
-```
-
-### \_registerServiceName
-
-```solidity
-function _registerServiceName(string serviceName) internal virtual
-```
-
-Adds a new service by its name. This function calculates the hash of the
-service name and adds it to the registry
-
-{serviceName} is the pkg + service name as:
-
-```text
- ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
-"cmp.services.accommodation.v1alpha.AccommodationSearchService"
-```
-
-_These services are coming from the Camino Messenger Protocol's protobuf
-definitions._
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### \_unregisterServiceName
-
-```solidity
-function _unregisterServiceName(string serviceName) internal virtual
-```
-
-Removes a service by its name. This function calculates the hash of the
-service name and removes it from the registry.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### getRegisteredServiceNameByHash
-
-```solidity
-function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
-```
-
-Returns the name of a service by its hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getRegisteredServiceHashByName
-
-```solidity
-function getRegisteredServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
-```
-
-Returns the hash of a service by its name.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### getAllRegisteredServiceHashes
-
-```solidity
-function getAllRegisteredServiceHashes() public view returns (bytes32[] services)
-```
-
-Returns all registered service **hashes**.
-
-#### Return Values
-
-| Name     | Type      | Description                   |
-| -------- | --------- | ----------------------------- |
-| services | bytes32[] | All registered service hashes |
-
-### getAllRegisteredServiceNames
-
-```solidity
-function getAllRegisteredServiceNames() public view returns (string[] services)
-```
-
-Returns all registered service **names**.
-
-#### Return Values
-
-| Name     | Type     | Description                  |
-| -------- | -------- | ---------------------------- |
-| services | string[] | All registered service names |
-
-## NullUSD
-
-### constructor
-
-```solidity
-constructor() public
+function initialize(address manager, address bookingToken, uint256 prefundAmount, address owner, address upgrader) external
 ```
 
 ## BookingToken
@@ -2772,12 +2110,666 @@ function tokenURI(uint256 tokenId) public view returns (string)
 function supportsInterface(bytes4 interfaceId) public view returns (bool)
 ```
 
+## CMAccountManager
+
+This contract manages the creation of the Camino Messenger accounts by
+deploying {ERC1967Proxy} proxies that point to the{CMAccount} implementation
+address.
+
+Create CM Account: Users who want to create an account should call
+`createCMAccount(address admin, address upgrader)` function with addresses of
+the accounts admin and upgrader roles and also send the pre fund amount,
+which is currently set as 100 CAMs. When the manager contract is paused,
+account creation is stopped.
+
+Developer Fee: This contracts also keeps the info about the developer wallet
+and fee basis points. Which are used during the cheque cash in to pay for the
+developer fee.
+
+Service Registry: {CMAccountManager} also acts as a registry for the services
+that {CMAccount} contracts add as a supported or wanted service. Registry
+works by hashing (keccak256) the service name (string) and creating a mapping
+as keccak256(serviceName) => serviceName. And provides functions that
+{CMAccount} function uses to register services. The {CMAccount} only keeps
+the hashes (byte32) of the registered services.
+
+### PAUSER_ROLE
+
+```solidity
+bytes32 PAUSER_ROLE
+```
+
+Pauser role can pause the contract. Currently this only affects the
+creation of CM Accounts. When paused, account creation is stopped.
+
+### UPGRADER_ROLE
+
+```solidity
+bytes32 UPGRADER_ROLE
+```
+
+Upgrader role can upgrade the contract to a new implementation.
+
+### VERSIONER_ROLE
+
+```solidity
+bytes32 VERSIONER_ROLE
+```
+
+Versioner role can set new {CMAccount} implementation address. When a
+new implementation address is set, it is used for the new {CMAccount}
+creations.
+
+The old {CMAccount} contracts are not affected by this. Owners of those
+should do the upgrade manually by calling the `upgradeToAndCall(address)`
+function on the account.
+
+### FEE_ADMIN_ROLE
+
+```solidity
+bytes32 FEE_ADMIN_ROLE
+```
+
+Fee admin role can set the developer fee basis points which used for
+calculating the developer fee that is cut from the cheque payments.
+
+### DEVELOPER_WALLET_ADMIN_ROLE
+
+```solidity
+bytes32 DEVELOPER_WALLET_ADMIN_ROLE
+```
+
+Developer wallet admin role can set the developer wallet address
+which is used to receive the developer fee.
+
+### PREFUND_ADMIN_ROLE
+
+```solidity
+bytes32 PREFUND_ADMIN_ROLE
+```
+
+Prefund admin role can set the mandatory prefund amount for {CMAccount}
+contracts.
+
+### SERVICE_REGISTRY_ADMIN_ROLE
+
+```solidity
+bytes32 SERVICE_REGISTRY_ADMIN_ROLE
+```
+
+Service registry admin role can add and remove services to the service
+registry mapping. Implemented by {ServiceRegistry} contract.
+
+### CMACCOUNT_ROLE
+
+```solidity
+bytes32 CMACCOUNT_ROLE
+```
+
+This role is granted to the created CM Accounts. It is used to keep
+an enumerable list of CM Accounts.
+
+### CMAccountInfo
+
+CMAccount info struct, to keep track of created CM Accounts and their
+creators.
+
+```solidity
+struct CMAccountInfo {
+    bool isCMAccount;
+    address creator;
+}
+```
+
+### CMAccountManagerStorage
+
+```solidity
+struct CMAccountManagerStorage {
+  address _latestAccountImplementation;
+  uint256 _prefundAmount;
+  address _developerWallet;
+  uint256 _developerFeeBp;
+  address _bookingToken;
+  mapping(address => struct CMAccountManager.CMAccountInfo) _cmAccountInfo;
+}
+```
+
+### CMAccountCreated
+
+```solidity
+event CMAccountCreated(address account)
+```
+
+CM Account created event.
+
+#### Parameters
+
+| Name    | Type    | Description                      |
+| ------- | ------- | -------------------------------- |
+| account | address | The address of the new CMAccount |
+
+### CMAccountImplementationUpdated
+
+```solidity
+event CMAccountImplementationUpdated(address oldImplementation, address newImplementation)
+```
+
+CM Account implementation address updated event.
+
+#### Parameters
+
+| Name              | Type    | Description                    |
+| ----------------- | ------- | ------------------------------ |
+| oldImplementation | address | The old implementation address |
+| newImplementation | address | The new implementation address |
+
+### DeveloperWalletUpdated
+
+```solidity
+event DeveloperWalletUpdated(address oldDeveloperWallet, address newDeveloperWallet)
+```
+
+Developer wallet address updated event.
+
+#### Parameters
+
+| Name               | Type    | Description                      |
+| ------------------ | ------- | -------------------------------- |
+| oldDeveloperWallet | address | The old developer wallet address |
+| newDeveloperWallet | address | The new developer wallet address |
+
+### DeveloperFeeBpUpdated
+
+```solidity
+event DeveloperFeeBpUpdated(uint256 oldDeveloperFeeBp, uint256 newDeveloperFeeBp)
+```
+
+Developer fee basis points updated event.
+
+#### Parameters
+
+| Name              | Type    | Description                        |
+| ----------------- | ------- | ---------------------------------- |
+| oldDeveloperFeeBp | uint256 | The old developer fee basis points |
+| newDeveloperFeeBp | uint256 | The new developer fee basis points |
+
+### BookingTokenAddressUpdated
+
+```solidity
+event BookingTokenAddressUpdated(address oldBookingToken, address newBookingToken)
+```
+
+Booking token address updated event.
+
+#### Parameters
+
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| oldBookingToken | address | The old booking token address |
+| newBookingToken | address | The new booking token address |
+
+### CMAccountInvalidImplementation
+
+```solidity
+error CMAccountInvalidImplementation(address implementation)
+```
+
+The implementation of the CMAccount is invalid.
+
+#### Parameters
+
+| Name           | Type    | Description                                 |
+| -------------- | ------- | ------------------------------------------- |
+| implementation | address | The implementation address of the CMAccount |
+
+### CMAccountInvalidAdmin
+
+```solidity
+error CMAccountInvalidAdmin(address admin)
+```
+
+The admin address is invalid.
+
+#### Parameters
+
+| Name  | Type    | Description       |
+| ----- | ------- | ----------------- |
+| admin | address | The admin address |
+
+### InvalidDeveloperWallet
+
+```solidity
+error InvalidDeveloperWallet(address developerWallet)
+```
+
+Invalid developer address.
+
+#### Parameters
+
+| Name            | Type    | Description                  |
+| --------------- | ------- | ---------------------------- |
+| developerWallet | address | The developer wallet address |
+
+### InvalidBookingTokenAddress
+
+```solidity
+error InvalidBookingTokenAddress(address bookingToken)
+```
+
+Invalid booking token address.
+
+#### Parameters
+
+| Name         | Type    | Description               |
+| ------------ | ------- | ------------------------- |
+| bookingToken | address | The booking token address |
+
+### IncorrectPrefundAmount
+
+```solidity
+error IncorrectPrefundAmount(uint256 expected, uint256 sended)
+```
+
+Incorrect pre fund amount.
+
+#### Parameters
+
+| Name     | Type    | Description                  |
+| -------- | ------- | ---------------------------- |
+| expected | uint256 | The expected pre fund amount |
+| sended   | uint256 |                              |
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(address defaultAdmin, address pauser, address upgrader, address versioner, address developerWallet, uint256 developerFeeBp) public
+```
+
+### pause
+
+```solidity
+function pause() public
+```
+
+Pauses the CMAccountManager contract. Currently this only affects the
+creation of CMAccount. When paused, account creation is stopped.
+
+### unpause
+
+```solidity
+function unpause() public
+```
+
+Unpauses the CMAccountManager contract.
+
+### \_authorizeUpgrade
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal
+```
+
+Authorization for the CMAccountManager contract upgrade.
+
+### createCMAccount
+
+```solidity
+function createCMAccount(address admin, address upgrader) external payable returns (address)
+```
+
+Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
+implementation from the manager.
+
+Because this function is deploying a contract, it reverts if the caller is
+not KYC or KYB verified. (For EOAs only)
+
+Caller must send the pre-fund amount with the transaction.
+
+_Emits a {CMAccountCreated} event._
+
+### \_setCMAccountInfo
+
+```solidity
+function _setCMAccountInfo(address account, struct CMAccountManager.CMAccountInfo info) internal
+```
+
+### getCMAccountCreator
+
+```solidity
+function getCMAccountCreator(address account) public view returns (address)
+```
+
+Returns the given account's creator.
+
+#### Parameters
+
+| Name    | Type    | Description         |
+| ------- | ------- | ------------------- |
+| account | address | The account address |
+
+### isCMAccount
+
+```solidity
+function isCMAccount(address account) public view returns (bool)
+```
+
+Check if an address is CMAccount created by the manager.
+
+#### Parameters
+
+| Name    | Type    | Description                  |
+| ------- | ------- | ---------------------------- |
+| account | address | The account address to check |
+
+### getAccountImplementation
+
+```solidity
+function getAccountImplementation() public view returns (address)
+```
+
+Returns the CMAccount implementation address.
+
+### setAccountImplementation
+
+```solidity
+function setAccountImplementation(address newImplementation) public
+```
+
+Set a new CMAccount implementation address.
+
+#### Parameters
+
+| Name              | Type    | Description                    |
+| ----------------- | ------- | ------------------------------ |
+| newImplementation | address | The new implementation address |
+
+### \_setAccountImplementation
+
+```solidity
+function _setAccountImplementation(address newImplementation) internal
+```
+
+### getPrefundAmount
+
+```solidity
+function getPrefundAmount() public view returns (uint256)
+```
+
+Returns the prefund amount.
+
+### setPrefundAmount
+
+```solidity
+function setPrefundAmount(uint256 newPrefundAmount) public
+```
+
+Sets the prefund amount.
+
+### getBookingTokenAddress
+
+```solidity
+function getBookingTokenAddress() public view returns (address)
+```
+
+Returns the booking token address.
+
+### setBookingTokenAddress
+
+```solidity
+function setBookingTokenAddress(address token) public
+```
+
+Sets booking token address.
+
+### \_setBookingTokenAddress
+
+```solidity
+function _setBookingTokenAddress(address token) internal
+```
+
+### getDeveloperWallet
+
+```solidity
+function getDeveloperWallet() public view returns (address developerWallet)
+```
+
+Returns developer wallet address.
+
+### setDeveloperWallet
+
+```solidity
+function setDeveloperWallet(address developerWallet) public
+```
+
+Sets developer wallet address.
+
+### getDeveloperFeeBp
+
+```solidity
+function getDeveloperFeeBp() public view returns (uint256 developerFeeBp)
+```
+
+Returns developer fee in basis points.
+
+### setDeveloperFeeBp
+
+```solidity
+function setDeveloperFeeBp(uint256 bp) public
+```
+
+Sets developer fee in basis points.
+
+A basis point (bp) is one hundredth of 1 percentage point.
+
+1 bp = 0.01%, 1/10,000⁠, or 0.0001.
+10 bp = 0.1%, 1/1,000⁠, or 0.001.
+100 bp = 1%, ⁠1/100⁠, or 0.01.
+
+### registerService
+
+```solidity
+function registerService(string serviceName) public
+```
+
+Registers a given service name. CM Accounts can only register services
+if they are also registered in the service registry on the manager contract.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### unregisterService
+
+```solidity
+function unregisterService(string serviceName) public
+```
+
+Unregisters a given service name. CM Accounts will not be able to register
+the service anymore.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+## CMAccountManagerV2
+
+### getVersion
+
+```solidity
+function getVersion() public pure returns (string)
+```
+
+## ServiceRegistry
+
+Service registry is used by the {CMAccountManager} contract to register
+services by hashing (keccak256) the service name (string) and creating a mapping
+as keccak256(serviceName) => serviceName.
+
+### ServiceRegistryStorage
+
+```solidity
+struct ServiceRegistryStorage {
+  struct EnumerableSet.Bytes32Set _servicesHashSet;
+  mapping(bytes32 => string) _serviceNameByHash;
+  mapping(string => bytes32) _hashByServiceName;
+}
+```
+
+### ServiceRegistered
+
+```solidity
+event ServiceRegistered(string serviceName, bytes32 serviceHash)
+```
+
+### ServiceUnregistered
+
+```solidity
+event ServiceUnregistered(string serviceName, bytes32 serviceHash)
+```
+
+### ServiceAlreadyRegistered
+
+```solidity
+error ServiceAlreadyRegistered(string serviceName)
+```
+
+### ServiceNotRegistered
+
+```solidity
+error ServiceNotRegistered()
+```
+
+### \_\_ServiceRegistry_init
+
+```solidity
+function __ServiceRegistry_init() internal
+```
+
+### \_\_ServiceRegistry_init_unchained
+
+```solidity
+function __ServiceRegistry_init_unchained() internal
+```
+
+### \_registerServiceName
+
+```solidity
+function _registerServiceName(string serviceName) internal virtual
+```
+
+Adds a new service by its name. This function calculates the hash of the
+service name and adds it to the registry
+
+{serviceName} is the pkg + service name as:
+
+```text
+ ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+"cmp.services.accommodation.v1alpha.AccommodationSearchService"
+```
+
+_These services are coming from the Camino Messenger Protocol's protobuf
+definitions._
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### \_unregisterServiceName
+
+```solidity
+function _unregisterServiceName(string serviceName) internal virtual
+```
+
+Removes a service by its name. This function calculates the hash of the
+service name and removes it from the registry.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### getRegisteredServiceNameByHash
+
+```solidity
+function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
+```
+
+Returns the name of a service by its hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getRegisteredServiceHashByName
+
+```solidity
+function getRegisteredServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
+```
+
+Returns the hash of a service by its name.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### getAllRegisteredServiceHashes
+
+```solidity
+function getAllRegisteredServiceHashes() public view returns (bytes32[] services)
+```
+
+Returns all registered service **hashes**.
+
+#### Return Values
+
+| Name     | Type      | Description                   |
+| -------- | --------- | ----------------------------- |
+| services | bytes32[] | All registered service hashes |
+
+### getAllRegisteredServiceNames
+
+```solidity
+function getAllRegisteredServiceNames() public view returns (string[] services)
+```
+
+Returns all registered service **names**.
+
+#### Return Values
+
+| Name     | Type     | Description                  |
+| -------- | -------- | ---------------------------- |
+| services | string[] | All registered service names |
+
 ## Dummy
 
 ### getVersion
 
 ```solidity
 function getVersion() public pure returns (string)
+```
+
+## NullUSD
+
+### constructor
+
+```solidity
+constructor() public
 ```
 
 ## ICaminoAdmin
