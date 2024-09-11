@@ -324,4 +324,28 @@ ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
         }
     });
 
+ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount implementation")
+    .addParam("privateKey", "Private key to use")
+    .addParam("cmAccount", "CMAccount address")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+
+        // Get new implementation
+        const manager = await getManager(hre);
+        const implementation = await manager.getAccountImplementation();
+        console.log("New Implementation on the Manager:", implementation);
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Upgrading CMAccount implementation...");
+            console.log("Signer:", signer.address);
+            const tx = await cmAccount.connect(signer).upgradeToAndCall(implementation, "0x");
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
 module.exports = {};

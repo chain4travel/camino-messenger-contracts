@@ -163,8 +163,17 @@ MANAGER_SCOPE.task("role:members", "List role members")
         console.log(members);
     });
 
-MANAGER_SCOPE.task("accounts:list", "List CM Accounts").setAction(async (taskArgs, hre) => {
+MANAGER_SCOPE.task("account:list", "List CM Accounts").setAction(async (taskArgs, hre) => {
     await hre.run({ scope: "manager", task: "role:members" }, { role: "CMACCOUNT_ROLE" });
 });
+
+MANAGER_SCOPE.task("account:set-implementation", "Set CMAccount implementation address")
+    .addParam("address", "Implementation address to set as the new CMAccount impl")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        const tx = await manager.setAccountImplementation(taskArgs.address);
+        const txReceipt = await tx.wait();
+        console.log("Tx:", txReceipt.hash);
+    });
 
 module.exports = {};
