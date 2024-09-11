@@ -74,7 +74,7 @@ function handleTransactionError(error, contract) {
 }
 
 ACCOUNT_SCOPE.task("role:grant", "Grant role")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to grant role to")
     .addParam("cmAccount", "CMAccount address")
@@ -83,7 +83,7 @@ ACCOUNT_SCOPE.task("role:grant", "Grant role")
     });
 
 ACCOUNT_SCOPE.task("role:revoke", "Revoke role")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to revoke role to")
     .addParam("cmAccount", "CMAccount address")
@@ -137,7 +137,7 @@ ACCOUNT_SCOPE.task("role:members", "List role members")
     });
 
 ACCOUNT_SCOPE.task("create", "Create CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .setAction(async (taskArgs, hre) => {
         const manager = await getManager(hre);
         try {
@@ -172,7 +172,7 @@ ACCOUNT_SCOPE.task("create", "Create CMAccount")
     });
 
 ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("bot", "Bot address")
     .addOptionalParam(
@@ -207,7 +207,7 @@ ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
     });
 
 ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("bot", "Bot address")
     .setAction(async (taskArgs, hre) => {
@@ -252,7 +252,7 @@ ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("serviceName", "Name of service to add")
     .setAction(async (taskArgs, hre) => {
@@ -275,7 +275,7 @@ ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:remove", "Remove wanted service from CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
@@ -315,7 +315,7 @@ ACCOUNT_SCOPE.task("wanted:list", "List all wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("serviceName", "Name of service to add")
     .addParam("fee", "Fee of the service in aCAM (wei in ETH terminology)")
@@ -348,7 +348,7 @@ ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:remove", "Remove wanted service from CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
@@ -405,7 +405,7 @@ ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount implementation")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("cmAccount", "CMAccount address")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
