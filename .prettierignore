@@ -10,3 +10,6 @@
 
 # Yarn
 yarn.lock
+
+# Ignore abi
+/abi

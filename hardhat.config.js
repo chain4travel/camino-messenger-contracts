@@ -2,6 +2,7 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 require("hardhat-contract-sizer");
 require("solidity-docgen");
+require("hardhat-abi-exporter");
 
 // Tasks
 require("./tasks/manager");
@@ -66,5 +67,12 @@ module.exports = {
         path: "./docs",
         pages: "single",
         runOnCompile: true,
+    },
+    abiExporter: {
+        path: "./abi",
+        runOnCompile: true,
+        format: "json",
+        clear: true,
+        except: ["@openzeppelin", "test"],
     },
 };

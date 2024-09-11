@@ -1,0 +1,507 @@
+[
+  {
+    "inputs": [],
+    "name": "InvalidInitialization",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "use",
+        "type": "uint8"
+      }
+    ],
+    "name": "InvalidPublicKeyUseType",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotInitializing",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "PaymentTokenAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "PaymentTokenDoesNotExist",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "pubKeyAddress",
+        "type": "address"
+      }
+    ],
+    "name": "PublicKeyAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "pubKeyAddress",
+        "type": "address"
+      }
+    ],
+    "name": "PublicKeyDoesNotExist",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ServiceAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ServiceDoesNotExist",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "WantedServiceAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "WantedServiceDoesNotExist",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "version",
+        "type": "uint64"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "supportsOffChainPayment",
+        "type": "bool"
+      }
+    ],
+    "name": "OffChainPaymentSupportUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "PaymentTokenAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "PaymentTokenRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "pubKeyAddress",
+        "type": "address"
+      }
+    ],
+    "name": "PublicKeyAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "pubKeyAddress",
+        "type": "address"
+      }
+    ],
+    "name": "PublicKeyRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ServiceAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ServiceCapabilitiesUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "capability",
+        "type": "string"
+      }
+    ],
+    "name": "ServiceCapabilityAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "capability",
+        "type": "string"
+      }
+    ],
+    "name": "ServiceCapabilityRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      }
+    ],
+    "name": "ServiceFeeUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ServiceRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "restrictedRate",
+        "type": "bool"
+      }
+    ],
+    "name": "ServiceRestrictedRateUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "WantedServiceAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "WantedServiceRemoved",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "getAllServiceHashes",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "serviceHashes",
+        "type": "bytes32[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "pubKeyAddress",
+        "type": "address"
+      }
+    ],
+    "name": "getPublicKey",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPublicKeysAddresses",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "pubKeyAddresses",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getService",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "_fee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "_restrictedRate",
+            "type": "bool"
+          },
+          {
+            "internalType": "string[]",
+            "name": "_capabilities",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct PartnerConfiguration.Service",
+        "name": "service",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getServiceCapabilities",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "capabilities",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getServiceFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "serviceHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getServiceRestrictedRate",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "restrictedRate",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getSupportedTokens",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "tokens",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getWantedServiceHashes",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "serviceHashes",
+        "type": "bytes32[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "offChainPaymentSupported",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
