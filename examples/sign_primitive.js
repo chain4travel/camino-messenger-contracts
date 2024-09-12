@@ -160,6 +160,7 @@ async function main() {
 
     // Print out what we've calculated so far
     console.log("\n----------------------- Calculated Values (off-chain) ------------------------------------");
+    console.log("⛓️  Chain ID:", chainId);
     console.log("MESSENGER_CHEQUE_TYPEHASH:", MESSENGER_CHEQUE_TYPEHASH);
     console.log("DOMAIN_TYPEHASH:", DOMAIN_TYPEHASH);
     console.log("DOMAIN_SEPARATOR:", DOMAIN_SEPARATOR);
@@ -211,7 +212,7 @@ async function main() {
 
     // Recover the address from the digest and signature
     const recoveredAddress = ethers.recoverAddress(ethers.getBytes(typedDataHash), signature);
-    console.log("🔑 Recovered Signer:", recoveredAddress, "<== Should be same as the 'Signer'");
+    console.log("\n🔑 Recovered Signer (off-chain):", recoveredAddress, "<== Should be same as the 'Signer'");
 
     // Try to recover the same address from the CMAccount's `verifyCheque(cheque ..., signature)` function.
     console.log("\n----------------------- Trying with a CMAccount (on-chain) -------------------------------");
@@ -230,7 +231,7 @@ async function main() {
         cheque.expiresAt,
         signature.serialized,
     );
-    console.log("🔑 Recovered (on-chain):", res[0], "<== Should be same as the off-chain 'Signer' above");
+    console.log("\n🔑 Recovered Signer  (on-chain):", res[0], "<== Should be same as the off-chain 'Signer' above\n");
 }
 
 main().catch(console.error);
