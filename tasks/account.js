@@ -74,19 +74,19 @@ function handleTransactionError(error, contract) {
 }
 
 ACCOUNT_SCOPE.task("role:grant", "Grant role")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to grant role to")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         await handleRoles(taskArgs, hre, "grantRole");
     });
 
 ACCOUNT_SCOPE.task("role:revoke", "Revoke role")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to revoke role to")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         await handleRoles(taskArgs, hre, "revokeRole");
     });
@@ -94,7 +94,7 @@ ACCOUNT_SCOPE.task("role:revoke", "Revoke role")
 ACCOUNT_SCOPE.task("role:has", "Check if address has role")
     .addParam("role", "Role to check. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to check")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -113,7 +113,7 @@ ACCOUNT_SCOPE.task("role:has", "Check if address has role")
 
 ACCOUNT_SCOPE.task("role:members", "List role members")
     .addParam("role", "Role to list. Ex: SERVICE_ADMIN_ROLE")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -137,7 +137,7 @@ ACCOUNT_SCOPE.task("role:members", "List role members")
     });
 
 ACCOUNT_SCOPE.task("create", "Create CMAccount")
-    .addParam("privateKey", "Private key to use")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
     .setAction(async (taskArgs, hre) => {
         const manager = await getManager(hre);
         try {
@@ -171,9 +171,89 @@ ACCOUNT_SCOPE.task("create", "Create CMAccount")
         }
     });
 
+ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addParam("bot", "Bot address")
+    .addOptionalParam(
+        "gasMoney",
+        "Gas money in CAM. This amount will be transferred from the CMAccount to the bot address (Ex: 1 or 0.1)",
+        "0",
+        types.string,
+    )
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Bot:", taskArgs.bot);
+        console.log(
+            "Gas:",
+            taskArgs.gasMoney,
+            "(This amount will be transferred from the CMAccount to the bot address)",
+        );
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Adding bot to CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const gasMoney = ethers.parseEther(taskArgs.gasMoney);
+
+            const tx = await cmAccount.connect(signer).addMessengerBot(taskArgs.bot, gasMoney);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addParam("bot", "Bot address")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Bot:", taskArgs.bot);
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Removing bot from CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const tx = await cmAccount.connect(signer).removeMessengerBot(taskArgs.bot);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .setAction(async (taskArgs, hre) => {
+        console.log("CMAccount:", taskArgs.cmAccount, "\n");
+
+        console.log("📢 A bot is an address that has been granted some special roles on the CMAccount.");
+
+        const role1 = "CHEQUE_OPERATOR_ROLE";
+        console.log("\n🤖", role1, "(Can sign cheques that are valid for the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role1, cmAccount: taskArgs.cmAccount });
+
+        const role2 = "BOOKING_OPERATOR_ROLE";
+        console.log("\n🤖", role2, "(Can mint and buy Booking Tokens for the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role2, cmAccount: taskArgs.cmAccount });
+
+        const role3 = "GAS_WITHDRAWER_ROLE";
+        console.log("\n🤖", role3, "(Can withdraw gas from the CMAccount)");
+        console.log("======================================================");
+        await hre.run({ scope: "account", task: "role:members" }, { role: role3, cmAccount: taskArgs.cmAccount });
+    });
+
 ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
-    .addParam("privateKey", "Private key to use")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .addParam("serviceName", "Name of service to add")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -195,8 +275,8 @@ ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:remove", "Remove wanted service from CMAccount")
-    .addParam("privateKey", "Private key to use")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -218,7 +298,7 @@ ACCOUNT_SCOPE.task("wanted:remove", "Remove wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:list", "List all wanted service from CMAccount")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -235,8 +315,8 @@ ACCOUNT_SCOPE.task("wanted:list", "List all wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
-    .addParam("privateKey", "Private key to use")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .addParam("serviceName", "Name of service to add")
     .addParam("fee", "Fee of the service in aCAM (wei in ETH terminology)")
     .addParam("restrictedRate", "Restricted rate of the service", false, types.boolean)
@@ -268,8 +348,8 @@ ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:remove", "Remove wanted service from CMAccount")
-    .addParam("privateKey", "Private key to use")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -291,7 +371,7 @@ ACCOUNT_SCOPE.task("service:remove", "Remove wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
-    .addParam("cmAccount", "CMAccount address")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -324,9 +404,9 @@ ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
         }
     });
 
-ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount implementation")
-    .addParam("privateKey", "Private key to use")
-    .addParam("cmAccount", "CMAccount address")
+ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount to latest implementation")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
