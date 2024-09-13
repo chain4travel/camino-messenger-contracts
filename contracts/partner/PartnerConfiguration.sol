@@ -85,21 +85,8 @@ abstract contract PartnerConfiguration is Initializable {
      *                    EVENTS                       *
      ***************************************************/
 
-    event ServiceAdded(bytes32 serviceHash);
-    event ServiceRemoved(bytes32 serviceHash);
-
-    event WantedServiceAdded(bytes32 serviceHash);
-    event WantedServiceRemoved(bytes32 serviceHash);
-
-    event ServiceFeeUpdated(bytes32 serviceHash, uint256 fee);
-    event ServiceRestrictedRateUpdated(bytes32 serviceHash, bool restrictedRate);
-
-    event ServiceCapabilitiesUpdated(bytes32 serviceHash);
-    event ServiceCapabilityAdded(bytes32 serviceHash, string capability);
-    event ServiceCapabilityRemoved(bytes32 serviceHash, string capability);
-
-    event PaymentTokenAdded(address token);
-    event PaymentTokenRemoved(address token);
+    event PaymentTokenAdded(address indexed token);
+    event PaymentTokenRemoved(address indexed token);
 
     event OffChainPaymentSupportUpdated(bool supportsOffChainPayment);
 
@@ -144,8 +131,6 @@ abstract contract PartnerConfiguration is Initializable {
             _capabilities: capabilities,
             _restrictedRate: restrictedRate
         });
-
-        emit ServiceAdded(serviceHash);
     }
 
     /**
@@ -163,8 +148,6 @@ abstract contract PartnerConfiguration is Initializable {
         }
 
         delete $._supportedServices[serviceHash];
-
-        emit ServiceRemoved(serviceHash);
     }
 
     /**
@@ -180,8 +163,6 @@ abstract contract PartnerConfiguration is Initializable {
         _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._fee = fee;
-
-        emit ServiceFeeUpdated(serviceHash, fee);
     }
 
     /**
@@ -197,8 +178,6 @@ abstract contract PartnerConfiguration is Initializable {
         _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._restrictedRate = restrictedRate;
-
-        emit ServiceRestrictedRateUpdated(serviceHash, restrictedRate);
     }
 
     /**
@@ -214,8 +193,6 @@ abstract contract PartnerConfiguration is Initializable {
         _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._capabilities = capabilities;
-
-        emit ServiceCapabilitiesUpdated(serviceHash);
     }
 
     /**
@@ -231,8 +208,6 @@ abstract contract PartnerConfiguration is Initializable {
         _checkServiceExists(serviceHash, $);
 
         $._supportedServices[serviceHash]._capabilities.push(capability);
-
-        emit ServiceCapabilityAdded(serviceHash, capability);
     }
 
     /**
@@ -252,7 +227,6 @@ abstract contract PartnerConfiguration is Initializable {
             if (keccak256(abi.encodePacked(capabilities[i])) == keccak256(abi.encodePacked(capability))) {
                 capabilities[i] = capabilities[capabilities.length - 1];
                 capabilities.pop();
-                emit ServiceCapabilityRemoved(serviceHash, capability);
                 break;
             }
         }
@@ -362,8 +336,6 @@ abstract contract PartnerConfiguration is Initializable {
         if (!added) {
             revert WantedServiceAlreadyExists(serviceHash);
         }
-
-        emit WantedServiceAdded(serviceHash);
     }
 
     /**
@@ -381,8 +353,6 @@ abstract contract PartnerConfiguration is Initializable {
         if (!removed) {
             revert WantedServiceDoesNotExist(serviceHash);
         }
-
-        emit WantedServiceRemoved(serviceHash);
     }
 
     /**
