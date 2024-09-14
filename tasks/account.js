@@ -228,6 +228,62 @@ ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
         }
     });
 
+ACCOUNT_SCOPE.task("payment-token:add", "Add payment token to CMAccount")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addParam("paymentToken", "Payment token address")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Payment Token:", taskArgs.paymentToken);
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Adding payment token to CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const tx = await cmAccount.connect(signer).addSupportedToken(taskArgs.paymentToken);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("payment-token:remove", "Remove payment token from CMAccount")
+    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addParam("paymentToken", "Payment token address")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+        console.log("Payment Token:", taskArgs.paymentToken);
+
+        try {
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            console.log("Removing payment token from CMAccount...");
+            console.log("Signer:", signer.address);
+
+            const tx = await cmAccount.connect(signer).removeSupportedToken(taskArgs.paymentToken);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("payment-token:list", "List supported payment tokens from CMAccount")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .setAction(async (taskArgs, hre) => {
+        console.log("CMAccount:", taskArgs.cmAccount, "\n");
+
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+
+        const supportedTokens = await cmAccount.getSupportedTokens();
+        console.log("💵 Supported payment tokens:");
+        console.log(supportedTokens);
+    });
+
 ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
     .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
     .setAction(async (taskArgs, hre) => {
