@@ -162,6 +162,21 @@ contract CMAccount is
      */
     event MessengerBotRemoved(address indexed bot);
 
+    // Partner Config Events
+
+    event ServiceAdded(string indexed serviceName);
+    event ServiceRemoved(string indexed serviceName);
+
+    event WantedServiceAdded(string indexed serviceName);
+    event WantedServiceRemoved(string indexed serviceName);
+
+    event ServiceFeeUpdated(string indexed serviceName, uint256 fee);
+    event ServiceRestrictedRateUpdated(string indexed serviceName, bool restrictedRate);
+
+    event ServiceCapabilitiesUpdated(string indexed serviceName);
+    event ServiceCapabilityAdded(string indexed serviceName, string capability);
+    event ServiceCapabilityRemoved(string indexed serviceName, string capability);
+
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
@@ -466,6 +481,7 @@ contract CMAccount is
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _addService(getServiceHash(serviceName), fee, capabilities, restrictedRate);
+        emit ServiceAdded(serviceName);
     }
 
     /**
@@ -473,6 +489,7 @@ contract CMAccount is
      */
     function removeService(string memory serviceName) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeService(getServiceHash(serviceName));
+        emit ServiceRemoved(serviceName);
     }
 
     // FEE
@@ -482,6 +499,7 @@ contract CMAccount is
      */
     function setServiceFee(string memory serviceName, uint256 fee) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setServiceFee(getServiceHash(serviceName), fee);
+        emit ServiceFeeUpdated(serviceName, fee);
     }
 
     // RESTRICTED RATE
@@ -494,6 +512,7 @@ contract CMAccount is
         bool restrictedRate
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setServiceRestrictedRate(getServiceHash(serviceName), restrictedRate);
+        emit ServiceRestrictedRateUpdated(serviceName, restrictedRate);
     }
 
     // ALL CAPABILITIES
@@ -506,6 +525,7 @@ contract CMAccount is
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _setServiceCapabilities(getServiceHash(serviceName), capabilities);
+        emit ServiceCapabilitiesUpdated(serviceName);
     }
 
     // SINGLE CAPABILITY
@@ -518,6 +538,7 @@ contract CMAccount is
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _addServiceCapability(getServiceHash(serviceName), capability);
+        emit ServiceCapabilityAdded(serviceName, capability);
     }
 
     /**
@@ -528,6 +549,7 @@ contract CMAccount is
         string memory capability
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
         _removeServiceCapability(getServiceHash(serviceName), capability);
+        emit ServiceCapabilityRemoved(serviceName, capability);
     }
 
     /**
@@ -593,6 +615,7 @@ contract CMAccount is
         for (uint256 i = 0; i < serviceNames.length; i++) {
             bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _addWantedService(serviceHash);
+            emit WantedServiceAdded(serviceNames[i]);
         }
     }
 
@@ -605,6 +628,7 @@ contract CMAccount is
         for (uint256 i = 0; i < serviceNames.length; i++) {
             bytes32 serviceHash = getServiceHash(serviceNames[i]);
             _removeWantedService(serviceHash);
+            emit WantedServiceRemoved(serviceNames[i]);
         }
     }
 

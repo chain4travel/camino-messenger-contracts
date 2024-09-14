@@ -57,7 +57,7 @@ describe("PartnerConfiguration", function () {
                 cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
             )
                 .to.emit(cmAccount, "ServiceAdded")
-                .withArgs(serviceHash);
+                .withArgs(serviceName);
         });
 
         it("should revert if the caller does not have the SERVICE_ADMIN_ROLE", async function () {
@@ -127,7 +127,7 @@ describe("PartnerConfiguration", function () {
                     .addService(services.serviceName1, fee1, restrictedRate1, capabilities1),
             )
                 .to.emit(cmAccount, "ServiceAdded")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
 
             expect(
                 await cmAccount
@@ -135,7 +135,7 @@ describe("PartnerConfiguration", function () {
                     .addService(services.serviceName2, fee2, restrictedRate2, capabilities2),
             )
                 .to.emit(cmAccount, "ServiceAdded")
-                .withArgs(services.serviceHash2);
+                .withArgs(services.serviceName2);
 
             expect(
                 await cmAccount
@@ -143,7 +143,7 @@ describe("PartnerConfiguration", function () {
                     .addService(services.serviceName3, fee3, restrictedRate3, capabilities3),
             )
                 .to.emit(cmAccount, "ServiceAdded")
-                .withArgs(services.serviceHash3);
+                .withArgs(services.serviceName3);
 
             // Get all services
             const servicesFromCMAccount = await cmAccount.getSupportedServices();
@@ -209,7 +209,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceFee(string,uint256)"](services.serviceName1, newFee1),
             )
                 .to.emit(cmAccount, "ServiceFeeUpdated")
-                .withArgs(services.serviceHash1, newFee1);
+                .withArgs(services.serviceName1, newFee1);
 
             await expect(
                 await cmAccount
@@ -217,7 +217,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceFee(string,uint256)"](services.serviceName2, newFee2),
             )
                 .to.emit(cmAccount, "ServiceFeeUpdated")
-                .withArgs(services.serviceHash2, newFee2);
+                .withArgs(services.serviceName2, newFee2);
 
             await expect(
                 await cmAccount
@@ -225,7 +225,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceFee(string,uint256)"](services.serviceName3, newFee3),
             )
                 .to.emit(cmAccount, "ServiceFeeUpdated")
-                .withArgs(services.serviceHash3, newFee3);
+                .withArgs(services.serviceName3, newFee3);
 
             // Restricted Rate Setter
             await expect(
@@ -234,7 +234,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceRestrictedRate(string,bool)"](services.serviceName1, newRestrictedRate1),
             )
                 .to.emit(cmAccount, "ServiceRestrictedRateUpdated")
-                .withArgs(services.serviceHash1, newRestrictedRate1);
+                .withArgs(services.serviceName1, newRestrictedRate1);
 
             await expect(
                 await cmAccount
@@ -242,7 +242,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceRestrictedRate(string,bool)"](services.serviceName2, newRestrictedRate2),
             )
                 .to.emit(cmAccount, "ServiceRestrictedRateUpdated")
-                .withArgs(services.serviceHash2, newRestrictedRate2);
+                .withArgs(services.serviceName2, newRestrictedRate2);
 
             await expect(
                 await cmAccount
@@ -257,7 +257,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceCapabilities(string,string[])"](services.serviceName1, newCapabilities1),
             )
                 .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
 
             await expect(
                 await cmAccount
@@ -265,7 +265,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceCapabilities(string,string[])"](services.serviceName2, newCapabilities2),
             )
                 .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
-                .withArgs(services.serviceHash2);
+                .withArgs(services.serviceName2);
 
             await expect(
                 await cmAccount
@@ -273,7 +273,7 @@ describe("PartnerConfiguration", function () {
                     ["setServiceCapabilities(string,string[])"](services.serviceName3, newCapabilities3),
             )
                 .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
-                .withArgs(services.serviceHash3);
+                .withArgs(services.serviceName3);
 
             // TEST GETTERS with hashes
 
@@ -331,7 +331,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
         });
 
         it("should add multiple (6) wanted services correctly", async function () {
@@ -352,17 +352,17 @@ describe("PartnerConfiguration", function () {
                     ]),
             )
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1)
+                .withArgs(services.serviceName1)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash2)
+                .withArgs(services.serviceName2)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash3)
+                .withArgs(services.serviceName3)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash4)
+                .withArgs(services.serviceName4)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash5)
+                .withArgs(services.serviceName5)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash6);
+                .withArgs(services.serviceName6);
         });
 
         it("should revert if a wanted service is already added", async function () {
@@ -372,7 +372,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
 
             await expect(
                 cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]),
@@ -398,11 +398,11 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).removeWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceRemoved")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
         });
 
         it("should remove multiple wanted services correctly", async function () {
@@ -416,9 +416,9 @@ describe("PartnerConfiguration", function () {
                     .addWantedServices([services.serviceName1, services.serviceName2]),
             )
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1)
+                .withArgs(services.serviceName1)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash2);
+                .withArgs(services.serviceName2);
 
             await expect(
                 cmAccount
@@ -426,9 +426,9 @@ describe("PartnerConfiguration", function () {
                     .removeWantedServices([services.serviceName1, services.serviceName2]),
             )
                 .to.emit(cmAccount, "WantedServiceRemoved")
-                .withArgs(services.serviceHash1)
+                .withArgs(services.serviceName1)
                 .to.emit(cmAccount, "WantedServiceRemoved")
-                .withArgs(services.serviceHash2);
+                .withArgs(services.serviceName2);
         });
 
         it("should revert removal if a wanted service does not exist", async function () {
@@ -448,7 +448,7 @@ describe("PartnerConfiguration", function () {
 
             await expect(cmAccount.connect(signers.cmServiceAdmin).addWantedServices([services.serviceName1]))
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash1);
+                .withArgs(services.serviceName1);
 
             await expect(
                 cmAccount
@@ -456,9 +456,9 @@ describe("PartnerConfiguration", function () {
                     .addWantedServices([services.serviceName2, services.serviceName3]),
             )
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash2)
+                .withArgs(services.serviceName2)
                 .to.emit(cmAccount, "WantedServiceAdded")
-                .withArgs(services.serviceHash3);
+                .withArgs(services.serviceName3);
 
             // Get wanted services
             expect(await cmAccount.getWantedServices()).to.be.deep.equal([
