@@ -8,5 +8,7 @@
   "CaminoMessengerModule#BookingTokenERC1967Proxy": "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC",
   "CaminoMessengerModule#BookingTokenProxy": "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC",
   "CMAccountVerifyChequeFixModule#BookingTokenOperator": "0x10133935503b4f958f6dFF783b628ba25aC010E3",
-  "CMAccountVerifyChequeFixModule#CMAccount": "0x0604d78E74bAab18b56eA5c4AAD106E01665f277"
+  "CMAccountVerifyChequeFixModule#CMAccount": "0x0604d78E74bAab18b56eA5c4AAD106E01665f277",
+  "CMAccountEventsUpdateModule#BookingTokenOperator": "0x10133935503b4f958f6dFF783b628ba25aC010E3",
+  "CMAccountEventsUpdateModule#CMAccount": "0xa51fd8A967b9de646270eC4DeD2F53812F469a17"
 }
