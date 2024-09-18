@@ -383,7 +383,7 @@ ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
         console.log("Service Name:", taskArgs.serviceName);
         console.log("Fee:", taskArgs.fee);
         console.log("Restricted Rate:", taskArgs.restrictedRate);
-        console.log("Capabilities:", capabilities);
+        console.log("Capabilities:", taskArgs.capabilities);
 
         try {
             const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
