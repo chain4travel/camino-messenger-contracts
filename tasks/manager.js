@@ -4,6 +4,24 @@ const MANAGER_SCOPE = scope("manager", "CM Account Manager Tasks");
 
 // TODO: Handle transaction failures
 
+const ROLES = [
+    "DEFAULT_ADMIN_ROLE",
+    "PAUSER_ROLE",
+    "UPGRADER_ROLE",
+    "VERSIONER_ROLE",
+    "FEE_ADMIN_ROLE",
+    "DEVELOPER_WALLET_ADMIN_ROLE",
+    "PREFUND_ADMIN_ROLE",
+    "SERVICE_REGISTRY_ADMIN_ROLE",
+    "CMACCOUNT_ROLE",
+];
+
+function bold(text) {
+    const boldCode = "\x1b[1m";
+    const resetCode = "\x1b[0m";
+    return `${boldCode}${text}${resetCode}`;
+}
+
 function getAddressesForNetwork(hre) {
     let addresses;
 
@@ -189,6 +207,16 @@ MANAGER_SCOPE.task("role:members", "List role members")
         console.log(members);
     });
 
+MANAGER_SCOPE.task("role:all", "List all roles").setAction(async (taskArgs, hre) => {
+    const manager = await getManager(hre);
+    for (const role of ROLES) {
+        console.log(`🛡️  ${bold(role)}`);
+        console.log(`${bold("=".repeat(48))}`);
+        await hre.run({ scope: "manager", task: "role:members" }, { role });
+        console.log();
+    }
+});
+
 MANAGER_SCOPE.task("account:list", "List CM Accounts").setAction(async (taskArgs, hre) => {
     await hre.run({ scope: "manager", task: "role:members" }, { role: "CMACCOUNT_ROLE" });
 });
@@ -198,6 +226,26 @@ MANAGER_SCOPE.task("account:set-implementation", "Set CMAccount implementation a
     .setAction(async (taskArgs, hre) => {
         const manager = await getManager(hre);
         const tx = await manager.setAccountImplementation(taskArgs.address);
+        const txReceipt = await tx.wait();
+        console.log("Tx:", txReceipt.hash);
+    });
+
+MANAGER_SCOPE.task("developer:set-fee", "Set developer fee")
+    .addParam("feeBasisPoints", "Developer fee basis points")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        console.log(`Setting developer fee to ${taskArgs.feeBasisPoints} basis points...`);
+        const tx = await manager.setDeveloperFeeBp(taskArgs.feeBasisPoints);
+        const txReceipt = await tx.wait();
+        console.log("Tx:", txReceipt.hash);
+    });
+
+MANAGER_SCOPE.task("developer:set-address", "Set developer address")
+    .addParam("address", "Developer address")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        console.log(`Setting developer address to ${taskArgs.address}...`);
+        const tx = await manager.setDeveloperWallet(taskArgs.address);
         const txReceipt = await tx.wait();
         console.log("Tx:", txReceipt.hash);
     });
