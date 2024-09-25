@@ -1,0 +1,10 @@
+{
+  "CaminoMessengerModule#BookingToken": "0x01Da45ef80aA219afaB06c11547Dd39B901C9cD7",
+  "CaminoMessengerModule#BookingTokenOperator": "0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD",
+  "CaminoMessengerModule#CMAccountManager": "0x169846C57B846AC6d54DA412B904FAB20A68E147",
+  "CaminoMessengerModule#CMAccount": "0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702",
+  "CaminoMessengerModule#ManagerERC1967Proxy": "0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e",
+  "CaminoMessengerModule#ManagerProxy": "0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e",
+  "CaminoMessengerModule#BookingTokenERC1967Proxy": "0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922",
+  "CaminoMessengerModule#BookingTokenProxy": "0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922"
+}
