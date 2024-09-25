@@ -7,19 +7,27 @@
 This repository contains the smart contracts for the [Camino
 Messenger](https://camino.network/camino-messenger-sets-the-global-standard-in-travel-data-management-and-distribution/).
 
-> [!WARNING]
-> These contracts are currently in the development phase. The ABI is
-> subject to change frequently until they are released into production.
+## Camino (mainnet) Deployed Contracts
 
-## Columbus Deployed Contracts
+Below is a table of deployed contracts and their addresses on Camino mainnet.
+
+| Contract                       | Address                                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| CMAccountManager               | [0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e](https://columbus.caminoscan.com/address/0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e?tab=contract) |
+| BookingToken                   | [0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922](https://columbus.caminoscan.com/address/0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922?tab=contract) |
+| BookingTokenOperator (Library) | [0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD](https://columbus.caminoscan.com/address/0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD?tab=contract) |
+| CMAccount (Implementation)     | [0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702](https://columbus.caminoscan.com/address/0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702?tab=contract) |
+
+## Columbus (testnet) Deployed Contracts
 
 Below is a table of deployed contracts and their addresses on Columbus testnet.
 
-| Contract                   | Address                                                                                                                                       |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| CMAccountManager           | [0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F](https://columbus.caminoscan.com/address/0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F?tab=contract) |
-| BookingToken               | [0xe55E387F5474a012D1b048155E25ea78C7DBfBBC](https://columbus.caminoscan.com/address/0xe55E387F5474a012D1b048155E25ea78C7DBfBBC?tab=contract) |
-| CMAccount (Implementation) | [0xCB43DabB6d579d5a6067aB06575601D3D77882CA](https://columbus.caminoscan.com/address/0xCB43DabB6d579d5a6067aB06575601D3D77882CA?tab=contract) |
+| Contract                       | Address                                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| CMAccountManager               | [0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F](https://columbus.caminoscan.com/address/0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F?tab=contract) |
+| BookingToken                   | [0xe55E387F5474a012D1b048155E25ea78C7DBfBBC](https://columbus.caminoscan.com/address/0xe55E387F5474a012D1b048155E25ea78C7DBfBBC?tab=contract) |
+| BookingTokenOperator (Library) | [0x10133935503b4f958f6dFF783b628ba25aC010E3](https://columbus.caminoscan.com/address/0x10133935503b4f958f6dFF783b628ba25aC010E3?tab=contract) |
+| CMAccount (Implementation)     | [0xCB43DabB6d579d5a6067aB06575601D3D77882CA](https://columbus.caminoscan.com/address/0xCB43DabB6d579d5a6067aB06575601D3D77882CA?tab=contract) |
 
 ## Quickstart
 
