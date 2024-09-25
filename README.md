@@ -11,12 +11,12 @@ Messenger](https://camino.network/camino-messenger-sets-the-global-standard-in-t
 
 Below is a table of deployed contracts and their addresses on Camino mainnet.
 
-| Contract                       | Address                                                                                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| CMAccountManager               | [0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e](https://columbus.caminoscan.com/address/0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e?tab=contract) |
-| BookingToken                   | [0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922](https://columbus.caminoscan.com/address/0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922?tab=contract) |
-| BookingTokenOperator (Library) | [0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD](https://columbus.caminoscan.com/address/0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD?tab=contract) |
-| CMAccount (Implementation)     | [0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702](https://columbus.caminoscan.com/address/0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702?tab=contract) |
+| Contract                       | Address                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| CMAccountManager               | [0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e](https://caminoscan.com/address/0xf9FE1eaAB73a2902136FE7A83E0703338D3b9F1e?tab=contract) |
+| BookingToken                   | [0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922](https://caminoscan.com/address/0xe2b8c92B6519d1A2020dA0A5fBbA99a43A2c0922?tab=contract) |
+| BookingTokenOperator (Library) | [0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD](https://caminoscan.com/address/0x65C34Ca1FCdF46B60C2b9b8f81475f69086116dD?tab=contract) |
+| CMAccount (Implementation)     | [0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702](https://caminoscan.com/address/0x52D94b6ccDa96BE4a99ED9C8D39682D6B4EE4702?tab=contract) |
 
 ## Columbus (testnet) Deployed Contracts
 
