@@ -1,5 +1,3 @@
-const { check } = require("prettier");
-
 require("@nomicfoundation/hardhat-toolbox");
 
 const MANAGER_SCOPE = scope("manager", "CM Account Manager Tasks");
