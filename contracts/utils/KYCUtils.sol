@@ -2,7 +2,7 @@
 //
 // Camino KYC Utilities
 
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 interface ICaminoAdmin {
     function getKycState(address account) external view returns (uint256);

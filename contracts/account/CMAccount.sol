@@ -2,7 +2,7 @@
 //
 // Camino Messenger Account Implementation
 
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";

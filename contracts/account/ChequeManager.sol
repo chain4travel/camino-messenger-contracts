@@ -2,7 +2,7 @@
 //
 // Camino Messenger Cheque Manager
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";

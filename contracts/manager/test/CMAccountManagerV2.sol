@@ -6,7 +6,7 @@
  * TESTING ONLY - NOT FOR PRODUCTION
  */
 
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import { CMAccountManager } from "../CMAccountManager.sol";
 

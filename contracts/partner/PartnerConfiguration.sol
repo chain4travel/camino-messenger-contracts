@@ -2,7 +2,7 @@
 //
 // Camino Messenger Partner Configuration
 
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";

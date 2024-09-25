@@ -2,7 +2,7 @@
 //
 // Camino Messenger Account Manager
 
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 // UUPS Proxy
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
