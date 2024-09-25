@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 
 const MANAGER_SCOPE = scope("manager", "CM Account Manager Tasks");
+const BT_SCOPE = scope("btoken", "Booking Token Tasks");
 
 // TODO: Handle transaction failures
 
@@ -46,15 +47,28 @@ async function getManager(hre) {
     return await ethers.getContractAt("CMAccountManager", addresses["CaminoMessengerModule#ManagerProxy"]);
 }
 
-async function handleRoles(taskArgs, hre, action) {
-    const manager = await getManager(hre);
+async function getBookingToken(hre) {
+    const addresses = getAddressesForNetwork(hre);
+    return await ethers.getContractAt("BookingToken", addresses["CaminoMessengerModule#BookingTokenProxy"]);
+}
+
+async function handleRoles(taskArgs, hre, action, contractName) {
+    let contract;
+
+    if (contractName === "btoken") {
+        contract = await getBookingToken(hre);
+    } else if (contractName === "manager") {
+        contract = await getManager(hre);
+    } else {
+        throw new Error(`Unsupported contract: ${contractName}`);
+    }
 
     console.log(
         `${action === "grantRole" ? "Granting" : "Revoking"} role ${taskArgs.role} for address ${taskArgs.address}...`,
     );
 
-    const role = await manager[taskArgs.role]();
-    const tx = await manager[action](role, taskArgs.address);
+    const role = await contract[taskArgs.role]();
+    const tx = await contract[action](role, taskArgs.address);
     const txReceipt = await tx.wait();
     console.log("Tx:", txReceipt.hash);
 }
@@ -168,14 +182,14 @@ MANAGER_SCOPE.task("role:grant", "Grant role")
     .addParam("role", "Role to grant. Ex: SERVICE_REGISTRY_ADMIN_ROLE")
     .addParam("address", "Address to grant role to")
     .setAction(async (taskArgs, hre) => {
-        await handleRoles(taskArgs, hre, "grantRole");
+        await handleRoles(taskArgs, hre, "grantRole", "manager");
     });
 
 MANAGER_SCOPE.task("role:revoke", "Revoke role")
     .addParam("role", "Role to grant. Ex: SERVICE_REGISTRY_ADMIN_ROLE")
     .addParam("address", "Address to revoke role to")
     .setAction(async (taskArgs, hre) => {
-        await handleRoles(taskArgs, hre, "revokeRole");
+        await handleRoles(taskArgs, hre, "revokeRole", "manager");
     });
 
 MANAGER_SCOPE.task("role:has", "Check if address has role")
@@ -248,6 +262,34 @@ MANAGER_SCOPE.task("developer:set-address", "Set developer address")
         const tx = await manager.setDeveloperWallet(taskArgs.address);
         const txReceipt = await tx.wait();
         console.log("Tx:", txReceipt.hash);
+    });
+
+BT_SCOPE.task("role:grant", "Grant role")
+    .addParam("role", "Role to grant. Ex: MIN_EXPIRATION_ADMIN_ROLE")
+    .addParam("address", "Address to grant role to")
+    .setAction(async (taskArgs, hre) => {
+        console.log(`📅 ${bold("BookingToken")}`);
+        await handleRoles(taskArgs, hre, "grantRole", "btoken");
+    });
+
+BT_SCOPE.task("role:revoke", "Revoke role")
+    .addParam("role", "Role to grant. Ex: MIN_EXPIRATION_ADMIN_ROLE")
+    .addParam("address", "Address to revoke role to")
+    .setAction(async (taskArgs, hre) => {
+        console.log(`📅 ${bold("BookingToken")}`);
+        await handleRoles(taskArgs, hre, "revokeRole", "btoken");
+    });
+
+BT_SCOPE.task("role:has", "Check if address has role")
+    .addParam("role", "Role to check. Ex: MIN_EXPIRATION_ADMIN_ROLE")
+    .addParam("address", "Address to check")
+    .setAction(async (taskArgs, hre) => {
+        const btoken = await getBookingToken(hre);
+        console.log(`📅 ${bold("BookingToken")}`);
+        const role = await btoken[taskArgs.role]();
+        const hasRole = await btoken.hasRole(role, taskArgs.address);
+        console.log(`${taskArgs.address} ${hasRole ? "has" : "does not have"} role ${taskArgs.role}`);
+        console.log(`${hasRole ? "🟢" : "🔴"}`, hasRole);
     });
 
 module.exports = {};
