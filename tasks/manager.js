@@ -41,6 +41,26 @@ async function handleRoles(taskArgs, hre, action) {
     console.log("Tx:", txReceipt.hash);
 }
 
+function handleTransactionError(error, contract) {
+    console.error("❌ Transaction failed!");
+
+    if (error.data.data && contract) {
+        const decodedError = contract.interface.parseError(error.data.data);
+        console.error("Message:", error.message);
+        console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`);
+    } else if (error.data?.message) {
+        console.error(`Reason: ${error.data.message}`);
+    } else if (error.message?.includes("[taskArgs.role] is not a function")) {
+        console.error("Reason: CMAccount does not have this role.");
+    } else if (error.message) {
+        console.error("Message:", error.message);
+    } else {
+        // General error logging
+        console.error("An unexpected error occurred.");
+        console.error("Error:", error);
+    }
+}
+
 async function handleServices(taskArgs, hre, action) {
     const manager = await getManager(hre);
 
@@ -49,9 +69,15 @@ async function handleServices(taskArgs, hre, action) {
     // Iterate over the services from the services file and perform the action
     const services = require(taskArgs.json);
     for (const service of services) {
-        const tx = await manager[`${action}Service`](service);
-        const txReceipt = await tx.wait();
-        console.log("Service:", service, "Tx:", txReceipt.hash);
+        console.log(`⏳ ${action === "register" ? "Registering" : "Unregistering"} Service:`, service);
+        try {
+            const tx = await manager[`${action}Service`](service);
+            const txReceipt = await tx.wait();
+            console.log("✅ Service:", service, "Tx:", txReceipt.hash);
+        } catch (error) {
+            handleTransactionError(error, manager);
+        }
+        console.log("-----------------------------------------------------------");
     }
 }
 
