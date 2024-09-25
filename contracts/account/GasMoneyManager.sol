@@ -2,7 +2,7 @@
 //
 // Camino Messenger Gas Money Manager
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
