@@ -5,6 +5,23 @@ const ACCOUNT_SCOPE = scope("account", "CM Account Tasks");
 
 // TODO: Get private key from .env or hardhat vars
 
+const ACC_ROLES = [
+    "DEFAULT_ADMIN_ROLE",
+    "UPGRADER_ROLE",
+    "BOT_ADMIN_ROLE",
+    "CHEQUE_OPERATOR_ROLE",
+    "GAS_WITHDRAWER_ROLE",
+    "WITHDRAWER_ROLE",
+    "BOOKING_OPERATOR_ROLE",
+    "SERVICE_ADMIN_ROLE",
+];
+
+function bold(text) {
+    const boldCode = "\x1b[1m";
+    const resetCode = "\x1b[0m";
+    return `${boldCode}${text}${resetCode}`;
+}
+
 function getAddressesForNetwork(hre) {
     let addresses;
 
@@ -133,6 +150,17 @@ ACCOUNT_SCOPE.task("role:members", "List role members")
             console.log(members);
         } catch (error) {
             handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("role:all", "List all roles and their members")
+    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .setAction(async (taskArgs, hre) => {
+        for (const role of ACC_ROLES) {
+            console.log(`🛡️  ${bold(role)}`);
+            console.log(`${bold("=".repeat(53))}`);
+            await hre.run({ scope: "account", task: "role:members" }, { role, cmAccount: taskArgs.cmAccount });
+            console.log();
         }
     });
 
