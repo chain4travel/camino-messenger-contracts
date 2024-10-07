@@ -1,0 +1,6 @@
+[
+    "cmp.services.network.v1.GetNetworkFeeService",
+    "cmp.services.notification.v1.NotificationService",
+    "cmp.services.partner.v1.GetPartnerConfigurationService",
+    "cmp.services.partner.v2.GetPartnerConfigurationService"
+]
