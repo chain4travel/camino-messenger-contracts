@@ -73,6 +73,6 @@ module.exports = {
         runOnCompile: true,
         format: "json",
         clear: true,
-        except: ["@openzeppelin", "test"],
+        except: ["test"],
     },
 };

@@ -4,13 +4,14 @@
 # https://github.com/ethereum/go-ethereum/
 
 CONTRACTS=(
-    "account/CMAccount.sol/CMAccount.json"
-    "manager/CMAccountManager.sol/CMAccountManager.json"
-    "booking-token/BookingToken.sol/BookingToken.json"
-    "utils/KYCUtils.sol/KYCUtils.json"
+    "contracts/account/CMAccount.sol/CMAccount.json"
+    "contracts/manager/CMAccountManager.sol/CMAccountManager.json"
+    "contracts/booking-token/BookingToken.sol/BookingToken.json"
+    "contracts/utils/KYCUtils.sol/KYCUtils.json"
+    "@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json"
 )
 
-ABI_PATH="abi/contracts"
+ABI_PATH="abi"
 GEN_PATH="go/contracts"
 
 for CONTRACT in "${CONTRACTS[@]}"; do
