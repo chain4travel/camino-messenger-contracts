@@ -91,19 +91,27 @@ function handleTransactionError(error, contract) {
 }
 
 ACCOUNT_SCOPE.task("role:grant", "Grant role")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to grant role to")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         await handleRoles(taskArgs, hre, "grantRole");
     });
 
 ACCOUNT_SCOPE.task("role:revoke", "Revoke role")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to revoke role to")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         await handleRoles(taskArgs, hre, "revokeRole");
     });
@@ -111,7 +119,11 @@ ACCOUNT_SCOPE.task("role:revoke", "Revoke role")
 ACCOUNT_SCOPE.task("role:has", "Check if address has role")
     .addParam("role", "Role to check. Ex: SERVICE_ADMIN_ROLE")
     .addParam("address", "Address to check")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -130,7 +142,11 @@ ACCOUNT_SCOPE.task("role:has", "Check if address has role")
 
 ACCOUNT_SCOPE.task("role:members", "List role members")
     .addParam("role", "Role to list. Ex: SERVICE_ADMIN_ROLE")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -154,7 +170,11 @@ ACCOUNT_SCOPE.task("role:members", "List role members")
     });
 
 ACCOUNT_SCOPE.task("role:all", "List all roles and their members")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         for (const role of ACC_ROLES) {
             console.log(`🛡️  ${bold(role)}`);
@@ -165,7 +185,7 @@ ACCOUNT_SCOPE.task("role:all", "List all roles and their members")
     });
 
 ACCOUNT_SCOPE.task("create", "Create CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
     .setAction(async (taskArgs, hre) => {
         const manager = await getManager(hre);
         try {
@@ -200,8 +220,12 @@ ACCOUNT_SCOPE.task("create", "Create CMAccount")
     });
 
 ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("bot", "Bot address")
     .addOptionalParam(
         "gasMoney",
@@ -235,8 +259,12 @@ ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
     });
 
 ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("bot", "Bot address")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -257,8 +285,12 @@ ACCOUNT_SCOPE.task("bot:remove", "Remove bot from the CMAccount")
     });
 
 ACCOUNT_SCOPE.task("payment-token:add", "Add payment token to CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("paymentToken", "Payment token address")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -279,8 +311,12 @@ ACCOUNT_SCOPE.task("payment-token:add", "Add payment token to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("payment-token:remove", "Remove payment token from CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("paymentToken", "Payment token address")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -301,7 +337,11 @@ ACCOUNT_SCOPE.task("payment-token:remove", "Remove payment token from CMAccount"
     });
 
 ACCOUNT_SCOPE.task("payment-token:list", "List supported payment tokens from CMAccount")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         console.log("CMAccount:", taskArgs.cmAccount, "\n");
 
@@ -313,7 +353,11 @@ ACCOUNT_SCOPE.task("payment-token:list", "List supported payment tokens from CMA
     });
 
 ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         console.log("CMAccount:", taskArgs.cmAccount, "\n");
 
@@ -336,8 +380,12 @@ ACCOUNT_SCOPE.task("bot:list", "List all bots from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("serviceName", "Name of service to add")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -359,8 +407,12 @@ ACCOUNT_SCOPE.task("wanted:add", "Add wanted service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:remove", "Remove wanted service from CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -382,7 +434,11 @@ ACCOUNT_SCOPE.task("wanted:remove", "Remove wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("wanted:list", "List all wanted service from CMAccount")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -399,8 +455,12 @@ ACCOUNT_SCOPE.task("wanted:list", "List all wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("serviceName", "Name of service to add")
     .addParam("fee", "Fee of the service in aCAM (wei in ETH terminology)")
     .addParam("restrictedRate", "Restricted rate of the service", false, types.boolean)
@@ -432,8 +492,12 @@ ACCOUNT_SCOPE.task("service:add", "Add supported service to CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:remove", "Remove wanted service from CMAccount")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .addParam("serviceName", "Name of service to remove")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
@@ -455,7 +519,11 @@ ACCOUNT_SCOPE.task("service:remove", "Remove wanted service from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
@@ -489,8 +557,12 @@ ACCOUNT_SCOPE.task("service:list", "List supported services from CMAccount")
     });
 
 ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount to latest implementation")
-    .addOptionalParam("privateKey", "Private key to use", process.env.CMACCOUNT_PK)
-    .addOptionalParam("cmAccount", "CMAccount address", process.env.CMACCOUNT_ADDRESS)
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);

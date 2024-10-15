@@ -72,6 +72,23 @@ yarn install
 yarn test
 ```
 
+### Setting Hardhat Vars
+
+For Camino (mainnet) and Columbus (testnet) networks, we are using hardhat's vars
+tool to store private keys. To set these you can use the commands below:
+
+```
+yarn hardhat vars set COLUMBUS_DEPLOYER_PRIVATE_KEY
+```
+
+```
+yarn hardhat vars set CAMINO_DEPLOYER_PRIVATE_KEY
+```
+
+These will also be used for `yarn hardhat manager` tasks. These variables are stored
+in the `/home/$USER/.config/hardhat-nodejs/vars.json` file, so they are not
+accidentally pushed to git.
+
 ## Contracts
 
 ### CMAccount
