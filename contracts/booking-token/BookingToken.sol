@@ -32,7 +32,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
  * Booking Tokens can have zero price, meaning that the payment will be done
  * off-chain.
  *
- * When a token is minted with a reservation, it can not transferred until the
+ * When a token is minted with a reservation, it can not be transferred until the
  * expiration timestamp is reached or the token is bought.
  */
 contract BookingToken is
@@ -90,7 +90,7 @@ contract BookingToken is
     bytes32 private constant BookingTokenStorageLocation =
         0x9db9d405bf15683ce835607b1f0b423dc1484d44bb9d5af64a483fa4afd82900;
 
-    function _getBookingTokenStorage() private pure returns (BookingTokenStorage storage $) {
+    function _getBookingTokenStorage() internal pure returns (BookingTokenStorage storage $) {
         assembly {
             $.slot := BookingTokenStorageLocation
         }
@@ -251,7 +251,7 @@ contract BookingToken is
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken
-    ) public onlyCMAccount(msg.sender) {
+    ) public virtual onlyCMAccount(msg.sender) {
         // Require reservedFor to be a CM Account
         requireCMAccount(reservedFor);
 
@@ -366,7 +366,7 @@ contract BookingToken is
     /**
      * @notice Check if the token is transferable
      */
-    function checkTransferable(uint256 tokenId) internal {
+    function checkTransferable(uint256 tokenId) internal virtual {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         TokenReservation memory reservation = $._reservations[tokenId];
 
