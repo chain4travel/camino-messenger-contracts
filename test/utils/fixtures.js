@@ -115,7 +115,7 @@ async function deployAndConfigureAllFixture() {
 
     // Deploy BookingToken
 
-    const BookingToken = await ethers.getContractFactory("BookingToken");
+    const BookingToken = await ethers.getContractFactory("BookingTokenV2");
     const bookingToken = await upgrades.deployProxy(
         BookingToken,
         [await cmAccountManager.getAddress(), signers.btAdmin.address, signers.btUpgrader.address],

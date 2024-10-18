@@ -594,4 +594,75 @@ describe("BookingToken", function () {
                 .withArgs(0n, await distributorCMAccount.getAddress());
         });
     });
+    describe("Cancellation", function () {
+        it("supplier: should initiate cancellation of a booking token correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            // Try to cancel the token
+
+            const token_id = 0n;
+            const initiator = await supplierCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+            const refundCurrency = ethers.ZeroAddress;
+
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .initiateCancellation(0n, refundAmount, refundCurrency),
+            )
+                .to.emit(bookingToken, "CancellationInitiated")
+                .withArgs(token_id, initiator, refundAmount, refundCurrency);
+
+            // Sanity check
+            expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
+                refundAmount,
+                refundCurrency,
+                initiator,
+                true,
+            ]);
+        });
+        // FIXME: add tests for other cases
+    });
 });

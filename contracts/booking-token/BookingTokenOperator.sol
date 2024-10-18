@@ -78,4 +78,37 @@ library BookingTokenOperator {
             IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }
+
+    function initiateCancellation(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        address refundCurrency
+    ) public {
+        IBookingToken(bookingToken).initiateCancellation(tokenId, refundAmount, refundCurrency);
+    }
+
+    function acceptCancellation(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).acceptCancellation(tokenId);
+    }
+
+    function counterCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        address refundCurrency
+    ) public {
+        IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount, refundCurrency);
+    }
+
+    function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
+    }
+
+    function getCancellationProposalStatus(
+        address bookingToken,
+        uint256 tokenId
+    ) public view returns (uint256 refundAmount, address refundCurrency, address initiatedBy, bool isActive) {
+        return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
+    }
 }
