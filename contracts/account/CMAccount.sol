@@ -761,4 +761,39 @@ contract CMAccount is
     function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
         _setGasMoneyWithdrawal(limit, period);
     }
+
+    /***************************************************
+     *                 CANCELLATION                    *
+     ***************************************************/
+
+    // FIXME: Create a specific role for those
+
+    function initiateCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        address refundCurrency
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.initiateCancellation(getBookingTokenAddress(), tokenId, refundAmount, refundCurrency);
+    }
+
+    function acceptCancellation(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.acceptCancellation(getBookingTokenAddress(), tokenId);
+    }
+
+    function counterCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount,
+        address refundCurrency
+    ) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.counterCancellationProposal(
+            getBookingTokenAddress(),
+            tokenId,
+            refundAmount,
+            refundCurrency
+        );
+    }
+
+    function cancelCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
+    }
 }

@@ -19,5 +19,44 @@
     ],
     "name": "TokenApprovalFailed",
     "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "bookingToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCancellationProposalStatus",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "refundCurrency",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "initiatedBy",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "isActive",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ]

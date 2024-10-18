@@ -1053,6 +1053,19 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "acceptCancellation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "bot",
         "type": "address"
@@ -1174,6 +1187,19 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "cancelCancellationProposal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "fromCMAccount",
         "type": "address"
@@ -1215,6 +1241,29 @@
       }
     ],
     "name": "cashInCheque",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "refundCurrency",
+        "type": "address"
+      }
+    ],
+    "name": "counterCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1865,6 +1914,29 @@
       }
     ],
     "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "refundCurrency",
+        "type": "address"
+      }
+    ],
+    "name": "initiateCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
