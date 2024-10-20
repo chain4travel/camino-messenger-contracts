@@ -409,6 +409,13 @@ contract CMAccount is
     }
 
     /**
+     * @notice Record expiration status if the token is expired
+     */
+    function recordExpiration(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.recordExpiration(getBookingTokenAddress(), tokenId);
+    }
+
+    /**
      * @notice Always returns `IERC721Receiver.onERC721Received.selector`.
      *
      * @dev See {IERC721Receiver-onERC721Received}.

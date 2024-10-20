@@ -79,6 +79,10 @@ library BookingTokenOperator {
         }
     }
 
+    function recordExpiration(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).recordExpiration(tokenId);
+    }
+
     function initiateCancellation(
         address bookingToken,
         uint256 tokenId,

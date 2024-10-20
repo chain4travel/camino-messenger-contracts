@@ -17,6 +17,12 @@ interface IBookingToken {
     function getReservationPrice(uint256 tokenId) external view returns (uint256 price, IERC20 paymentToken);
 
     /**
+     * @notice Record expiration status if the token is expired
+     * @param tokenId The token id to record as expired
+     */
+    function recordExpiration(uint256 tokenId) external;
+
+    /**
      * @notice Initiates a cancellation for a bought token.
      *
      * @param tokenId The token id to initiate the cancellation for

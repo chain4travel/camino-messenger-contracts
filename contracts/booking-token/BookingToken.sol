@@ -65,6 +65,14 @@ contract BookingToken is
      *                   STORAGE                       *
      ***************************************************/
 
+    enum BookingStatus {
+        Unspecified, // 0, default value
+        Reserved, // 1
+        Expired, // 2
+        Bought, // 3
+        Canceled // 4
+    }
+
     // Reservation details
     struct TokenReservation {
         address reservedFor; // CM Account address that can buy the token
@@ -84,6 +92,8 @@ contract BookingToken is
         uint256 _minExpirationTimestampDiff;
         // Reservation details for each token
         mapping(uint256 tokenId => TokenReservation tokenReservation) _reservations;
+        // BookingStatus of each token
+        mapping(uint256 tokenId => BookingStatus status) _bookingStatus;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingToken")) - 1)) & ~bytes32(uint256(0xff));
@@ -126,6 +136,13 @@ contract BookingToken is
      * @param buyer buyer address
      */
     event TokenBought(uint256 indexed tokenId, address indexed buyer);
+
+    /**
+     * @notice Event emitted when a token is expired.
+     *
+     * @param tokenId token id
+     */
+    event TokenExpired(uint256 indexed tokenId);
 
     /***************************************************
      *                    ERRORS                       *
@@ -193,6 +210,14 @@ contract BookingToken is
      * @param allowance allowance amount
      */
     error InsufficientAllowance(address sender, IERC20 paymentToken, uint256 price, uint256 allowance);
+
+    /**
+     * @notice Invalid token status.
+     *
+     * @param tokenId token id
+     * @param status status
+     */
+    error InvalidTokenStatus(uint256 tokenId, BookingStatus status);
 
     /***************************************************
      *                  MODIFIERS                      *
@@ -274,6 +299,9 @@ contract BookingToken is
         // Store the reservation
         _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
 
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Reserved;
+
         emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
     }
 
@@ -316,9 +344,6 @@ contract BookingToken is
         // Only in this function and only for buying a reserved token
         _transfer(reservation.supplier, msg.sender, tokenId);
 
-        // Delete the reservation
-        delete $._reservations[tokenId];
-
         // Do the payment at the end
         if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
             // Payment is in ERC20.
@@ -344,8 +369,22 @@ contract BookingToken is
             payable(reservation.supplier).sendValue(msg.value);
         }
 
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Bought;
+
         // Emit event
         emit TokenBought(tokenId, msg.sender);
+    }
+
+    /**
+     * @notice Return booking status
+     *
+     * @param tokenId The token id
+     * @return The booking status
+     */
+    function getBookingStatus(uint256 tokenId) public view returns (BookingStatus) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._bookingStatus[tokenId];
     }
 
     /**
@@ -368,20 +407,55 @@ contract BookingToken is
      */
     function checkTransferable(uint256 tokenId) internal virtual {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        TokenReservation memory reservation = $._reservations[tokenId];
+        BookingStatus status = $._bookingStatus[tokenId];
 
+        // If token is bought, expired or canceled, token is transferable
+        if (status == BookingStatus.Bought || status == BookingStatus.Canceled || status == BookingStatus.Expired) {
+            return;
+        }
+
+        // If token is reserved, check if it is expired
         // If expiration time is in the past, token is transferable. Because it can
         // not be bought after expired.
-        //
-        // This is also true if expirationTimestamp is 0. Which means there is no
-        // reservation and token is transferable. No need to check for the
-        // reservedFor address.
-        if (block.timestamp <= reservation.expirationTimestamp) {
-            // Token is not transferable
+        TokenReservation storage reservation = $._reservations[tokenId];
+
+        if (block.timestamp > reservation.expirationTimestamp) {
+            // Token is expired, set status to expired
+            $._bookingStatus[tokenId] = BookingStatus.Expired;
+
+            // Emit event
+            emit TokenExpired(tokenId);
+            return;
+        } else {
+            // Token is not expired, revert transfer
             revert TokenIsReserved(tokenId, reservation.reservedFor);
-        } else if (reservation.reservedFor != address(0)) {
-            // Clean up: Token is transferable but has expired reservation
-            delete $._reservations[tokenId];
+        }
+    }
+
+    /**
+     * @notice Record expiration status if the token is expired
+     *
+     * @param tokenId The token id
+     */
+    function recordExpiration(uint256 tokenId) public virtual {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        TokenReservation storage reservation = $._reservations[tokenId];
+        BookingStatus status = $._bookingStatus[tokenId];
+
+        // If token is already set as expired, bought or canceled, revert.
+        if (status == BookingStatus.Expired || status == BookingStatus.Bought || status == BookingStatus.Canceled) {
+            revert InvalidTokenStatus(tokenId, status);
+        }
+
+        // If expiration time is in the past, set status to expired
+        if (block.timestamp > reservation.expirationTimestamp) {
+            $._bookingStatus[tokenId] = BookingStatus.Expired;
+
+            // Emit event
+            emit TokenExpired(tokenId);
+        } else {
+            // Token is not expired, revert setting status
+            revert TokenIsReserved(tokenId, reservation.reservedFor);
         }
     }
 
