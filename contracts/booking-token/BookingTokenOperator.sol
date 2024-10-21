@@ -95,6 +95,10 @@ library BookingTokenOperator {
         IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount);
     }
 
+    function acceptCounteredCancellationProposal(address bookingToken, uint256 tokenId) external {
+        IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId);
+    }
+
     function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
         IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
     }

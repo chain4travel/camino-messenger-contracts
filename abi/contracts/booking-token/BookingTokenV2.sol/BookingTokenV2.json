@@ -274,6 +274,17 @@
         "type": "uint256"
       }
     ],
+    "name": "NoCounteredCancellationProposal",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
     "name": "NoPendingCancellationProposal",
     "type": "error"
   },
@@ -286,6 +297,17 @@
       }
     ],
     "name": "NotAuthorizedToAcceptCancellation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      }
+    ],
+    "name": "NotAuthorizedToAcceptCounterProposal",
     "type": "error"
   },
   {
@@ -882,6 +904,19 @@
       }
     ],
     "name": "acceptCancellationProposal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "acceptCounteredCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

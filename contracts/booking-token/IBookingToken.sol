@@ -46,6 +46,12 @@ interface IBookingToken {
     function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount) external;
 
     /**
+     * @notice Accept a countered cancellation proposal
+     * @param tokenId The token id to accept the countered cancellation proposal for
+     */
+    function acceptCounteredCancellationProposal(uint256 tokenId) external;
+
+    /**
      * @notice Cancels an active cancellation proposal. Only the initiator can cancel.
      *
      * @param tokenId The token id for which to cancel the proposal

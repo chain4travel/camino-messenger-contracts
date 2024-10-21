@@ -787,6 +787,10 @@ contract CMAccount is
         BookingTokenOperator.counterCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
+    function acceptCounteredCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId);
+    }
+
     function cancelCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
         BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
     }
