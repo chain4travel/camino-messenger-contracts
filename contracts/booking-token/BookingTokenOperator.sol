@@ -87,8 +87,30 @@ library BookingTokenOperator {
         IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
     }
 
+    // TODO: Send funds
     function acceptCancellationProposal(address bookingToken, uint256 tokenId) public {
-        IBookingToken(bookingToken).acceptCancellationProposal(tokenId);
+        // Get paymentToken and refundAmount
+        IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
+        uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
+
+        // Check if payment is in native currency or in ERC20
+        if (address(paymentToken) != address(0) && refundAmount > 0) {
+            // Payment is in ERC20. Approve the BookingToken contract for the
+            // refund amount. BookingToken should do the transfer to the
+            // supplier.
+            bool approval = paymentToken.approve(bookingToken, refundAmount);
+
+            if (!approval) {
+                revert TokenApprovalFailed(bookingToken, address(paymentToken), refundAmount);
+            }
+
+            // Accept the cancellation
+            IBookingToken(bookingToken).acceptCancellationProposal(tokenId);
+        } else {
+            // Payment is in native currency. Accept the cancellation by sending the
+            // payment in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId);
+        }
     }
 
     function counterCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {

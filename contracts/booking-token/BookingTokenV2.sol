@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { BookingToken, IERC20 } from "./BookingToken.sol";
+import { BookingToken, Address, SafeERC20, IERC20 } from "./BookingToken.sol";
 
 /**
  * @title BookingTokenV2
@@ -9,6 +9,9 @@ import { BookingToken, IERC20 } from "./BookingToken.sol";
  * Specifically, it introduces a cancellation process after the token is bought.
  */
 contract BookingTokenV2 is BookingToken {
+    using Address for address payable;
+    using SafeERC20 for IERC20;
+
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
@@ -146,9 +149,37 @@ contract BookingTokenV2 is BookingToken {
      */
     error TokenHasActiveCancellationProposal(uint256 tokenId);
 
+    /**
+     * @notice Incorrect amount
+     *
+     * @param actual The actual amount
+     * @param expected The expected amount
+     */
+    error IncorrectAmount(uint256 actual, uint256 expected);
+
     /***************************************************
      *                   FUNCTIONS                     *
      ***************************************************/
+
+    /**
+     * @notice Retrieves the refund amount for a given token.
+     *
+     * @param tokenId The token id to retrieve the refund amount for
+     * @return refundAmount The refund amount in wei
+     */
+    function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount) {
+        return _getBookingTokenCancellableStorage()._cancellationProposals[tokenId].refundAmount;
+    }
+
+    /**
+     * @notice Retrieves the payment token for a given token.
+     *
+     * @param tokenId The token id to retrieve the payment token for
+     * @return paymentToken The payment token
+     */
+    function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken) {
+        return _getBookingTokenStorage()._reservations[tokenId].paymentToken;
+    }
 
     /**
      * @notice Initiates a cancellation for a bought token.
@@ -192,7 +223,7 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellationProposal(uint256 tokenId) external {
+    function acceptCancellationProposal(uint256 tokenId) external payable {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -202,12 +233,41 @@ contract BookingTokenV2 is BookingToken {
         }
 
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        address supplier = $._reservations[tokenId].supplier;
+        TokenReservation memory reservation = $._reservations[tokenId];
 
         // Revert if the caller is not the supplier, only the supplier can accept a
         // cancellation proposal
-        if (msg.sender != supplier) {
+        if (msg.sender != reservation.supplier) {
             revert NotAuthorizedToAcceptCancellation(msg.sender);
+        }
+
+        // Finalize the cancellation
+        address owner = _requireOwned(tokenId);
+
+        // Do the payment of the refund
+        if (address(reservation.paymentToken) != address(0) && proposal.refundAmount > 0) {
+            // Payment is in ERC20.
+            //
+            // Message sender (supplier of the Booking Token) must provide enough
+            // allowance for this (BookingToken) contract to pay the cancellation
+            // refund amount to the owner.
+            uint256 allowance = reservation.paymentToken.allowance(msg.sender, address(this));
+            if (allowance < proposal.refundAmount) {
+                revert InsufficientAllowance(msg.sender, reservation.paymentToken, proposal.refundAmount, allowance);
+            }
+
+            // Transfer proposal refund amount in the ERC20 tokens from the supplier
+            // to the owner
+            reservation.paymentToken.safeTransferFrom(msg.sender, owner, proposal.refundAmount);
+        } else {
+            // Payment is in native currency or refund is zero.
+            // Check if we receive the right refund amount
+            if (msg.value != proposal.refundAmount) {
+                revert IncorrectAmount(msg.value, proposal.refundAmount);
+            }
+
+            // Transfer payment to the owner
+            payable(owner).sendValue(msg.value);
         }
 
         // Set token status to "cancelled"
@@ -216,8 +276,7 @@ contract BookingTokenV2 is BookingToken {
         // Set cancellation proposal status to "accepted"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Accepted;
 
-        // Finalize the cancellation
-        // TODO: Transfer refund to owner
+        // Burn the token
         _burn(tokenId);
 
         // Emit the cancellation accepted event

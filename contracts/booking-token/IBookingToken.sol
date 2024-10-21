@@ -16,6 +16,10 @@ interface IBookingToken {
 
     function getReservationPrice(uint256 tokenId) external view returns (uint256 price, IERC20 paymentToken);
 
+    function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount);
+
+    function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken);
+
     /**
      * @notice Record expiration status if the token is expired
      * @param tokenId The token id to record as expired
@@ -35,7 +39,7 @@ interface IBookingToken {
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellationProposal(uint256 tokenId) external;
+    function acceptCancellationProposal(uint256 tokenId) external payable;
 
     /**
      * @notice Counters a cancellation proposal with a new proposal.

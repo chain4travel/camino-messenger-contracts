@@ -775,23 +775,26 @@ contract CMAccount is
 
     // FIXME: Create a specific role for those
 
-    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(SERVICE_ADMIN_ROLE) {
+    function initiateCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.initiateCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function acceptCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+    function acceptCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId);
     }
 
-    function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(SERVICE_ADMIN_ROLE) {
+    function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.counterCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function acceptCounteredCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+    function acceptCounteredCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId);
     }
 
-    function cancelCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+    function cancelCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
     }
 }
