@@ -253,22 +253,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "enum BookingToken.BookingStatus",
-        "name": "status",
-        "type": "uint8"
-      }
-    ],
-    "name": "InvalidTokenStatus",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "account",
         "type": "address"
@@ -575,19 +559,6 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
-      }
-    ],
-    "name": "TokenExpired",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
       },
       {
         "indexed": true,
@@ -777,25 +748,6 @@
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getBookingStatus",
-    "outputs": [
-      {
-        "internalType": "enum BookingToken.BookingStatus",
-        "name": "",
-        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -1021,19 +973,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "recordExpiration",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
