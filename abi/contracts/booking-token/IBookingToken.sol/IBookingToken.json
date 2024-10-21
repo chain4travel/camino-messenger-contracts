@@ -7,7 +7,7 @@
         "type": "uint256"
       }
     ],
-    "name": "acceptCancellation",
+    "name": "acceptCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -49,11 +49,6 @@
         "internalType": "uint256",
         "name": "newRefundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "newRefundCurrency",
-        "type": "address"
       }
     ],
     "name": "counterCancellationProposal",
@@ -78,18 +73,13 @@
       },
       {
         "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "initiatedBy",
         "type": "address"
       },
       {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "status",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -130,14 +120,9 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
-    "name": "initiateCancellation",
+    "name": "initiateCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

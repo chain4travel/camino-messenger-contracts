@@ -807,27 +807,36 @@ describe("BookingToken", function () {
             // Check token booking status
             expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
 
-            // Try to cancel the token
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
 
+            // Grant BOOKING_OPERATOR_ROLE
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Buy the token
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+
+            // Try to cancel the token
             const token_id = 0n;
-            const initiator = await supplierCMAccount.getAddress();
+            const proposer = await supplierCMAccount.getAddress();
             const refundAmount = ethers.parseEther("0.045");
-            const refundCurrency = ethers.ZeroAddress;
 
             await expect(
-                supplierCMAccount
-                    .connect(signers.cmAccountAdmin)
-                    .initiateCancellation(0n, refundAmount, refundCurrency),
+                supplierCMAccount.connect(signers.cmAccountAdmin).initiateCancellationProposal(0n, refundAmount),
             )
-                .to.emit(bookingToken, "CancellationInitiated")
-                .withArgs(token_id, initiator, refundAmount, refundCurrency);
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(token_id, proposer, refundAmount);
 
             // Sanity check
             expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
                 refundAmount,
-                refundCurrency,
-                initiator,
-                true,
+                proposer,
+                1n, // Pending == 1
             ]);
         });
         // FIXME: add tests for other cases

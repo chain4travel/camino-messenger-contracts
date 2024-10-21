@@ -13,32 +13,38 @@ contract BookingTokenV2 is BookingToken {
      *                   STORAGE                       *
      ***************************************************/
 
+    enum CancellationProposalStatus {
+        NoProposal, // 0, default
+        Pending, // 1
+        Rejected, // 2
+        Countered, // 3
+        CounterAccepted, // 4
+        Accepted // 5
+    }
+
     struct CancellationProposal {
         uint256 refundAmount;
-        address refundCurrency;
-        address initiatedBy;
-        bool isActive;
+        address proposedBy;
+        CancellationProposalStatus status;
     }
-    /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenV2
-    struct BookingTokenV2Storage {
-        // Mapping to store the original supplier (minter) of each token
-        mapping(uint256 => address) _originalSupplier;
+    /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
+    struct BookingTokenCancellableStorage {
         // Mapping to store the ongoing cancellation proposals for each token
         mapping(uint256 => CancellationProposal) _cancellationProposals;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenV2")) - 1)) & ~bytes32(uint256(0xff));
-    bytes32 private constant BookingTokenV2StorageLocation =
-        0x96683f18b5720c3d007c342e56e2dbf25d018d9c7f77c4217427b152a0bd6100;
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenCancellable")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant BookingTokenCancellableStorageLocation =
+        0x56ee42015b616c256a09657decaf7aa5d877decbe489a4b4b22f8bb476600500;
 
     /**
-     * @notice Retrieves the BookingTokenV2 storage struct from the designated storage slot.
+     * @notice Retrieves the BookingTokenCancellable storage struct from the designated storage slot.
      *
      * @return $ The storage struct reference
      */
-    function _getBookingTokenV2Storage() private pure returns (BookingTokenV2Storage storage $) {
+    function _getBookingTokenCancellableStorage() private pure returns (BookingTokenCancellableStorage storage $) {
         assembly {
-            $.slot := BookingTokenV2StorageLocation
+            $.slot := BookingTokenCancellableStorageLocation
         }
     }
 
@@ -50,16 +56,10 @@ contract BookingTokenV2 is BookingToken {
      * @notice Event emitted when a cancellation is initiated.
      *
      * @param tokenId token id
-     * @param initiatedBy address that initiated the cancellation
+     * @param proposedBy address that initiated the cancellation
      * @param refundAmount proposed refund amount
-     * @param refundCurrency ERC20 token address for the refund
      */
-    event CancellationInitiated(
-        uint256 indexed tokenId,
-        address indexed initiatedBy,
-        uint256 refundAmount,
-        address refundCurrency
-    );
+    event CancellationPending(uint256 indexed tokenId, address indexed proposedBy, uint256 refundAmount);
 
     /**
      * @notice Event emitted when a cancellation is accepted.
@@ -67,14 +67,8 @@ contract BookingTokenV2 is BookingToken {
      * @param tokenId token id
      * @param acceptedBy address that accepted the cancellation
      * @param refundAmount final refund amount
-     * @param refundCurrency ERC20 token address for the refund
      */
-    event CancellationAccepted(
-        uint256 indexed tokenId,
-        address indexed acceptedBy,
-        uint256 refundAmount,
-        address refundCurrency
-    );
+    event CancellationAccepted(uint256 indexed tokenId, address indexed acceptedBy, uint256 refundAmount);
 
     /**
      * @notice Event emitted when a cancellation proposal is countered.
@@ -82,14 +76,8 @@ contract BookingTokenV2 is BookingToken {
      * @param tokenId token id
      * @param counteredBy address that countered the proposal
      * @param newRefundAmount new proposed refund amount
-     * @param newRefundCurrency new proposed ERC20 token address for the refund
      */
-    event CancellationCountered(
-        uint256 indexed tokenId,
-        address indexed counteredBy,
-        uint256 newRefundAmount,
-        address newRefundCurrency
-    );
+    event CancellationCountered(uint256 indexed tokenId, address indexed counteredBy, uint256 newRefundAmount);
 
     /**
      * @notice Event emitted when a cancellation proposal is canceled.
@@ -111,11 +99,11 @@ contract BookingTokenV2 is BookingToken {
     error NotAuthorizedToInitiateCancellation(address caller);
 
     /**
-     * @notice Error for when there is no active cancellation proposal.
+     * @notice Error for when there is no pending cancellation proposal.
      *
-     * @param tokenId The token id for which there is no active proposal
+     * @param tokenId The token id for which there is no pending proposal
      */
-    error NoActiveCancellationProposal(uint256 tokenId);
+    error NoPendingCancellationProposal(uint256 tokenId);
 
     /**
      * @notice Error for when the caller is not authorized to accept a cancellation.
@@ -150,81 +138,79 @@ contract BookingTokenV2 is BookingToken {
      ***************************************************/
 
     /**
-     * @notice Mints a new token with a reservation for a specific address.
-     *
-     * @param reservedFor The CM Account address that can buy the token
-     * @param uri The URI of the token
-     * @param expirationTimestamp The expiration timestamp
-     * @param price The price of the token
-     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
-     */
-    function safeMintWithReservation(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) public override onlyCMAccount(msg.sender) {
-        super.safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
-        uint256 tokenId = _getBookingTokenStorage()._nextTokenId - 1;
-        _getBookingTokenV2Storage()._originalSupplier[tokenId] = msg.sender;
-    }
-
-    /**
      * @notice Initiates a cancellation for a bought token.
      *
      * @param tokenId The token id to initiate the cancellation for
      * @param refundAmount The proposed refund amount in wei
-     * @param refundCurrency The ERC20 token address for the refund
      */
-    function initiateCancellation(uint256 tokenId, uint256 refundAmount, address refundCurrency) external {
+    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external {
+        // Revert if the token status is not "bought"
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        if ($._bookingStatus[tokenId] != BookingStatus.Bought) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        // Get owner and supplier
         address owner = _requireOwned(tokenId);
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        address supplier = $._originalSupplier[tokenId];
+        address supplier = $._reservations[tokenId].supplier;
+
+        // Revert if the caller is not the owner or supplier
         if (msg.sender != owner && msg.sender != supplier) {
             revert NotAuthorizedToInitiateCancellation(msg.sender);
         }
 
-        $._cancellationProposals[tokenId] = CancellationProposal({
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+
+        // FIXME: Should we allow cancellation proposals to be initiated when there
+        // is an active cancellation proposal and the status is Rejected?
+
+        // Store cancellation proposal
+        cancellableStorage._cancellationProposals[tokenId] = CancellationProposal({
             refundAmount: refundAmount,
-            refundCurrency: refundCurrency,
-            initiatedBy: msg.sender,
-            isActive: true
+            proposedBy: msg.sender,
+            status: CancellationProposalStatus.Pending
         });
 
-        emit CancellationInitiated(tokenId, msg.sender, refundAmount, refundCurrency);
+        emit CancellationPending(tokenId, msg.sender, refundAmount);
     }
 
     /**
-     * @notice Accepts a cancellation proposal for a bought token.
+     * @notice Accepts a cancellation proposal for a bought token and finalizes it.
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellation(uint256 tokenId) external {
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        address owner = _requireOwned(tokenId);
-        CancellationProposal memory proposal = $._cancellationProposals[tokenId];
-        if (!proposal.isActive) {
-            revert NoActiveCancellationProposal(tokenId);
+    function acceptCancellationProposal(uint256 tokenId) external {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Revert if the cancellation proposal status is not "Pending"
+        if (proposal.status != CancellationProposalStatus.Pending) {
+            revert NoPendingCancellationProposal(tokenId);
         }
 
-        address supplier = $._originalSupplier[tokenId];
-        if (msg.sender == proposal.initiatedBy) {
+        address owner = _requireOwned(tokenId);
+
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        address supplier = $._reservations[tokenId].supplier;
+
+        // Revert if the caller is not the supplier, only the supplier can accept a
+        // cancellation proposal
+        if (msg.sender != supplier) {
             revert NotAuthorizedToAcceptCancellation(msg.sender);
         }
-        if (
-            (proposal.initiatedBy == owner && msg.sender != supplier) ||
-            (proposal.initiatedBy == supplier && msg.sender != owner)
-        ) {
-            revert NotAuthorizedToAcceptCancellation(msg.sender);
-        }
+
+        // Set token status to "cancelled"
+        $._bookingStatus[tokenId] = BookingStatus.Canceled;
+
+        // Set cancellation proposal status to "accepted"
+        cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Accepted;
 
         // Finalize the cancellation
-        delete $._cancellationProposals[tokenId];
+        // TODO: Transfer refund to owner
         _burn(tokenId);
 
         // Emit the cancellation accepted event
-        emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount, proposal.refundCurrency);
+        emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount);
     }
 
     /**
@@ -232,52 +218,57 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id to counter the cancellation for
      * @param newRefundAmount The new proposed refund amount in wei
-     * @param newRefundCurrency The new ERC20 token address for the refund
      */
-    function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount, address newRefundCurrency) external {
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        address owner = _requireOwned(tokenId);
-        CancellationProposal storage proposal = $._cancellationProposals[tokenId];
-        if (!proposal.isActive) {
-            revert NoActiveCancellationProposal(tokenId);
+    function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount) external {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        if (proposal.status != CancellationProposalStatus.Pending) {
+            revert NoPendingCancellationProposal(tokenId);
         }
 
-        address supplier = $._originalSupplier[tokenId];
-        if (msg.sender == proposal.initiatedBy) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        address supplier = $._reservations[tokenId].supplier;
+
+        // Revert if the caller is not the supplier
+        if (msg.sender != supplier) {
             revert NotAuthorizedToCounterCancellation(msg.sender);
         }
-        if (
-            (proposal.initiatedBy == owner && msg.sender != supplier) ||
-            (proposal.initiatedBy == supplier && msg.sender != owner)
-        ) {
-            revert NotAuthorizedToCounterCancellation(msg.sender);
-        }
+
+        address owner = _requireOwned(tokenId);
 
         // Update the proposal with the new values
-        proposal.refundAmount = newRefundAmount;
-        proposal.refundCurrency = newRefundCurrency;
+        cancellableStorage._cancellationProposals[tokenId].refundAmount = newRefundAmount;
+
+        // Set cancellation proposal status to "countered"
+        cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Countered;
 
         // Emit the countered proposal event
-        emit CancellationCountered(tokenId, msg.sender, newRefundAmount, newRefundCurrency);
+        emit CancellationCountered(tokenId, msg.sender, newRefundAmount);
     }
 
     /**
-     * @notice Cancels an active cancellation proposal. Only the initiator can cancel.
+     * @notice Cancels a pending cancellation proposal. Only the proposer can cancel
+     * the proposal.
      *
      * @param tokenId The token id for which to cancel the proposal
      */
     function cancelCancellationProposal(uint256 tokenId) external {
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        CancellationProposal storage proposal = $._cancellationProposals[tokenId];
-        if (!proposal.isActive) {
-            revert NoActiveCancellationProposal(tokenId);
-        }
-        if (msg.sender != proposal.initiatedBy) {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Revert if the caller is not the proposer
+        if (msg.sender != proposal.proposedBy) {
             revert NotAuthorizedToCancelProposal(msg.sender);
         }
 
-        // Cancel the proposal
-        delete $._cancellationProposals[tokenId];
+        // Revert if the cancellation proposal status is not "Pending"
+        if (proposal.status != CancellationProposalStatus.Pending) {
+            revert NoPendingCancellationProposal(tokenId);
+        }
+
+        // Cancel the proposal by deleting it from the storage
+        delete cancellableStorage._cancellationProposals[tokenId];
 
         // Emit the cancellation proposal canceled event
         emit CancellationProposalCanceled(tokenId, msg.sender);
@@ -288,16 +279,15 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id to check the proposal status for
      * @return refundAmount The proposed refund amount
-     * @return refundCurrency The address of the proposed refund currency
-     * @return initiatedBy The address that initiated the cancellation
-     * @return isActive The status of the cancellation proposal
+     * @return proposedBy The address that initiated the cancellation
+     * @return status The status of the cancellation proposal
      */
     function getCancellationProposalStatus(
         uint256 tokenId
-    ) external view returns (uint256 refundAmount, address refundCurrency, address initiatedBy, bool isActive) {
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        CancellationProposal memory proposal = $._cancellationProposals[tokenId];
-        return (proposal.refundAmount, proposal.refundCurrency, proposal.initiatedBy, proposal.isActive);
+    ) external view returns (uint256 refundAmount, address proposedBy, CancellationProposalStatus status) {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
+        return (proposal.refundAmount, proposal.proposedBy, proposal.status);
     }
 
     /***************************************************
@@ -311,8 +301,17 @@ contract BookingTokenV2 is BookingToken {
      */
     function checkTransferable(uint256 tokenId) internal override {
         super.checkTransferable(tokenId);
-        BookingTokenV2Storage storage $ = _getBookingTokenV2Storage();
-        if ($._cancellationProposals[tokenId].isActive) {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Allow transfer if cancellation status is "Rejected". Only in this state
+        // the token is still usable.
+        if (proposal.status == CancellationProposalStatus.Rejected) {
+            return;
+        }
+
+        // FIXME: Should we prevent transfer if there is an active cancellation proposal?
+        if (proposal.status != CancellationProposalStatus.NoProposal) {
             revert TokenHasActiveCancellationProposal(tokenId);
         }
     }

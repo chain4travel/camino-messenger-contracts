@@ -42,18 +42,13 @@
       },
       {
         "internalType": "address",
-        "name": "refundCurrency",
+        "name": "proposedBy",
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "initiatedBy",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "status",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

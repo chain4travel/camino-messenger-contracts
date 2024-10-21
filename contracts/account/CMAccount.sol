@@ -775,29 +775,16 @@ contract CMAccount is
 
     // FIXME: Create a specific role for those
 
-    function initiateCancellation(
-        uint256 tokenId,
-        uint256 refundAmount,
-        address refundCurrency
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        BookingTokenOperator.initiateCancellation(getBookingTokenAddress(), tokenId, refundAmount, refundCurrency);
+    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.initiateCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function acceptCancellation(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
-        BookingTokenOperator.acceptCancellation(getBookingTokenAddress(), tokenId);
+    function acceptCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId);
     }
 
-    function counterCancellationProposal(
-        uint256 tokenId,
-        uint256 refundAmount,
-        address refundCurrency
-    ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        BookingTokenOperator.counterCancellationProposal(
-            getBookingTokenAddress(),
-            tokenId,
-            refundAmount,
-            refundCurrency
-        );
+    function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(SERVICE_ADMIN_ROLE) {
+        BookingTokenOperator.counterCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
     function cancelCancellationProposal(uint256 tokenId) public onlyRole(SERVICE_ADMIN_ROLE) {

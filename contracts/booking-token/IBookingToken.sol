@@ -27,25 +27,23 @@ interface IBookingToken {
      *
      * @param tokenId The token id to initiate the cancellation for
      * @param refundAmount The proposed refund amount in wei
-     * @param refundCurrency The ERC20 token address for the refund
      */
-    function initiateCancellation(uint256 tokenId, uint256 refundAmount, address refundCurrency) external;
+    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external;
 
     /**
      * @notice Accepts a cancellation proposal for a bought token.
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellation(uint256 tokenId) external;
+    function acceptCancellationProposal(uint256 tokenId) external;
 
     /**
      * @notice Counters a cancellation proposal with a new proposal.
      *
      * @param tokenId The token id to counter the cancellation for
      * @param newRefundAmount The new proposed refund amount in wei
-     * @param newRefundCurrency The new ERC20 token address for the refund
      */
-    function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount, address newRefundCurrency) external;
+    function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount) external;
 
     /**
      * @notice Cancels an active cancellation proposal. Only the initiator can cancel.
@@ -59,11 +57,10 @@ interface IBookingToken {
      *
      * @param tokenId The token id to check the proposal status for
      * @return refundAmount The proposed refund amount
-     * @return refundCurrency The address of the proposed refund currency
      * @return initiatedBy The address that initiated the cancellation
-     * @return isActive The status of the cancellation proposal
+     * @return status The status of the cancellation proposal
      */
     function getCancellationProposalStatus(
         uint256 tokenId
-    ) external view returns (uint256 refundAmount, address refundCurrency, address initiatedBy, bool isActive);
+    ) external view returns (uint256 refundAmount, address initiatedBy, uint status);
 }

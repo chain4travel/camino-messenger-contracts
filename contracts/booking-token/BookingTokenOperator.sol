@@ -83,26 +83,16 @@ library BookingTokenOperator {
         IBookingToken(bookingToken).recordExpiration(tokenId);
     }
 
-    function initiateCancellation(
-        address bookingToken,
-        uint256 tokenId,
-        uint256 refundAmount,
-        address refundCurrency
-    ) public {
-        IBookingToken(bookingToken).initiateCancellation(tokenId, refundAmount, refundCurrency);
+    function initiateCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
+        IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
     }
 
-    function acceptCancellation(address bookingToken, uint256 tokenId) public {
-        IBookingToken(bookingToken).acceptCancellation(tokenId);
+    function acceptCancellationProposal(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).acceptCancellationProposal(tokenId);
     }
 
-    function counterCancellationProposal(
-        address bookingToken,
-        uint256 tokenId,
-        uint256 refundAmount,
-        address refundCurrency
-    ) public {
-        IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount, refundCurrency);
+    function counterCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
+        IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount);
     }
 
     function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
@@ -112,7 +102,7 @@ library BookingTokenOperator {
     function getCancellationProposalStatus(
         address bookingToken,
         uint256 tokenId
-    ) public view returns (uint256 refundAmount, address refundCurrency, address initiatedBy, bool isActive) {
+    ) public view returns (uint256 refundAmount, address proposedBy, uint status) {
         return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
     }
 }

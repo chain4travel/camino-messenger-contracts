@@ -274,7 +274,7 @@
         "type": "uint256"
       }
     ],
-    "name": "NoActiveCancellationProposal",
+    "name": "NoPendingCancellationProposal",
     "type": "error"
   },
   {
@@ -533,12 +533,6 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
     "name": "CancellationAccepted",
@@ -564,12 +558,6 @@
         "internalType": "uint256",
         "name": "newRefundAmount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "newRefundCurrency",
-        "type": "address"
       }
     ],
     "name": "CancellationCountered",
@@ -587,7 +575,7 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "initiatedBy",
+        "name": "proposedBy",
         "type": "address"
       },
       {
@@ -595,15 +583,9 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
-    "name": "CancellationInitiated",
+    "name": "CancellationPending",
     "type": "event"
   },
   {
@@ -899,7 +881,7 @@
         "type": "uint256"
       }
     ],
-    "name": "acceptCancellation",
+    "name": "acceptCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -978,11 +960,6 @@
         "internalType": "uint256",
         "name": "newRefundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "newRefundCurrency",
-        "type": "address"
       }
     ],
     "name": "counterCancellationProposal",
@@ -1045,18 +1022,13 @@
       },
       {
         "internalType": "address",
-        "name": "refundCurrency",
+        "name": "proposedBy",
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "initiatedBy",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
+        "internalType": "enum BookingTokenV2.CancellationProposalStatus",
+        "name": "status",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -1207,14 +1179,9 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
-    "name": "initiateCancellation",
+    "name": "initiateCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

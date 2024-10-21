@@ -1058,7 +1058,7 @@
         "type": "uint256"
       }
     ],
-    "name": "acceptCancellation",
+    "name": "acceptCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1256,11 +1256,6 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
     "name": "counterCancellationProposal",
@@ -1929,14 +1924,9 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "refundCurrency",
-        "type": "address"
       }
     ],
-    "name": "initiateCancellation",
+    "name": "initiateCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
