@@ -759,7 +759,7 @@ describe("BookingToken", function () {
         });
     });
     describe("Cancellation", function () {
-        it("supplier: should initiate cancellation of a booking token correctly", async function () {
+        it("should initiate cancellation of a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -838,6 +838,93 @@ describe("BookingToken", function () {
                 proposer,
                 1n, // Pending == 1
             ]);
+        });
+        it("should revert initiating a proposal if token state is reserved or expired", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            // Check token booking status
+            expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
+
+            // Try to cancel the token
+            const token_id = 0n;
+            const proposer = await supplierCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+
+            await expect(
+                supplierCMAccount.connect(signers.cmAccountAdmin).initiateCancellationProposal(0n, refundAmount),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(0n, 1n); // tokenID == 0, Reserved == 1
+
+            // Sanity check
+            expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
+                0n,
+                ethers.ZeroAddress,
+                0n, // NoProposal == 0
+            ]);
+
+            // Expire the token
+
+            // Advance time by 24 hours, token should can be expired after
+            await network.provider.send("evm_increaseTime", [24 * 60 * 60]);
+            await network.provider.send("evm_mine");
+
+            // Expire the token
+            await expect(supplierCMAccount.connect(signers.btAdmin).recordExpiration(0n))
+                .to.emit(bookingToken, "TokenExpired")
+                .withArgs(0n);
+
+            // Check token booking status
+            expect(await bookingToken.getBookingStatus(0n)).to.equal(2); // Expired == 2
+
+            // Try to cancel the token
+            await expect(
+                supplierCMAccount.connect(signers.cmAccountAdmin).initiateCancellationProposal(0n, refundAmount),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(0n, 2n); // tokenID == 0, Expired == 2
         });
         // FIXME: add tests for other cases
     });
