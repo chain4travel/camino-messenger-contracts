@@ -190,7 +190,7 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id that has an active cancellation proposal
      */
-    error TokenHasActiveCancellationProposal(uint256 tokenId);
+    error TokenHasActiveCancellationProposalOrCancelled(uint256 tokenId);
 
     /**
      * @notice Incorrect amount
@@ -337,7 +337,7 @@ contract BookingTokenV2 is BookingToken {
 
         // Revert if there is already an active cancellation proposal
         if (cancellableStorage._cancellationProposals[tokenId].status != CancellationProposalStatus.NoProposal) {
-            revert TokenHasActiveCancellationProposal(tokenId);
+            revert TokenHasActiveCancellationProposalOrCancelled(tokenId);
         }
 
         // Store cancellation proposal
@@ -559,7 +559,7 @@ contract BookingTokenV2 is BookingToken {
 
         // FIXME: Should we prevent transfer if there is an active cancellation proposal?
         if (proposal.status != CancellationProposalStatus.NoProposal) {
-            revert TokenHasActiveCancellationProposal(tokenId);
+            revert TokenHasActiveCancellationProposalOrCancelled(tokenId);
         }
     }
 }
