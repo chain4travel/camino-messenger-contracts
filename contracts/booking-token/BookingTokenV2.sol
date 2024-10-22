@@ -95,6 +95,19 @@ contract BookingTokenV2 is BookingToken {
     event CancellationAccepted(uint256 indexed tokenId, address indexed acceptedBy, uint256 refundAmount);
 
     /**
+     * @notice Event emitted when a cancellation proposal is accepted by the owner.
+     *
+     * @param tokenId token id
+     * @param acceptedBy address that accepted the proposal
+     * @param refundAmount proposed refund amount
+     */
+    event CancellationProposalAcceptedByTheOwner(
+        uint256 indexed tokenId,
+        address indexed acceptedBy,
+        uint256 refundAmount
+    );
+
+    /**
      * @notice Event emitted when a cancellation proposal is countered.
      *
      * @param tokenId token id
@@ -142,7 +155,7 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param caller The address of the caller
      */
-    error NotAuthorizedToAcceptCancellation(address caller);
+    error NotAuthorizedToAcceptCancellation(uint256 tokenId, address caller);
 
     /**
      * @notice Error for when the caller is not authorized to counter a cancellation.
@@ -206,6 +219,7 @@ contract BookingTokenV2 is BookingToken {
      * @param expirationTimestamp The expiration timestamp
      * @param price The price of the token
      * @param paymentToken The token used to pay for the reservation. If address(0) then native.
+     * @param _isCancellable The cancellable flag
      */
     function safeMintWithReservation(
         address reservedFor,
@@ -353,16 +367,31 @@ contract BookingTokenV2 is BookingToken {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         TokenReservation memory reservation = $._reservations[tokenId];
 
-        // FIXME: Distributor should approve supplier's proposal
+        address owner = _requireOwned(tokenId);
 
-        // Revert if the caller is not the supplier, only the supplier can accept a
-        // cancellation proposal
-        if (msg.sender != reservation.supplier) {
-            revert NotAuthorizedToAcceptCancellation(msg.sender);
+        // Set the proposer to the owner if the proposedBy is the supplier and the
+        // caller is the owner. This means that the distributor/owner is accepting
+        // the proposal. Setting the proposedBy to the owner, which allows the
+        // supplier to accept the proposal.
+        if (proposal.proposedBy == reservation.supplier && msg.sender == owner) {
+            // Set proposedBy to distributor/owner
+            cancellableStorage._cancellationProposals[tokenId].proposedBy = owner;
+
+            // Emit event so the supplier can get notified
+            emit CancellationProposalAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
+
+            // We're done here because there is nothing else to do for the owner.
+            return;
+        }
+
+        // Revert if the caller is not the supplier and the proposer is not the
+        // owner. Only the supplier can accept a cancellation proposal after this
+        // point.
+        if (msg.sender != reservation.supplier || proposal.proposedBy != owner) {
+            revert NotAuthorizedToAcceptCancellation(tokenId, msg.sender);
         }
 
         // Finalize the cancellation
-        address owner = _requireOwned(tokenId);
 
         // Do the payment of the refund
         if (address(reservation.paymentToken) != address(0) && proposal.refundAmount > 0) {
