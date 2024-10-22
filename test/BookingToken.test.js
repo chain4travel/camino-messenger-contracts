@@ -48,6 +48,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
@@ -80,6 +81,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
@@ -112,6 +114,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -122,6 +125,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -129,6 +133,9 @@ describe("BookingToken", function () {
 
             // Check token booking status
             expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
+
+            // Check cancellable flag
+            expect(await bookingToken.isCancellable(0n)).to.equal(true);
 
             // Mint again to make sure the token id is incremented
             await expect(
@@ -138,6 +145,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -148,6 +156,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -183,6 +192,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -193,6 +203,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 );
 
             // Sanity check
@@ -231,6 +242,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -241,6 +253,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -306,6 +319,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -316,6 +330,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -375,6 +390,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -385,6 +401,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 );
 
             // Check token ownership
@@ -451,6 +468,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -461,6 +479,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 );
 
             // Check token ownership
@@ -527,6 +546,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -537,6 +557,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             /***************************************************
@@ -587,6 +608,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -597,6 +619,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -646,6 +669,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -656,6 +680,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -711,6 +736,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -721,6 +747,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -759,6 +786,87 @@ describe("BookingToken", function () {
         });
     });
     describe("Cancellation", function () {
+        it("should set and get cancellable flag correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                    true,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                    true,
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            // Check token booking status
+            expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
+
+            // Get cancellable flag
+            expect(await bookingToken.isCancellable(0n)).to.equal(true);
+
+            // Set cancellable flag
+            await expect(supplierCMAccount.connect(signers.btAdmin).setCancellable(0n, false))
+                .to.emit(bookingToken, "TokenCancellableUpdated")
+                .withArgs(0n, false);
+
+            // Check cancellable flag
+            expect(await bookingToken.isCancellable(0n)).to.equal(false);
+
+            // Try to set cancellable with unauthorized caller, should revert with
+            // NotAuthorizedToSetCancellable
+            await expect(distributorCMAccount.connect(signers.otherAccount3).setCancellable(0n, true))
+                .to.revertedWithCustomError(distributorCMAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(signers.otherAccount3.address, BOOKING_OPERATOR_ROLE);
+
+            // Try to set cancellable with unauthorized cm account, should revert with
+            // NotAuthorizedToSetCancellable
+
+            // Grant BOOKING_OPERATOR_ROLE for other account on distributor cm account
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.otherAccount3.address),
+            ).to.not.reverted;
+
+            await expect(distributorCMAccount.connect(signers.otherAccount3).setCancellable(0n, true))
+                .to.revertedWithCustomError(bookingToken, "NotAuthorizedToSetCancellable")
+                .withArgs(0n, await distributorCMAccount.getAddress());
+        });
         it("should initiate cancellation of a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
@@ -789,6 +897,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -799,6 +908,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -867,6 +977,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -877,6 +988,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -950,6 +1062,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -960,6 +1073,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Check token ownership
@@ -1042,6 +1156,7 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1052,6 +1167,7 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    true,
                 );
 
             // Check token ownership

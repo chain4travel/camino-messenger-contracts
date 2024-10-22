@@ -386,7 +386,8 @@ contract CMAccount is
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        bool _isCancellable
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
         BookingTokenOperator.mintBookingToken(
@@ -395,7 +396,8 @@ contract CMAccount is
             uri,
             expirationTimestamp,
             price,
-            paymentToken
+            paymentToken,
+            _isCancellable
         );
     }
 
@@ -413,6 +415,15 @@ contract CMAccount is
      */
     function recordExpiration(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.recordExpiration(getBookingTokenAddress(), tokenId);
+    }
+
+    /**
+     * @notice Set cancellable flag for booking token
+     * @param tokenId The token id
+     * @param cancellable The cancellable flag
+     */
+    function setCancellable(uint256 tokenId, bool cancellable) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.setCancellable(getBookingTokenAddress(), tokenId, cancellable);
     }
 
     /**
@@ -772,8 +783,6 @@ contract CMAccount is
     /***************************************************
      *                 CANCELLATION                    *
      ***************************************************/
-
-    // FIXME: Create a specific role for those
 
     function initiateCancellationProposal(
         uint256 tokenId,

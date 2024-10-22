@@ -9,7 +9,8 @@ interface IBookingToken {
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        bool isCancellable
     ) external;
 
     function buyReservedToken(uint256 tokenId) external payable;
@@ -19,6 +20,14 @@ interface IBookingToken {
     function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount);
 
     function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken);
+
+    /**
+     * @notice Sets the cancellable flag for a token. This can only be called by the
+     * supplier of the token.
+     * @param tokenId The token id
+     * @param _isCancellable The new cancellable flag
+     */
+    function setCancellable(uint256 tokenId, bool _isCancellable) external;
 
     /**
      * @notice Record expiration status if the token is expired

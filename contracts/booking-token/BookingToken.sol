@@ -70,7 +70,7 @@ contract BookingToken is
         Reserved, // 1
         Expired, // 2
         Bought, // 3
-        Canceled // 4
+        Cancelled // 4
     }
 
     // Reservation details
@@ -109,25 +109,6 @@ contract BookingToken is
     /***************************************************
      *                    EVENTS                       *
      ***************************************************/
-
-    /**
-     * @notice Event emitted when a token is reserved.
-     *
-     * @param tokenId token id
-     * @param reservedFor reserved for address
-     * @param supplier supplier address
-     * @param expirationTimestamp expiration timestamp
-     * @param price price of the token
-     * @param paymentToken payment token address
-     */
-    event TokenReserved(
-        uint256 indexed tokenId,
-        address indexed reservedFor,
-        address indexed supplier,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    );
 
     /**
      * @notice Event emitted when a token is bought.
@@ -262,50 +243,6 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @notice Mints a new token with a reservation for a specific address.
-     *
-     * @param reservedFor The CM Account address that can buy the token
-     * @param uri The URI of the token
-     * @param expirationTimestamp The expiration timestamp
-     * @param price The price of the token
-     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
-     */
-    function safeMintWithReservation(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) public virtual onlyCMAccount(msg.sender) {
-        // Require reservedFor to be a CM Account
-        requireCMAccount(reservedFor);
-
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-
-        // Expiration timestamp should be at least `_minExpirationTimestampDiff`
-        // seconds in the future
-        uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
-        if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
-            revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
-        }
-
-        // Increment the token id
-        uint256 tokenId = $._nextTokenId++;
-
-        // Mint the token for the supplier (the caller)
-        _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        // Store the reservation
-        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
-
-        // Set the status
-        $._bookingStatus[tokenId] = BookingStatus.Reserved;
-
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
-    }
-
-    /**
      * @notice Buys a reserved token. The reservation must be for the message sender.
      *
      * Also the message sender should set allowance for the payment token to this
@@ -409,9 +346,14 @@ contract BookingToken is
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         BookingStatus status = $._bookingStatus[tokenId];
 
-        // If token is bought, expired or canceled, token is transferable
-        if (status == BookingStatus.Bought || status == BookingStatus.Canceled || status == BookingStatus.Expired) {
+        // If token is bought, expired or cancelled, token is transferable
+        if (status == BookingStatus.Bought || status == BookingStatus.Expired) {
             return;
+        }
+
+        // Revert if booking status is Cancelled
+        if (status == BookingStatus.Cancelled) {
+            revert InvalidTokenStatus(tokenId, status);
         }
 
         // If token is reserved, check if it is expired
@@ -442,8 +384,8 @@ contract BookingToken is
         TokenReservation storage reservation = $._reservations[tokenId];
         BookingStatus status = $._bookingStatus[tokenId];
 
-        // If token is already set as expired, bought or canceled, revert.
-        if (status == BookingStatus.Expired || status == BookingStatus.Bought || status == BookingStatus.Canceled) {
+        // If token is already set as expired, bought or cancelled, revert.
+        if (status == BookingStatus.Expired || status == BookingStatus.Bought || status == BookingStatus.Cancelled) {
             revert InvalidTokenStatus(tokenId, status);
         }
 

@@ -355,6 +355,7 @@ describe("CMAccount", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -365,6 +366,7 @@ describe("CMAccount", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    true,
                 );
 
             // Advance time to after the expiration

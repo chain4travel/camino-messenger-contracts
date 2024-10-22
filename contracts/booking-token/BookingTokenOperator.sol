@@ -43,9 +43,17 @@ library BookingTokenOperator {
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        bool _isCancellable
     ) public {
-        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
+        IBookingToken(bookingToken).safeMintWithReservation(
+            reservedFor,
+            uri,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            _isCancellable
+        );
     }
 
     /**
@@ -79,15 +87,43 @@ library BookingTokenOperator {
         }
     }
 
+    /**
+     * @notice Sets the cancellable flag for a token. This can only be called by the
+     * supplier of the token.
+     * @param tokenId The token id
+     * @param _isCancellable The new cancellable flag
+     */
+    function setCancellable(address bookingToken, uint256 tokenId, bool _isCancellable) external {
+        IBookingToken(bookingToken).setCancellable(tokenId, _isCancellable);
+    }
+
+    /**
+     * @notice Record the expiration of a booking token.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
     function recordExpiration(address bookingToken, uint256 tokenId) public {
         IBookingToken(bookingToken).recordExpiration(tokenId);
     }
 
+    /**
+     * @notice Initiates a cancellation proposal for a bought token.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     * @param refundAmount proposed refund amount
+     */
     function initiateCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
         IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
     }
 
-    // TODO: Send funds
+    /**
+     * @notice Accepts a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
     function acceptCancellationProposal(address bookingToken, uint256 tokenId) public {
         // Get paymentToken and refundAmount
         IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
@@ -113,18 +149,43 @@ library BookingTokenOperator {
         }
     }
 
+    /**
+     * @notice Counters a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     * @param refundAmount proposed refund amount
+     */
     function counterCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
         IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount);
     }
 
+    /**
+     * @notice Accepts a countered cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
     function acceptCounteredCancellationProposal(address bookingToken, uint256 tokenId) external {
         IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId);
     }
 
+    /**
+     * @notice Cancels a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
     function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
         IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
     }
 
+    /**
+     * @dev Gets the status of a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
     function getCancellationProposalStatus(
         address bookingToken,
         uint256 tokenId

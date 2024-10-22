@@ -32,7 +32,9 @@ contract BookingTokenV2 is BookingToken {
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
     struct BookingTokenCancellableStorage {
         // Mapping to store the ongoing cancellation proposals for each token
-        mapping(uint256 => CancellationProposal) _cancellationProposals;
+        mapping(uint256 tokenId => CancellationProposal cancellationProposal) _cancellationProposals;
+        // Mapping to store the cancellable flag for each token
+        mapping(uint256 tokenId => bool cancellable) _isCancellable;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenCancellable")) - 1)) & ~bytes32(uint256(0xff));
@@ -53,6 +55,26 @@ contract BookingTokenV2 is BookingToken {
     /***************************************************
      *                   EVENTS                        *
      ***************************************************/
+
+    /**
+     * @notice Event emitted when a token is reserved.
+     *
+     * @param tokenId token id
+     * @param reservedFor reserved for address
+     * @param supplier supplier address
+     * @param expirationTimestamp expiration timestamp
+     * @param price price of the token
+     * @param paymentToken payment token address
+     */
+    event TokenReserved(
+        uint256 indexed tokenId,
+        address indexed reservedFor,
+        address indexed supplier,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken,
+        bool isCancellable
+    );
 
     /**
      * @notice Event emitted when a cancellation is initiated.
@@ -82,12 +104,20 @@ contract BookingTokenV2 is BookingToken {
     event CancellationCountered(uint256 indexed tokenId, address indexed counteredBy, uint256 newRefundAmount);
 
     /**
-     * @notice Event emitted when a cancellation proposal is canceled.
+     * @notice Event emitted when a cancellation proposal is cancelled.
      *
      * @param tokenId token id
-     * @param canceledBy address that canceled the proposal
+     * @param cancelledBy address that cancelled the proposal
      */
-    event CancellationProposalCanceled(uint256 indexed tokenId, address indexed canceledBy);
+    event CancellationProposalCancelled(uint256 indexed tokenId, address indexed cancelledBy);
+
+    /**
+     * @notice Event emitted when the cancellable flag for a token is updated.
+     *
+     * @param tokenId token id
+     * @param isCancellable new cancellable flag
+     */
+    event TokenCancellableUpdated(uint256 indexed tokenId, bool isCancellable);
 
     /***************************************************
      *                   ERRORS                        *
@@ -157,9 +187,95 @@ contract BookingTokenV2 is BookingToken {
      */
     error IncorrectAmount(uint256 actual, uint256 expected);
 
+    /**
+     * @notice Error for when the caller is not authorized to set the cancellable flag.
+     *
+     * @param tokenId The token id
+     * @param caller The address of the caller
+     */
+    error NotAuthorizedToSetCancellable(uint256 tokenId, address caller);
+
     /***************************************************
      *                   FUNCTIONS                     *
      ***************************************************/
+    /**
+     * @notice Mints a new token with a reservation for a specific address.
+     *
+     * @param reservedFor The CM Account address that can buy the token
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
+     */
+    function safeMintWithReservation(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken,
+        bool _isCancellable
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Require reservedFor to be a CM Account
+        requireCMAccount(reservedFor);
+
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Expiration timestamp should be at least `_minExpirationTimestampDiff`
+        // seconds in the future
+        uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
+        if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
+            revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
+        }
+
+        // Increment the token id
+        uint256 tokenId = $._nextTokenId++;
+
+        // Mint the token for the supplier (the caller)
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, uri);
+
+        // Store the reservation
+        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
+
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Reserved;
+
+        // Set the cancellable flag
+        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = _isCancellable;
+
+        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken, _isCancellable);
+    }
+
+    /**
+     * @notice Returns true if the token is cancellable and false otherwise.
+     * @param tokenId The token id
+     */
+    function isCancellable(uint256 tokenId) external view returns (bool) {
+        return _getBookingTokenCancellableStorage()._isCancellable[tokenId];
+    }
+
+    /**
+     * @notice Sets the cancellable flag for a token. This can only be called by the
+     * supplier of the token.
+     * @param tokenId The token id
+     * @param _isCancellable The new cancellable flag
+     */
+    function setCancellable(uint256 tokenId, bool _isCancellable) external {
+        // Get the supplier
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        address supplier = $._reservations[tokenId].supplier;
+
+        // Revert if the caller is not the supplier
+        if (msg.sender != supplier) {
+            revert NotAuthorizedToSetCancellable(tokenId, msg.sender);
+        }
+
+        // Set the cancellable flag
+        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = _isCancellable;
+
+        // Emit the set cancellable event
+        emit TokenCancellableUpdated(tokenId, _isCancellable);
+    }
 
     /**
      * @notice Retrieves the refund amount for a given token.
@@ -205,8 +321,10 @@ contract BookingTokenV2 is BookingToken {
 
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
 
-        // FIXME: Should we allow cancellation proposals to be initiated when there
-        // is an active cancellation proposal and the status is Rejected?
+        // Revert if there is already an active cancellation proposal
+        if (cancellableStorage._cancellationProposals[tokenId].status != CancellationProposalStatus.NoProposal) {
+            revert TokenHasActiveCancellationProposal(tokenId);
+        }
 
         // Store cancellation proposal
         cancellableStorage._cancellationProposals[tokenId] = CancellationProposal({
@@ -234,6 +352,8 @@ contract BookingTokenV2 is BookingToken {
 
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         TokenReservation memory reservation = $._reservations[tokenId];
+
+        // FIXME: Distributor should approve supplier's proposal
 
         // Revert if the caller is not the supplier, only the supplier can accept a
         // cancellation proposal
@@ -270,8 +390,8 @@ contract BookingTokenV2 is BookingToken {
             payable(owner).sendValue(msg.value);
         }
 
-        // Set token status to "cancelled"
-        $._bookingStatus[tokenId] = BookingStatus.Canceled;
+        // Set token status to "Cancelled"
+        $._bookingStatus[tokenId] = BookingStatus.Cancelled;
 
         // Set cancellation proposal status to "accepted"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Accepted;
@@ -293,7 +413,10 @@ contract BookingTokenV2 is BookingToken {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
 
-        if (proposal.status != CancellationProposalStatus.Pending) {
+        if (
+            proposal.status != CancellationProposalStatus.Pending &&
+            proposal.status != CancellationProposalStatus.Rejected
+        ) {
             revert NoPendingCancellationProposal(tokenId);
         }
 
@@ -365,8 +488,8 @@ contract BookingTokenV2 is BookingToken {
         // Cancel the proposal by deleting it from the storage
         delete cancellableStorage._cancellationProposals[tokenId];
 
-        // Emit the cancellation proposal canceled event
-        emit CancellationProposalCanceled(tokenId, msg.sender);
+        // Emit the cancellation proposal cancelled event
+        emit CancellationProposalCancelled(tokenId, msg.sender);
     }
 
     /**
