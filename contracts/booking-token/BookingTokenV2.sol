@@ -2,6 +2,9 @@
 pragma solidity 0.8.24;
 
 import { BookingToken, Address, SafeERC20, IERC20 } from "./BookingToken.sol";
+import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
+
+//import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
 
 /**
  * @title BookingTokenV2
@@ -16,18 +19,11 @@ contract BookingTokenV2 is BookingToken {
      *                   STORAGE                       *
      ***************************************************/
 
-    enum CancellationProposalStatus {
-        NoProposal, // 0, default
-        Pending, // 1
-        Rejected, // 2
-        Countered, // 3
-        Accepted // 4
-    }
-
     struct CancellationProposal {
         uint256 refundAmount;
         address proposedBy;
         CancellationProposalStatus status;
+        CancellationRejectionReason rejectionReason;
     }
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
     struct BookingTokenCancellableStorage {
@@ -131,6 +127,15 @@ contract BookingTokenV2 is BookingToken {
      * @param isCancellable new cancellable flag
      */
     event TokenCancellableUpdated(uint256 indexed tokenId, bool isCancellable);
+
+    /**
+     * @notice Event emitted when a cancellation proposal is rejected.
+     *
+     * @param tokenId token id
+     * @param rejectedBy address that rejected the proposal
+     * @param reason reason for rejection
+     */
+    event CancellationRejected(uint256 indexed tokenId, address indexed rejectedBy, CancellationRejectionReason reason);
 
     /***************************************************
      *                   ERRORS                        *
@@ -344,10 +349,44 @@ contract BookingTokenV2 is BookingToken {
         cancellableStorage._cancellationProposals[tokenId] = CancellationProposal({
             refundAmount: refundAmount,
             proposedBy: msg.sender,
-            status: CancellationProposalStatus.Pending
+            status: CancellationProposalStatus.Pending,
+            rejectionReason: CancellationRejectionReason.Unspecified
         });
 
         emit CancellationPending(tokenId, msg.sender, refundAmount);
+    }
+
+    /**
+     * @notice Reject a cancellation proposal for a bought token.
+     *
+     * @param tokenId The token id to reject the cancellation for
+     * @param reason The reason for rejecting the cancellation
+     */
+    function rejectCancellationProposal(uint256 tokenId, CancellationRejectionReason reason) external {
+        BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
+        CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Revert if the cancellation proposal status is not "Pending"
+        if (proposal.status != CancellationProposalStatus.Pending) {
+            revert NoPendingCancellationProposal(tokenId);
+        }
+
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        TokenReservation memory reservation = $._reservations[tokenId];
+
+        address owner = _requireOwned(tokenId);
+
+        // Revert if the caller is not the supplier and the proposer is not the
+        // owner. Only the supplier can reject a cancellation proposal.
+        if (msg.sender != reservation.supplier || proposal.proposedBy != owner) {
+            revert NotAuthorizedToAcceptCancellation(tokenId, msg.sender);
+        }
+
+        // Reject the cancellation proposal
+        cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Rejected;
+        cancellableStorage._cancellationProposals[tokenId].rejectionReason = reason;
+
+        emit CancellationRejected(tokenId, msg.sender, reason);
     }
 
     /**
@@ -531,10 +570,19 @@ contract BookingTokenV2 is BookingToken {
      */
     function getCancellationProposalStatus(
         uint256 tokenId
-    ) external view returns (uint256 refundAmount, address proposedBy, CancellationProposalStatus status) {
+    )
+        external
+        view
+        returns (
+            uint256 refundAmount,
+            address proposedBy,
+            CancellationProposalStatus status,
+            CancellationRejectionReason rejectionReason
+        )
+    {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
-        return (proposal.refundAmount, proposal.proposedBy, proposal.status);
+        return (proposal.refundAmount, proposal.proposedBy, proposal.status, proposal.rejectionReason);
     }
 
     /***************************************************

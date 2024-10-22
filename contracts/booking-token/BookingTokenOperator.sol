@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "./IBookingToken.sol";
+import { IBookingToken, IERC20, CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
 
 // ERC-20 Utils
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -150,6 +150,16 @@ library BookingTokenOperator {
     }
 
     /**
+     * @notice Reject a cancellation proposal for a bought token.
+     *
+     * @param tokenId The token id to reject the cancellation for
+     * @param reason The reason for rejecting the cancellation
+     */
+    function rejectCancellationProposal(address bookingToken, uint256 tokenId, uint256 reason) external {
+        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, CancellationRejectionReason(reason));
+    }
+
+    /**
      * @notice Counters a cancellation proposal.
      *
      * @param bookingToken booking token contract address
@@ -180,16 +190,25 @@ library BookingTokenOperator {
         IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
     }
 
-    /**
-     * @dev Gets the status of a cancellation proposal.
-     *
-     * @param bookingToken booking token contract address
-     * @param tokenId token id
-     */
-    function getCancellationProposalStatus(
-        address bookingToken,
-        uint256 tokenId
-    ) public view returns (uint256 refundAmount, address proposedBy, uint status) {
-        return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
-    }
+    // /**
+    //  * @dev Gets the status of a cancellation proposal.
+    //  *
+    //  * @param bookingToken booking token contract address
+    //  * @param tokenId token id
+    //  */
+    // function getCancellationProposalStatus(
+    //     address bookingToken,
+    //     uint256 tokenId
+    // )
+    //     public
+    //     view
+    //     returns (
+    //         uint256 refundAmount,
+    //         address proposedBy,
+    //         CancellationProposalStatus status,
+    //         CancellationRejectionReason rejectionReason
+    //     )
+    // {
+    //     return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
+    // }
 }

@@ -1017,6 +1017,9 @@ describe("BookingToken", function () {
             // Buy the token
             const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
 
+            // Wait for the transaction to be mined
+            await expect(buyTx).to.not.be.reverted;
+
             // Try to cancel the token
             const token_id = 0n;
             const proposer = await supplierCMAccount.getAddress();
@@ -1031,6 +1034,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer,
                 1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
             ]);
         });
         it("should revert initiating a proposal if token state is reserved or expired", async function () {
@@ -1097,6 +1101,7 @@ describe("BookingToken", function () {
                 0n,
                 ethers.ZeroAddress,
                 0n, // NoProposal == 0
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // Expire the token
@@ -1200,6 +1205,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer,
                 1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // Accept the cancellation, this should send the refund from supplier to distributor
@@ -1303,6 +1309,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer, // supplier
                 1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // Try to accept the cancellation proposed by the supplier with the
@@ -1428,6 +1435,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer,
                 1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // Accept the cancellation, this should send the refund from supplier to distributor
@@ -1532,6 +1540,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer,
                 1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // THERE IS AN ACTIVE CANCELLATION PROPOSAL
@@ -1583,6 +1592,7 @@ describe("BookingToken", function () {
                 refundAmount,
                 proposer,
                 4n, // Accepted == 1
+                0n, // Rejection Reason: Unspecified
             ]);
 
             // Try to transfer the token, should revert with InvalidTokenStatus
@@ -1593,122 +1603,138 @@ describe("BookingToken", function () {
                     .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
             ).to.be.revertedWithCustomError(bookingToken, "InvalidTokenStatus");
         });
-        // it("should allow transfer if cancellation is rejected", async function () {
-        //     const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
-        //         await loadFixture(deployBookingTokenFixture);
+        it("should reject correctly and allow transfer if cancellation is rejected", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
 
-        //     const tokenURI =
-        //         "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
 
-        //     const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
 
-        //     const price = ethers.parseEther("0.05");
+            const price = ethers.parseEther("0.05");
 
-        //     /***************************************************
-        //      *                   SUPPLIER                      *
-        //      ***************************************************/
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
 
-        //     // Grant BOOKING_OPERATOR_ROLE
-        //     const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
-        //     await expect(
-        //         supplierCMAccount
-        //             .connect(signers.cmAccountAdmin)
-        //             .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
-        //     ).to.not.reverted;
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
 
-        //     await expect(
-        //         await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
-        //             distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
-        //             tokenURI, // tokenURI
-        //             expirationTimestamp, // expiration
-        //             price, // price
-        //             ethers.ZeroAddress, // zero address
-        //             true,
-        //         ),
-        //     )
-        //         .to.be.emit(bookingToken, "TokenReserved")
-        //         .withArgs(
-        //             0n,
-        //             distributorCMAccount.getAddress(),
-        //             supplierCMAccount.getAddress(),
-        //             expirationTimestamp,
-        //             price,
-        //             ethers.ZeroAddress, // zero address
-        //             true,
-        //         );
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                    true,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                    true,
+                );
 
-        //     // Check token ownership
-        //     expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
 
-        //     // Check token booking status
-        //     expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
+            // Check token booking status
+            expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
 
-        //     /***************************************************
-        //      *                  DISTRIBUTOR                    *
-        //      ***************************************************/
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
 
-        //     // Grant BOOKING_OPERATOR_ROLE
-        //     await expect(
-        //         distributorCMAccount
-        //             .connect(signers.cmAccountAdmin)
-        //             .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
-        //     ).to.not.reverted;
+            // Grant BOOKING_OPERATOR_ROLE
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
 
-        //     // Buy the token
-        //     const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            // Buy the token
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
 
-        //     await expect(buyTx)
-        //         .to.be.emit(bookingToken, "TokenBought")
-        //         .withArgs(0n, await distributorCMAccount.getAddress());
+            await expect(buyTx)
+                .to.be.emit(bookingToken, "TokenBought")
+                .withArgs(0n, await distributorCMAccount.getAddress());
 
-        //     // Try to cancel the token
-        //     const token_id = 0n;
-        //     const proposer = await distributorCMAccount.getAddress();
-        //     const refundAmount = ethers.parseEther("0.045");
+            // Initiate the cancellation
+            const token_id = 0n;
+            const proposer = await distributorCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
 
-        //     await expect(distributorCMAccount.connect(signers.btAdmin).initiateCancellationProposal(0n, refundAmount))
-        //         .to.emit(bookingToken, "CancellationPending")
-        //         .withArgs(token_id, proposer, refundAmount);
+            await expect(distributorCMAccount.connect(signers.btAdmin).initiateCancellationProposal(0n, refundAmount))
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(token_id, proposer, refundAmount);
 
-        //     // Sanity check
-        //     expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
-        //         refundAmount,
-        //         proposer,
-        //         1n, // Pending == 1
-        //     ]);
+            // Check proposal
+            expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
+                refundAmount,
+                proposer,
+                1n, // Pending == 1
+                0n, // Rejection Reason: Unspecified
+            ]);
 
-        //     // THERE IS AN ACTIVE CANCELLATION PROPOSAL
+            // TRY TRANSFER, SHOULD REVERT
 
-        //     // Set WITHDRAWER_ROLE
-        //     const WITHDRAWER_ROLE = await distributorCMAccount.WITHDRAWER_ROLE();
-        //     await expect(
-        //         distributorCMAccount
-        //             .connect(signers.cmAccountAdmin)
-        //             .grantRole(WITHDRAWER_ROLE, signers.withdrawer.address),
-        //     ).to.not.reverted;
+            // Set WITHDRAWER_ROLE
+            const WITHDRAWER_ROLE = await distributorCMAccount.WITHDRAWER_ROLE();
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(WITHDRAWER_ROLE, signers.withdrawer.address),
+            ).to.not.reverted;
 
-        //     // Try to transfer the token, should revert.
-        //     await expect(
-        //         distributorCMAccount
-        //             .connect(signers.withdrawer)
-        //             .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
-        //     )
-        //         .to.be.revertedWithCustomError(bookingToken, "TokenHasActiveCancellationProposalOrCancelled")
-        //         .withArgs(0n);
+            // Try to transfer the token, should revert.
+            await expect(
+                distributorCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
+            )
+                .to.be.revertedWithCustomError(bookingToken, "TokenHasActiveCancellationProposalOrCancelled")
+                .withArgs(0n);
 
-        //     // Sanity check
-        //     await expect(
-        //         bookingToken
-        //             .connect(signers.withdrawer)
-        //             .safeTransferFrom(await distributorCMAccount.getAddress(), signers.otherAccount2.address, 0n),
-        //     ).to.be.revertedWithCustomError(bookingToken, "TokenHasActiveCancellationProposalOrCancelled");
+            // REJECT THE CANCELLATION
+            await expect(
+                supplierCMAccount.connect(signers.btAdmin).rejectCancellationProposal(
+                    token_id,
+                    5n, // Reason: CancellationWindowExpired
+                ),
+            )
+                .to.emit(bookingToken, "CancellationRejected")
+                .withArgs(token_id, await supplierCMAccount.getAddress(), 5n);
 
-        //     await expect(
-        //         bookingToken
-        //             .connect(signers.withdrawer)
-        //             .transferFrom(await distributorCMAccount.getAddress(), signers.otherAccount2.address, 0n),
-        //     ).to.be.revertedWithCustomError(bookingToken, "TokenHasActiveCancellationProposalOrCancelled");
-        // });
+            // Check proposal
+            expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
+                refundAmount,
+                proposer,
+                2n, // Rejected == 2
+                5n, // Reason: CancellationWindowExpired
+            ]);
+
+            // TRY TRANSFER AGAIN, SHOULD NOT REVERT
+
+            await expect(
+                distributorCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
+            )
+                .to.emit(bookingToken, "Transfer")
+                .withArgs(await distributorCMAccount.getAddress(), signers.otherAccount2.address, 0n);
+        });
         // FIXME: add tests for other cases
     });
 });
