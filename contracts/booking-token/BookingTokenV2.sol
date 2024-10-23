@@ -158,30 +158,42 @@ contract BookingTokenV2 is BookingToken {
     /**
      * @notice Error for when the caller is not authorized to accept a cancellation.
      *
+     * @param tokenId The token id
      * @param caller The address of the caller
      */
     error NotAuthorizedToAcceptCancellation(uint256 tokenId, address caller);
 
     /**
-     * @notice Error for when the caller is not authorized to counter a cancellation.
+     * @notice Error for when the caller is not authorized to reject a cancellation.
      *
+     * @param tokenId The token id
      * @param caller The address of the caller
      */
-    error NotAuthorizedToCounterCancellation(address caller);
+    error NotAuthorizedToRejectCancellation(uint256 tokenId, address caller);
+
+    /**
+     * @notice Error for when the caller is not authorized to counter a cancellation.
+     *
+     * @param tokenId The token id
+     * @param caller The address of the caller
+     */
+    error NotAuthorizedToCounterCancellation(uint256 tokenId, address caller);
 
     /**
      * @notice Error for when the caller is not authorized to accept a counter proposal.
      *
+     * @param tokenId The token id
      * @param caller The address of the caller
      */
-    error NotAuthorizedToAcceptCounterProposal(address caller);
+    error NotAuthorizedToAcceptCounterProposal(uint256 tokenId, address caller);
 
     /**
      * @notice Error for when the caller is not authorized to cancel a proposal.
      *
+     * @param tokenId The token id
      * @param caller The address of the caller
      */
-    error NotAuthorizedToCancelProposal(address caller);
+    error NotAuthorizedToCancelProposal(uint256 tokenId, address caller);
 
     /**
      * @notice Error for when there is no countered cancellation proposal.
@@ -379,7 +391,7 @@ contract BookingTokenV2 is BookingToken {
         // Revert if the caller is not the supplier and the proposer is not the
         // owner. Only the supplier can reject a cancellation proposal.
         if (msg.sender != reservation.supplier || proposal.proposedBy != owner) {
-            revert NotAuthorizedToAcceptCancellation(tokenId, msg.sender);
+            revert NotAuthorizedToRejectCancellation(tokenId, msg.sender);
         }
 
         // Reject the cancellation proposal
@@ -394,9 +406,14 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellationProposal(uint256 tokenId) external payable {
+    function acceptCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external payable {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Revert if the checkRefundAmount is not equal to the proposal refund amount
+        if (checkRefundAmount != proposal.refundAmount) {
+            revert IncorrectAmount(checkRefundAmount, proposal.refundAmount);
+        }
 
         // Revert if the cancellation proposal status is not "Pending"
         if (proposal.status != CancellationProposalStatus.Pending) {
@@ -491,9 +508,11 @@ contract BookingTokenV2 is BookingToken {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         address supplier = $._reservations[tokenId].supplier;
 
+        address owner = _requireOwned(tokenId);
+
         // Revert if the caller is not the supplier
-        if (msg.sender != supplier) {
-            revert NotAuthorizedToCounterCancellation(msg.sender);
+        if (msg.sender != supplier || proposal.proposedBy != owner) {
+            revert NotAuthorizedToCounterCancellation(tokenId, msg.sender);
         }
 
         // Update the proposal with the new values
@@ -501,6 +520,7 @@ contract BookingTokenV2 is BookingToken {
 
         // Set cancellation proposal status to "countered"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Countered;
+        cancellableStorage._cancellationProposals[tokenId].rejectionReason = CancellationRejectionReason.Unspecified;
 
         // Emit the countered proposal event
         emit CancellationCountered(tokenId, msg.sender, newRefundAmount);
@@ -510,16 +530,21 @@ contract BookingTokenV2 is BookingToken {
      * @notice Accept a countered cancellation proposal
      * @param tokenId The token id to accept the countered cancellation proposal for
      */
-    function acceptCounteredCancellationProposal(uint256 tokenId) external {
+    function acceptCounteredCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external {
         address owner = _requireOwned(tokenId);
 
         // Revert if the caller is not the owner
         if (msg.sender != owner) {
-            revert NotAuthorizedToAcceptCounterProposal(msg.sender);
+            revert NotAuthorizedToAcceptCounterProposal(tokenId, msg.sender);
         }
 
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
+
+        // Revert if the checkRefundAmount is not equal to the proposal refund amount
+        if (checkRefundAmount != proposal.refundAmount) {
+            revert IncorrectAmount(checkRefundAmount, proposal.refundAmount);
+        }
 
         // Revert if the cancellation proposal status is not "Countered"
         if (proposal.status != CancellationProposalStatus.Countered) {
@@ -545,7 +570,7 @@ contract BookingTokenV2 is BookingToken {
 
         // Revert if the caller is not the proposer
         if (msg.sender != proposal.proposedBy) {
-            revert NotAuthorizedToCancelProposal(msg.sender);
+            revert NotAuthorizedToCancelProposal(tokenId, msg.sender);
         }
 
         // Revert if the cancellation proposal status is not "Pending"

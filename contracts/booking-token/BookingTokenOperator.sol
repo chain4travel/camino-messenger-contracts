@@ -124,7 +124,7 @@ library BookingTokenOperator {
      * @param bookingToken booking token contract address
      * @param tokenId token id
      */
-    function acceptCancellationProposal(address bookingToken, uint256 tokenId) public {
+    function acceptCancellationProposal(address bookingToken, uint256 tokenId, uint256 checkRefundAmount) public {
         // Get paymentToken and refundAmount
         IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
         uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
@@ -141,11 +141,11 @@ library BookingTokenOperator {
             }
 
             // Accept the cancellation
-            IBookingToken(bookingToken).acceptCancellationProposal(tokenId);
+            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
         } else {
             // Payment is in native currency. Accept the cancellation by sending the
             // payment in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId);
+            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
         }
     }
 
@@ -176,8 +176,12 @@ library BookingTokenOperator {
      * @param bookingToken booking token contract address
      * @param tokenId token id
      */
-    function acceptCounteredCancellationProposal(address bookingToken, uint256 tokenId) external {
-        IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId);
+    function acceptCounteredCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) external {
+        IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId, checkRefundAmount);
     }
 
     /**
