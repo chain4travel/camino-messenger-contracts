@@ -6,7 +6,7 @@
 CONTRACTS=(
     "contracts/account/CMAccount.sol/CMAccount.json"
     "contracts/manager/CMAccountManager.sol/CMAccountManager.json"
-    "contracts/booking-token/BookingToken.sol/BookingToken.json"
+    "contracts/booking-token/BookingTokenV2.sol/BookingTokenV2.json"
     "contracts/utils/KYCUtils.sol/KYCUtils.json"
     "@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json"
 )
