@@ -42,14 +42,16 @@ describe("BookingToken", function () {
             const price = ethers.parseEther("0.05");
 
             await expect(
-                bookingToken.connect(signers.btAdmin).safeMintWithReservation(
-                    distributorCMAccount.getAddress(), // reservedFor
-                    tokenURI, // tokenURI
-                    expirationTimestamp, // expiration
-                    price, // price
-                    ethers.ZeroAddress, // zero address
-                    true,
-                ),
+                bookingToken
+                    .connect(signers.btAdmin)
+                    ["safeMintWithReservation(address,string,uint256,uint256,address,bool)"](
+                        distributorCMAccount.getAddress(), // reservedFor
+                        tokenURI, // tokenURI
+                        expirationTimestamp, // expiration
+                        price, // price
+                        ethers.ZeroAddress, // zero address
+                        true,
+                    ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
                 .withArgs(signers.btAdmin.address);
@@ -924,6 +926,34 @@ describe("BookingToken", function () {
 
             // Get cancellable flag
             expect(await bookingToken.isCancellable(0n)).to.equal(true);
+
+            // Mint one with isCancellable set to false
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // zero address
+                    false,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    1n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // zero address
+                    false,
+                );
+
+            // Check token booking status
+            expect(await bookingToken.getBookingStatus(1n)).to.equal(1); // Reserved == 1
+
+            // Get cancellable flag
+            expect(await bookingToken.isCancellable(1n)).to.equal(false);
         });
         it("should initiate cancellation of a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =

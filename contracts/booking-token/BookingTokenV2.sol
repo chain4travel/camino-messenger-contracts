@@ -278,6 +278,27 @@ contract BookingTokenV2 is BookingToken {
     }
 
     /**
+     * @notice Mints a new token with a reservation for a specific address. Setting
+     * the cancellable flag to false. Original function signature from V1.
+     *
+     * @param reservedFor The CM Account address that can buy the token
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The token used to pay for the reservation. If address(0)
+       then native.
+     */
+    function safeMintWithReservation(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken
+    ) public {
+        safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken, false);
+    }
+
+    /**
      * @notice Returns true if the token is cancellable and false otherwise.
      * @param tokenId The token id
      */
