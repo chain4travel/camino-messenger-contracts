@@ -386,7 +386,8 @@ contract CMAccount is
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        bool _isCancellable
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
         BookingTokenOperator.mintBookingToken(
@@ -395,7 +396,8 @@ contract CMAccount is
             uri,
             expirationTimestamp,
             price,
-            paymentToken
+            paymentToken,
+            _isCancellable
         );
     }
 
@@ -406,6 +408,22 @@ contract CMAccount is
      */
     function buyBookingToken(uint256 tokenId) external nonReentrant onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
+    }
+
+    /**
+     * @notice Record expiration status if the token is expired
+     */
+    function recordExpiration(uint256 tokenId) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.recordExpiration(getBookingTokenAddress(), tokenId);
+    }
+
+    /**
+     * @notice Set cancellable flag for booking token
+     * @param tokenId The token id
+     * @param cancellable The cancellable flag
+     */
+    function setCancellable(uint256 tokenId, bool cancellable) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.setCancellable(getBookingTokenAddress(), tokenId, cancellable);
     }
 
     /**
@@ -760,5 +778,42 @@ contract CMAccount is
      */
     function setGasMoneyWithdrawal(uint256 limit, uint256 period) public onlyRole(BOT_ADMIN_ROLE) {
         _setGasMoneyWithdrawal(limit, period);
+    }
+
+    /***************************************************
+     *                 CANCELLATION                    *
+     ***************************************************/
+
+    function initiateCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.initiateCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+    }
+
+    function acceptCancellationProposal(
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId, checkRefundAmount);
+    }
+
+    function rejectCancellationProposal(uint256 tokenId, uint256 reason) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.rejectCancellationProposal(getBookingTokenAddress(), tokenId, reason);
+    }
+
+    function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.counterCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+    }
+
+    function acceptCounteredCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+    }
+
+    function cancelCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
     }
 }

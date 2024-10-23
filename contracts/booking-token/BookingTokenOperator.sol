@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "./IBookingToken.sol";
+import { IBookingToken, IERC20, CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
 
 // ERC-20 Utils
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -43,9 +43,17 @@ library BookingTokenOperator {
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        bool _isCancellable
     ) public {
-        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
+        IBookingToken(bookingToken).safeMintWithReservation(
+            reservedFor,
+            uri,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            _isCancellable
+        );
     }
 
     /**
@@ -78,4 +86,133 @@ library BookingTokenOperator {
             IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }
+
+    /**
+     * @notice Sets the cancellable flag for a token. This can only be called by the
+     * supplier of the token.
+     * @param tokenId The token id
+     * @param _isCancellable The new cancellable flag
+     */
+    function setCancellable(address bookingToken, uint256 tokenId, bool _isCancellable) external {
+        IBookingToken(bookingToken).setCancellable(tokenId, _isCancellable);
+    }
+
+    /**
+     * @notice Record the expiration of a booking token.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
+    function recordExpiration(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).recordExpiration(tokenId);
+    }
+
+    /**
+     * @notice Initiates a cancellation proposal for a bought token.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     * @param refundAmount proposed refund amount
+     */
+    function initiateCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
+        IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
+    }
+
+    /**
+     * @notice Accepts a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
+    function acceptCancellationProposal(address bookingToken, uint256 tokenId, uint256 checkRefundAmount) public {
+        // Get paymentToken and refundAmount
+        IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
+        uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
+
+        // Check if payment is in native currency or in ERC20
+        if (address(paymentToken) != address(0) && refundAmount > 0) {
+            // Payment is in ERC20. Approve the BookingToken contract for the
+            // refund amount. BookingToken should do the transfer to the
+            // supplier.
+            bool approval = paymentToken.approve(bookingToken, refundAmount);
+
+            if (!approval) {
+                revert TokenApprovalFailed(bookingToken, address(paymentToken), refundAmount);
+            }
+
+            // Accept the cancellation
+            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
+        } else {
+            // Payment is in native currency. Accept the cancellation by sending the
+            // payment in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
+        }
+    }
+
+    /**
+     * @notice Reject a cancellation proposal for a bought token.
+     *
+     * @param tokenId The token id to reject the cancellation for
+     * @param reason The reason for rejecting the cancellation
+     */
+    function rejectCancellationProposal(address bookingToken, uint256 tokenId, uint256 reason) external {
+        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, CancellationRejectionReason(reason));
+    }
+
+    /**
+     * @notice Counters a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     * @param refundAmount proposed refund amount
+     */
+    function counterCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
+        IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount);
+    }
+
+    /**
+     * @notice Accepts a countered cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
+    function acceptCounteredCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) external {
+        IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId, checkRefundAmount);
+    }
+
+    /**
+     * @notice Cancels a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id
+     */
+    function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
+        IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
+    }
+
+    // /**
+    //  * @dev Gets the status of a cancellation proposal.
+    //  *
+    //  * @param bookingToken booking token contract address
+    //  * @param tokenId token id
+    //  */
+    // function getCancellationProposalStatus(
+    //     address bookingToken,
+    //     uint256 tokenId
+    // )
+    //     public
+    //     view
+    //     returns (
+    //         uint256 refundAmount,
+    //         address proposedBy,
+    //         CancellationProposalStatus status,
+    //         CancellationRejectionReason rejectionReason
+    //     )
+    // {
+    //     return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
+    // }
 }

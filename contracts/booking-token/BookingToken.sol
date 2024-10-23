@@ -32,7 +32,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
  * Booking Tokens can have zero price, meaning that the payment will be done
  * off-chain.
  *
- * When a token is minted with a reservation, it can not transferred until the
+ * When a token is minted with a reservation, it can not be transferred until the
  * expiration timestamp is reached or the token is bought.
  */
 contract BookingToken is
@@ -65,6 +65,14 @@ contract BookingToken is
      *                   STORAGE                       *
      ***************************************************/
 
+    enum BookingStatus {
+        Unspecified, // 0, default value
+        Reserved, // 1
+        Expired, // 2
+        Bought, // 3
+        Cancelled // 4
+    }
+
     // Reservation details
     struct TokenReservation {
         address reservedFor; // CM Account address that can buy the token
@@ -84,13 +92,15 @@ contract BookingToken is
         uint256 _minExpirationTimestampDiff;
         // Reservation details for each token
         mapping(uint256 tokenId => TokenReservation tokenReservation) _reservations;
+        // BookingStatus of each token
+        mapping(uint256 tokenId => BookingStatus status) _bookingStatus;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingToken")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 private constant BookingTokenStorageLocation =
         0x9db9d405bf15683ce835607b1f0b423dc1484d44bb9d5af64a483fa4afd82900;
 
-    function _getBookingTokenStorage() private pure returns (BookingTokenStorage storage $) {
+    function _getBookingTokenStorage() internal pure returns (BookingTokenStorage storage $) {
         assembly {
             $.slot := BookingTokenStorageLocation
         }
@@ -101,31 +111,19 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @notice Event emitted when a token is reserved.
-     *
-     * @param tokenId token id
-     * @param reservedFor reserved for address
-     * @param supplier supplier address
-     * @param expirationTimestamp expiration timestamp
-     * @param price price of the token
-     * @param paymentToken payment token address
-     */
-    event TokenReserved(
-        uint256 indexed tokenId,
-        address indexed reservedFor,
-        address indexed supplier,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    );
-
-    /**
      * @notice Event emitted when a token is bought.
      *
      * @param tokenId token id
      * @param buyer buyer address
      */
     event TokenBought(uint256 indexed tokenId, address indexed buyer);
+
+    /**
+     * @notice Event emitted when a token is expired.
+     *
+     * @param tokenId token id
+     */
+    event TokenExpired(uint256 indexed tokenId);
 
     /***************************************************
      *                    ERRORS                       *
@@ -194,6 +192,14 @@ contract BookingToken is
      */
     error InsufficientAllowance(address sender, IERC20 paymentToken, uint256 price, uint256 allowance);
 
+    /**
+     * @notice Invalid token status.
+     *
+     * @param tokenId token id
+     * @param status status
+     */
+    error InvalidTokenStatus(uint256 tokenId, BookingStatus status);
+
     /***************************************************
      *                  MODIFIERS                      *
      ***************************************************/
@@ -237,47 +243,6 @@ contract BookingToken is
      ***************************************************/
 
     /**
-     * @notice Mints a new token with a reservation for a specific address.
-     *
-     * @param reservedFor The CM Account address that can buy the token
-     * @param uri The URI of the token
-     * @param expirationTimestamp The expiration timestamp
-     * @param price The price of the token
-     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
-     */
-    function safeMintWithReservation(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) public onlyCMAccount(msg.sender) {
-        // Require reservedFor to be a CM Account
-        requireCMAccount(reservedFor);
-
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-
-        // Expiration timestamp should be at least `_minExpirationTimestampDiff`
-        // seconds in the future
-        uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
-        if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
-            revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
-        }
-
-        // Increment the token id
-        uint256 tokenId = $._nextTokenId++;
-
-        // Mint the token for the supplier (the caller)
-        _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        // Store the reservation
-        _reserve(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
-
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
-    }
-
-    /**
      * @notice Buys a reserved token. The reservation must be for the message sender.
      *
      * Also the message sender should set allowance for the payment token to this
@@ -316,9 +281,6 @@ contract BookingToken is
         // Only in this function and only for buying a reserved token
         _transfer(reservation.supplier, msg.sender, tokenId);
 
-        // Delete the reservation
-        delete $._reservations[tokenId];
-
         // Do the payment at the end
         if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
             // Payment is in ERC20.
@@ -344,8 +306,22 @@ contract BookingToken is
             payable(reservation.supplier).sendValue(msg.value);
         }
 
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Bought;
+
         // Emit event
         emit TokenBought(tokenId, msg.sender);
+    }
+
+    /**
+     * @notice Return booking status
+     *
+     * @param tokenId The token id
+     * @return The booking status
+     */
+    function getBookingStatus(uint256 tokenId) public view returns (BookingStatus) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._bookingStatus[tokenId];
     }
 
     /**
@@ -366,22 +342,62 @@ contract BookingToken is
     /**
      * @notice Check if the token is transferable
      */
-    function checkTransferable(uint256 tokenId) internal {
+    function checkTransferable(uint256 tokenId) internal virtual {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        TokenReservation memory reservation = $._reservations[tokenId];
+        BookingStatus status = $._bookingStatus[tokenId];
 
+        // If token is bought, expired or cancelled, token is transferable
+        if (status == BookingStatus.Bought || status == BookingStatus.Expired) {
+            return;
+        }
+
+        // Revert if booking status is Cancelled
+        if (status == BookingStatus.Cancelled) {
+            revert InvalidTokenStatus(tokenId, status);
+        }
+
+        // If token is reserved, check if it is expired
         // If expiration time is in the past, token is transferable. Because it can
         // not be bought after expired.
-        //
-        // This is also true if expirationTimestamp is 0. Which means there is no
-        // reservation and token is transferable. No need to check for the
-        // reservedFor address.
-        if (block.timestamp <= reservation.expirationTimestamp) {
-            // Token is not transferable
+        TokenReservation storage reservation = $._reservations[tokenId];
+
+        if (block.timestamp > reservation.expirationTimestamp) {
+            // Token is expired, set status to expired
+            $._bookingStatus[tokenId] = BookingStatus.Expired;
+
+            // Emit event
+            emit TokenExpired(tokenId);
+            return;
+        } else {
+            // Token is not expired, revert transfer
             revert TokenIsReserved(tokenId, reservation.reservedFor);
-        } else if (reservation.reservedFor != address(0)) {
-            // Clean up: Token is transferable but has expired reservation
-            delete $._reservations[tokenId];
+        }
+    }
+
+    /**
+     * @notice Record expiration status if the token is expired
+     *
+     * @param tokenId The token id
+     */
+    function recordExpiration(uint256 tokenId) public virtual {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        TokenReservation storage reservation = $._reservations[tokenId];
+        BookingStatus status = $._bookingStatus[tokenId];
+
+        // If token is already set as expired, bought or cancelled, revert.
+        if (status == BookingStatus.Expired || status == BookingStatus.Bought || status == BookingStatus.Cancelled) {
+            revert InvalidTokenStatus(tokenId, status);
+        }
+
+        // If expiration time is in the past, set status to expired
+        if (block.timestamp > reservation.expirationTimestamp) {
+            $._bookingStatus[tokenId] = BookingStatus.Expired;
+
+            // Emit event
+            emit TokenExpired(tokenId);
+        } else {
+            // Token is not expired, revert setting status
+            revert TokenIsReserved(tokenId, reservation.reservedFor);
         }
     }
 
