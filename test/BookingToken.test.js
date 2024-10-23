@@ -1910,6 +1910,32 @@ describe("BookingToken", function () {
                 0n, // Rejection Reason: Unspecified
             ]);
 
+            // DETOUR: Test "cancel counter proposal" by distributor cm account
+
+            await expect(distributorCMAccount.connect(signers.btAdmin).cancelCancellationProposal(token_id))
+                .to.emit(bookingToken, "CancellationProposalCancelled")
+                .withArgs(token_id, await distributorCMAccount.getAddress());
+
+            // Check proposal
+            expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
+                0n,
+                ethers.ZeroAddress,
+                0n,
+                0n,
+            ]);
+
+            // BACK TO COUNTER PROPOSAL: Recreate the cancellation
+            await expect(distributorCMAccount.connect(signers.btAdmin).initiateCancellationProposal(0n, refundAmount))
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(token_id, proposer, refundAmount);
+
+            await expect(
+                supplierCMAccount.connect(signers.btAdmin).counterCancellationProposal(token_id, newRefundAmount),
+            )
+                .to.emit(bookingToken, "CancellationCountered")
+                .withArgs(token_id, await supplierCMAccount.getAddress(), newRefundAmount);
+            // END BACK TO COUNTER PROPOSAL
+
             // Try to accept the countered cancellation proposal with supplier cm account, should revert
             await expect(
                 supplierCMAccount

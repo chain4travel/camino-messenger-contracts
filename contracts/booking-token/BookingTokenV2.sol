@@ -573,8 +573,11 @@ contract BookingTokenV2 is BookingToken {
             revert NotAuthorizedToCancelProposal(tokenId, msg.sender);
         }
 
-        // Revert if the cancellation proposal status is not "Pending"
-        if (proposal.status != CancellationProposalStatus.Pending) {
+        // Revert if the cancellation proposal status is not "Pending" or "Countered"
+        if (
+            proposal.status != CancellationProposalStatus.Pending &&
+            proposal.status != CancellationProposalStatus.Countered
+        ) {
             revert NoPendingCancellationProposal(tokenId);
         }
 
