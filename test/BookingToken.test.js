@@ -872,7 +872,7 @@ describe("BookingToken", function () {
         });
     });
     describe("Cancellation", function () {
-        it("should set and get cancellable flag correctly", async function () {
+        it("should get cancellable flag correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
                 await loadFixture(deployBookingTokenFixture);
 
@@ -924,34 +924,6 @@ describe("BookingToken", function () {
 
             // Get cancellable flag
             expect(await bookingToken.isCancellable(0n)).to.equal(true);
-
-            // Set cancellable flag
-            await expect(supplierCMAccount.connect(signers.btAdmin).setCancellable(0n, false))
-                .to.emit(bookingToken, "TokenCancellableUpdated")
-                .withArgs(0n, false);
-
-            // Check cancellable flag
-            expect(await bookingToken.isCancellable(0n)).to.equal(false);
-
-            // Try to set cancellable with unauthorized caller, should revert with
-            // NotAuthorizedToSetCancellable
-            await expect(distributorCMAccount.connect(signers.otherAccount3).setCancellable(0n, true))
-                .to.revertedWithCustomError(distributorCMAccount, "AccessControlUnauthorizedAccount")
-                .withArgs(signers.otherAccount3.address, BOOKING_OPERATOR_ROLE);
-
-            // Try to set cancellable with unauthorized cm account, should revert with
-            // NotAuthorizedToSetCancellable
-
-            // Grant BOOKING_OPERATOR_ROLE for other account on distributor cm account
-            await expect(
-                distributorCMAccount
-                    .connect(signers.cmAccountAdmin)
-                    .grantRole(BOOKING_OPERATOR_ROLE, signers.otherAccount3.address),
-            ).to.not.reverted;
-
-            await expect(distributorCMAccount.connect(signers.otherAccount3).setCancellable(0n, true))
-                .to.revertedWithCustomError(bookingToken, "NotAuthorizedToSetCancellable")
-                .withArgs(0n, await distributorCMAccount.getAddress());
         });
         it("should initiate cancellation of a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =

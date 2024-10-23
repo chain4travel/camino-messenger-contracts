@@ -286,29 +286,6 @@ contract BookingTokenV2 is BookingToken {
     }
 
     /**
-     * @notice Sets the cancellable flag for a token. This can only be called by the
-     * supplier of the token.
-     * @param tokenId The token id
-     * @param _isCancellable The new cancellable flag
-     */
-    function setCancellable(uint256 tokenId, bool _isCancellable) external {
-        // Get the supplier
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-        address supplier = $._reservations[tokenId].supplier;
-
-        // Revert if the caller is not the supplier
-        if (msg.sender != supplier) {
-            revert NotAuthorizedToSetCancellable(tokenId, msg.sender);
-        }
-
-        // Set the cancellable flag
-        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = _isCancellable;
-
-        // Emit the set cancellable event
-        emit TokenCancellableUpdated(tokenId, _isCancellable);
-    }
-
-    /**
      * @notice Retrieves the refund amount for a given token.
      *
      * @param tokenId The token id to retrieve the refund amount for
