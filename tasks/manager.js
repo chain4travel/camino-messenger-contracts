@@ -292,4 +292,14 @@ BT_SCOPE.task("role:has", "Check if address has role")
         console.log(`${hasRole ? "🟢" : "🔴"}`, hasRole);
     });
 
+BT_SCOPE.task("status", "Show BookingToken status").setAction(async (taskArgs, hre) => {
+    const btoken = await getBookingToken(hre);
+    console.log(`📅 ${bold("BookingToken")}`);
+    const name = await btoken.name();
+    const symbol = await btoken.symbol();
+    console.log(`${bold("Address")}: ${await btoken.getAddress()}`);
+    console.log(`${bold("Name")}: ${name}`);
+    console.log(`${bold("Symbol")}: ${symbol}`);
+});
+
 module.exports = {};
