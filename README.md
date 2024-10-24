@@ -35,13 +35,13 @@ Chain4Travel is running the first and currently only messenger server.
 
 | Camino Mainnet                       | Address                                      |
 | ------------------------------------ | -------------------------------------------- |
-| Messenger URL                        | `https://dev.messenger.chain4travel.com`     |
+| Messenger URL                        | `https://messenger.chain4travel.com`         |
 | Messenger CM Account                 | `0x16DFfB3911BB0b1B53eF4d774804381f0B38B5d7` |
 | Messenger Service Bot (`toBot`) Addr | `0xbeb027D2f439805E17EAA16Da26c1FCa68a30232` |
 
 | Columbus Testnet                     | Address                                      |
 | ------------------------------------ | -------------------------------------------- |
-| Messenger URL                        | `https://messenger.chain4travel.com`         |
+| Messenger URL                        | `https://dev.messenger.chain4travel.com`     |
 | Messenger CM Account                 | `0xF6bA5c68A505559c170dC7a30448Ed64D8b9Bc3B` |
 | Messenger Service Bot (`toBot`) Addr | `0xff6BAC3d972680515cbB59fCB6Db6deB13Eb0E91` |
 
