@@ -1370,8 +1370,8 @@ describe("BookingToken", function () {
 
             // Try to accept the cancellation proposed by the supplier with another account
             await expect(bookingToken.connect(signers.otherAccount3).acceptCancellationProposal(token_id, refundAmount))
-                .to.be.revertedWithCustomError(bookingToken, "NotAuthorizedToAcceptCancellation")
-                .withArgs(0n, signers.otherAccount3.address);
+                .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
+                .withArgs(signers.otherAccount3.address);
 
             // Accept the supplier's proposal with the distributor cm account
             await expect(
@@ -1391,8 +1391,8 @@ describe("BookingToken", function () {
 
             // Sanity check: Try to accept the cancellation proposed by the owner with another account
             await expect(bookingToken.connect(signers.otherAccount2).acceptCancellationProposal(token_id, refundAmount))
-                .to.be.revertedWithCustomError(bookingToken, "NotAuthorizedToAcceptCancellation")
-                .withArgs(0n, signers.otherAccount2.address);
+                .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
+                .withArgs(signers.otherAccount2.address);
 
             // Finally, accept the "owner accepted proposal" with the supplier cm account
             const acceptTx = await supplierCMAccount
