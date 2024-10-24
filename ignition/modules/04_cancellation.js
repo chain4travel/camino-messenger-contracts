@@ -31,8 +31,11 @@ const CancellationModule = buildModule("CancellationModule", (m) => {
         id: "BookingTokenV2Impl",
     });
 
+    // Encode the Reinitialize function call for BookingTokenV2
+    const reinitializeV2 = m.encodeFunctionCall(bookingTokenV2, "reinitializeV2", ["BookingToken", "BToken"]);
+
     // Upgrade the BookingToken contract to V2
-    m.call(bookingTokenProxy, "upgradeToAndCall", [bookingTokenV2, "0x"]);
+    m.call(bookingTokenProxy, "upgradeToAndCall", [bookingTokenV2, reinitializeV2]);
 
     return { managerProxy, bookingTokenProxy, bookingTokenOperator, newCMAccountImpl };
 });
