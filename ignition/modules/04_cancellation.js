@@ -1,10 +1,38 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 const CaminoMessengerModule = require("./01_messenger");
+const hre = require("hardhat");
+
+function getAddressesForNetwork(hre) {
+    let addresses;
+
+    if (hre.network.name === "columbus") {
+        console.log("Running on columbus");
+        addresses = require("../deployments/chain-501/deployed_addresses.json");
+    } else if (hre.network.name === "camino") {
+        console.log("Running on camino");
+        addresses = require("../deployments/chain-500/deployed_addresses.json");
+    } else if (hre.network.name === "localhost") {
+        console.log("Running on localhost");
+        addresses = require("../deployments/chain-31337/deployed_addresses.json");
+    } else {
+        throw new Error(`Unsupported network: ${hre.network.name}`);
+    }
+
+    return addresses;
+}
 
 // Upgrades for the BookingToken Cancellation support
 const CancellationModule = buildModule("CancellationModule", (m) => {
-    // Use module to get the managerProxy and bookingTokenProxy
-    const { managerProxy, bookingTokenProxy } = m.useModule(CaminoMessengerModule);
+    // Use addresses from the deployment to get the managerProxy and bookingTokenProxy contracts
+    const addresses = getAddressesForNetwork(hre);
+
+    const managerProxy = m.contractAt("CMAccountManager", addresses["CaminoMessengerModule#ManagerProxy"], {
+        id: "ManagerProxy",
+    });
+
+    const bookingTokenProxy = m.contractAt("BookingToken", addresses["CaminoMessengerModule#BookingTokenProxy"], {
+        id: "BookingTokenProxy",
+    });
 
     // BookingTokenOperator is updated to support Cancellation. We need to deploy a
     // new library for CMAccount implementation.
