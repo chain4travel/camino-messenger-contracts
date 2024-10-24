@@ -10,5 +10,10 @@
   "CMAccountVerifyChequeFixModule#BookingTokenOperator": "0x10133935503b4f958f6dFF783b628ba25aC010E3",
   "CMAccountVerifyChequeFixModule#CMAccount": "0x0604d78E74bAab18b56eA5c4AAD106E01665f277",
   "CMAccountEventsUpdateModule#BookingTokenOperator": "0x10133935503b4f958f6dFF783b628ba25aC010E3",
-  "CMAccountEventsUpdateModule#CMAccount": "0xa51fd8A967b9de646270eC4DeD2F53812F469a17"
+  "CMAccountEventsUpdateModule#CMAccount": "0xa51fd8A967b9de646270eC4DeD2F53812F469a17",
+  "CancellationModule#BookingTokenOperator": "0xac1300CDaF25fD622a0fA09302fB09e9a6400ae4",
+  "CancellationModule#BookingTokenProxy": "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC",
+  "CancellationModule#ManagerProxy": "0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F",
+  "CancellationModule#BookingTokenV2Impl": "0xBf6b064c6799833C1f8261C3Fb819fFA3C740F8D",
+  "CancellationModule#CMAccount": "0xaA573b3942168bC5222C7aa11c6708D7f64Af374"
 }
