@@ -404,7 +404,10 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId The token id to accept the cancellation for
      */
-    function acceptCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external payable {
+    function acceptCancellationProposal(
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) external payable nonReentrant onlyCMAccount(msg.sender) {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -425,7 +428,7 @@ contract BookingTokenV2 is BookingToken {
 
         // Set the proposer to the owner if the proposedBy is the supplier and the
         // caller is the owner. This means that the distributor/owner is accepting
-        // the proposal. Setting the proposedBy to the owner, which allows the
+        // the proposal, by setting the proposedBy to the owner, which allows the
         // supplier to accept the proposal.
         if (proposal.proposedBy == reservation.supplier && msg.sender == owner) {
             // Set proposedBy to distributor/owner
@@ -434,11 +437,11 @@ contract BookingTokenV2 is BookingToken {
             // Emit event so the supplier can get notified
             emit CancellationProposalAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
 
-            // We're done here because there is nothing else to do for the owner.
+            // Exit early as there's nothing else to do for the owner.
             return;
         }
 
-        // Revert if the caller is not the supplier and the proposer is not the
+        // Revert if the caller is not the supplier or the proposer is not the
         // owner. Only the supplier can accept a cancellation proposal after this
         // point.
         if (msg.sender != reservation.supplier || proposal.proposedBy != owner) {
@@ -447,7 +450,21 @@ contract BookingTokenV2 is BookingToken {
 
         // Finalize the cancellation
 
-        // Do the payment of the refund
+        // Set token status to "Cancelled"
+        $._bookingStatus[tokenId] = BookingStatus.Cancelled;
+
+        // Set cancellation proposal status to "Accepted"
+        cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Accepted;
+
+        // Burn the token
+        _burn(tokenId);
+
+        // Emit the cancellation accepted event
+        emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount);
+
+        // Interactions: Perform external calls after state updates.
+
+        // Process the refund payment
         if (address(reservation.paymentToken) != address(0) && proposal.refundAmount > 0) {
             // Payment is in ERC20.
             //
@@ -459,12 +476,13 @@ contract BookingTokenV2 is BookingToken {
                 revert InsufficientAllowance(msg.sender, reservation.paymentToken, proposal.refundAmount, allowance);
             }
 
-            // Transfer proposal refund amount in the ERC20 tokens from the supplier
-            // to the owner
+            // Transfer proposal refund amount as ERC20 tokens from the supplier to
+            // the owner
             reservation.paymentToken.safeTransferFrom(msg.sender, owner, proposal.refundAmount);
         } else {
             // Payment is in native currency or refund is zero.
-            // Check if we receive the right refund amount
+
+            // Check if we receive the correct refund amount
             if (msg.value != proposal.refundAmount) {
                 revert IncorrectAmount(msg.value, proposal.refundAmount);
             }
@@ -472,18 +490,6 @@ contract BookingTokenV2 is BookingToken {
             // Transfer payment to the owner
             payable(owner).sendValue(msg.value);
         }
-
-        // Set token status to "Cancelled"
-        $._bookingStatus[tokenId] = BookingStatus.Cancelled;
-
-        // Set cancellation proposal status to "accepted"
-        cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Accepted;
-
-        // Burn the token
-        _burn(tokenId);
-
-        // Emit the cancellation accepted event
-        emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount);
     }
 
     /**
