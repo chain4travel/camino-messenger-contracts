@@ -219,6 +219,30 @@ ACCOUNT_SCOPE.task("create", "Create CMAccount")
         }
     });
 
+ACCOUNT_SCOPE.task("withdraw", "Withdraw funds from CMAccount")
+    .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
+    .addParam("recipient", "Recipient address")
+    .addParam("amount", "Amount to withdraw")
+    .setAction(async (taskArgs, hre) => {
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+
+        try {
+            console.log("Running on", hre.network.name);
+            const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
+            const tx = await cmAccount.connect(signer).withdraw(taskArgs.recipient, taskArgs.amount);
+            const receipt = await tx.wait();
+            console.log("Tx:", receipt.hash);
+        } catch (error) {
+            handleTransactionError(error, cmAccount);
+        }
+    });
+
 ACCOUNT_SCOPE.task("bot:add", "Add bot to the CMAccount")
     .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
     .addOptionalParam(
