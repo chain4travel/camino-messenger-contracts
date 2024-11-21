@@ -234,6 +234,11 @@ ACCOUNT_SCOPE.task("withdraw", "Withdraw funds from CMAccount")
 
         try {
             console.log("Running on", hre.network.name);
+            console.log("💸 Withdrawing funds...");
+            console.log("From  :", taskArgs.cmAccount);
+            console.log("To    :", taskArgs.recipient);
+            console.log("Amount:", taskArgs.amount);
+
             const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
             const tx = await cmAccount.connect(signer).withdraw(taskArgs.recipient, taskArgs.amount);
             const receipt = await tx.wait();
