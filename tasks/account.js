@@ -228,19 +228,47 @@ ACCOUNT_SCOPE.task("withdraw", "Withdraw funds from CMAccount")
     )
     .addParam("recipient", "Recipient address")
     .addParam("amount", "Amount to withdraw")
+    .addOptionalParam("unit", "Unit of amount (CAM/nCAM/aCAM)", "aCAM")
     .setAction(async (taskArgs, hre) => {
         const cmAccount = await getCMAccount(taskArgs.cmAccount);
         console.log("CMAccount:", taskArgs.cmAccount);
 
         try {
+            // Validate unit
+            const validUnits = ["cam", "ncam", "acam"];
+            if (!validUnits.includes(taskArgs.unit.toLowerCase())) {
+                throw new Error(`Invalid unit. Must be one of: ${validUnits.join(", ")}`);
+            }
+
+            // Convert amount to wei based on unit
+            let amountInWei;
+            let hrUnit;
+            const unit = taskArgs.unit.toLowerCase();
+
+            switch (unit) {
+                case "cam":
+                    amountInWei = ethers.parseEther(taskArgs.amount.toString());
+                    hrUnit = "CAM";
+                    break;
+                case "ncam":
+                    amountInWei = ethers.parseUnits(taskArgs.amount.toString(), "gwei");
+                    hrUnit = "nCAM";
+                    break;
+                case "acam":
+                    amountInWei = taskArgs.amount.toString();
+                    hrUnit = "aCAM";
+                    break;
+            }
+
             console.log("Running on", hre.network.name);
             console.log("💸 Withdrawing funds...");
-            console.log("From  :", taskArgs.cmAccount);
-            console.log("To    :", taskArgs.recipient);
-            console.log("Amount:", taskArgs.amount);
+            console.log("From         :", taskArgs.cmAccount);
+            console.log("To           :", taskArgs.recipient);
+            console.log("Amount       :", `${taskArgs.amount} ${hrUnit}`);
+            console.log("Amount (aCAM):", amountInWei.toString());
 
             const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
-            const tx = await cmAccount.connect(signer).withdraw(taskArgs.recipient, taskArgs.amount);
+            const tx = await cmAccount.connect(signer).withdraw(taskArgs.recipient, amountInWei);
             const receipt = await tx.wait();
             console.log("Tx:", receipt.hash);
         } catch (error) {
