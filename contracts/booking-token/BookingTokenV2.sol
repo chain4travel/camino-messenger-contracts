@@ -26,7 +26,9 @@ contract BookingTokenV2 is BookingToken {
     address public constant NATIVE_PAYMENT = address(0);
 
     /**
-     * @dev Special address for offchain payments.
+     * @dev Special address for offchain payments. The enum for this
+     * is defined in the Camino Messenger Protocol's
+     * cmp.types.<version>.IsoCurrency enum (currency.proto file).
      * @notice A third-party service is used to handle payments.
      */
     address public constant OFFCHAIN_PAYMENT = address(1);
@@ -445,7 +447,7 @@ contract BookingTokenV2 is BookingToken {
      * @notice Retrieves the refund amount for a given token.
      *
      * @param tokenId The token id to retrieve the refund amount for
-     * @return refundAmount The refund amount in wei
+     * @return refundAmount The refund amount in aCAM (wei)
      */
     function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount) {
         return _getBookingTokenCancellableStorage()._cancellationProposals[tokenId].refundAmount;
@@ -475,7 +477,7 @@ contract BookingTokenV2 is BookingToken {
      * @notice Initiates a cancellation for a bought token.
      *
      * @param tokenId The token id to initiate the cancellation for
-     * @param refundAmount The proposed refund amount in wei
+     * @param refundAmount The proposed refund amount in aCAM (wei)
      */
     function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external {
         // Revert if the token status is not "bought"
@@ -615,7 +617,7 @@ contract BookingTokenV2 is BookingToken {
      * @notice Counters a cancellation proposal with a new proposal.
      *
      * @param tokenId The token id to counter the cancellation for
-     * @param newRefundAmount The new proposed refund amount in wei
+     * @param newRefundAmount The new proposed refund amount in aCAM (wei)
      */
     function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
