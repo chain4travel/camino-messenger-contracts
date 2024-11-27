@@ -387,6 +387,7 @@ contract CMAccount is
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool _isCancellable
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
@@ -397,6 +398,7 @@ contract CMAccount is
             expirationTimestamp,
             price,
             paymentToken,
+            offchainPaymentCurrency,
             _isCancellable
         );
     }

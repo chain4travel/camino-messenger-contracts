@@ -16,6 +16,22 @@ contract BookingTokenV2 is BookingToken {
     using SafeERC20 for IERC20;
 
     /***************************************************
+     *                   CONSTANTS                     *
+     ***************************************************/
+
+    /**
+     * @dev Special address for native payments.
+     * @notice Tokens are directly transferred to the recipient.
+     */
+    address public constant NATIVE_PAYMENT = address(0);
+
+    /**
+     * @dev Special address for offchain payments.
+     * @notice A third-party service is used to handle payments.
+     */
+    address public constant OFFCHAIN_PAYMENT = address(1);
+
+    /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
@@ -31,6 +47,10 @@ contract BookingTokenV2 is BookingToken {
         mapping(uint256 tokenId => CancellationProposal cancellationProposal) _cancellationProposals;
         // Mapping to store the cancellable flag for each token
         mapping(uint256 tokenId => bool cancellable) _isCancellable;
+        // Mapping to store the off-chain payment currency for each token. The enum
+        // for the `offchainPaymentCurrency` is defined in the Camino Messenger
+        // Protocol's cmp.types.<version>.IsoCurrency enum (currency.proto file).
+        mapping(uint256 tokenId => uint256 offchainPaymentCurrency) _offchainPaymentCurrencies;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenCancellable")) - 1)) & ~bytes32(uint256(0xff));
@@ -69,6 +89,7 @@ contract BookingTokenV2 is BookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool isCancellable
     );
 
@@ -225,6 +246,13 @@ contract BookingTokenV2 is BookingToken {
      */
     error NotAuthorizedToSetCancellable(uint256 tokenId, address caller);
 
+    /**
+     * @notice Error for when there is unexpected native payment.
+     *
+     * @param amount The unexpected amount
+     */
+    error UnexpectedNativePayment(uint256 amount);
+
     /***************************************************
      *                  REINITIALIZE                   *
      ***************************************************/
@@ -253,7 +281,7 @@ contract BookingTokenV2 is BookingToken {
      * @param expirationTimestamp The expiration timestamp
      * @param price The price of the token
      * @param paymentToken The token used to pay for the reservation. If address(0) then native.
-     * @param _isCancellable The cancellable flag
+     * @param cancellable The cancellable flag
      */
     function safeMintWithReservation(
         address reservedFor,
@@ -261,7 +289,8 @@ contract BookingTokenV2 is BookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
-        bool _isCancellable
+        uint256 offchainPaymentCurrency,
+        bool cancellable
     ) public virtual onlyCMAccount(msg.sender) {
         // Require reservedFor to be a CM Account
         requireCMAccount(reservedFor);
@@ -289,9 +318,21 @@ contract BookingTokenV2 is BookingToken {
         $._bookingStatus[tokenId] = BookingStatus.Reserved;
 
         // Set the cancellable flag
-        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = _isCancellable;
+        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = cancellable;
 
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken, _isCancellable);
+        // Set the offchain payment currency. This is only used if the paymentToken is `address(1)`.
+        _getBookingTokenCancellableStorage()._offchainPaymentCurrencies[tokenId] = offchainPaymentCurrency;
+
+        emit TokenReserved(
+            tokenId,
+            reservedFor,
+            msg.sender,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
     }
 
     /**
@@ -312,7 +353,84 @@ contract BookingTokenV2 is BookingToken {
         uint256 price,
         IERC20 paymentToken
     ) public {
-        safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken, false);
+        safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken, 0, false);
+    }
+
+    /**
+     * @notice Buys a reserved token. The reservation must be for the message sender.
+     *
+     * Also the message sender should set allowance for the payment token to this
+     * contract to at least the reservation price. (only for ERC20 tokens)
+     *
+     * For native coin, the message sender should send the exact amount.
+     *
+     * Only CM Accounts can call this function
+     *
+     * @param tokenId The token id
+     */
+    function buyReservedToken(uint256 tokenId) external payable nonReentrant onlyCMAccount(msg.sender) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Get the reservation for the token
+        TokenReservation memory reservation = $._reservations[tokenId];
+
+        // Check if `reservedFor` and `msg.sender` match
+        if (reservation.reservedFor != msg.sender) {
+            revert ReservationMismatch(reservation.reservedFor, msg.sender);
+        }
+
+        // Check expiration timestamp
+        if (block.timestamp > reservation.expirationTimestamp) {
+            revert ReservationExpired(tokenId, reservation.expirationTimestamp);
+        }
+
+        // Check if supplier is still the owner
+        address owner = ownerOf(tokenId);
+        if (owner != reservation.supplier) {
+            revert SupplierIsNotOwner(tokenId, reservation.supplier);
+        }
+
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Do the payment at the end
+        processPayment(reservation.paymentToken, reservation.price, reservation.supplier);
+
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Bought;
+
+        // Emit event
+        emit TokenBought(tokenId, msg.sender);
+    }
+
+    function processPayment(IERC20 paymentToken, uint256 paymentAmount, address recipient) internal {
+        // Handle the payment based on payment type
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency (CAM)
+            if (msg.value != paymentAmount) {
+                revert IncorrectPrice(msg.value, paymentAmount);
+            }
+
+            // Transfer payment to the supplier
+            payable(recipient).sendValue(msg.value);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+        } else {
+            // Payment is in ERC20
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+
+            // Transfer the ERC20 tokens from distributor to supplier
+            IERC20(paymentToken).safeTransferFrom(msg.sender, recipient, paymentAmount);
+        }
     }
 
     /**
@@ -341,6 +459,16 @@ contract BookingTokenV2 is BookingToken {
      */
     function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken) {
         return _getBookingTokenStorage()._reservations[tokenId].paymentToken;
+    }
+
+    /**
+     * @notice Retrieves the reservation for a given token.
+     *
+     * @param tokenId The token id to retrieve the reservation for
+     * @return reservation The reservation
+     */
+    function getTokenReservation(uint256 tokenId) external view returns (TokenReservation memory) {
+        return _getBookingTokenStorage()._reservations[tokenId];
     }
 
     /**
@@ -479,34 +607,8 @@ contract BookingTokenV2 is BookingToken {
         // Emit the cancellation accepted event
         emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount);
 
-        // Interactions: Perform external calls after state updates.
-
         // Process the refund payment
-        if (address(reservation.paymentToken) != address(0) && proposal.refundAmount > 0) {
-            // Payment is in ERC20.
-            //
-            // Message sender (supplier of the Booking Token) must provide enough
-            // allowance for this (BookingToken) contract to pay the cancellation
-            // refund amount to the owner.
-            uint256 allowance = reservation.paymentToken.allowance(msg.sender, address(this));
-            if (allowance < proposal.refundAmount) {
-                revert InsufficientAllowance(msg.sender, reservation.paymentToken, proposal.refundAmount, allowance);
-            }
-
-            // Transfer proposal refund amount as ERC20 tokens from the supplier to
-            // the owner
-            reservation.paymentToken.safeTransferFrom(msg.sender, owner, proposal.refundAmount);
-        } else {
-            // Payment is in native currency or refund is zero.
-
-            // Check if we receive the correct refund amount
-            if (msg.value != proposal.refundAmount) {
-                revert IncorrectAmount(msg.value, proposal.refundAmount);
-            }
-
-            // Transfer payment to the owner
-            payable(owner).sendValue(msg.value);
-        }
+        processPayment(reservation.paymentToken, proposal.refundAmount, owner);
     }
 
     /**

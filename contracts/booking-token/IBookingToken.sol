@@ -31,6 +31,7 @@ interface IBookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool isCancellable
     ) external;
 
@@ -100,25 +101,4 @@ interface IBookingToken {
      * @param tokenId The token id for which to cancel the proposal
      */
     function cancelCancellationProposal(uint256 tokenId) external;
-
-    // /**
-    //  * @notice Retrieves the current cancellation proposal status for a given token.
-    //  *
-    //  * @param tokenId The token id to check the proposal status for
-    //  * @return refundAmount The proposed refund amount
-    //  * @return initiatedBy The address that initiated the cancellation
-    //  * @return status The status of the cancellation proposal
-    //  * @return rejectionReason The reason for rejecting the cancellation
-    //  */
-    // function getCancellationProposalStatus(
-    //     uint256 tokenId
-    // )
-    //     external
-    //     view
-    //     returns (
-    //         uint256 refundAmount,
-    //         address initiatedBy,
-    //         CancellationProposalStatus status,
-    //         CancellationRejectionReason rejectionReason
-    //     );
 }

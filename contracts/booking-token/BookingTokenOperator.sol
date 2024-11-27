@@ -17,6 +17,26 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 library BookingTokenOperator {
     using SafeERC20 for IERC20;
 
+    /***************************************************
+     *                   CONSTANTS                     *
+     ***************************************************/
+
+    /**
+     * @dev Special address for native payments.
+     * @notice Tokens are directly transferred to the recipient.
+     */
+    address public constant NATIVE_PAYMENT = address(0);
+
+    /**
+     * @dev Special address for offchain payments.
+     * @notice A third-party service is used to handle payments.
+     */
+    address public constant OFFCHAIN_PAYMENT = address(1);
+
+    /***************************************************
+     *                   ERRORS                        *
+     ***************************************************/
+
     /**
      * @dev Token approval for the BookingToken address failed.
      *
@@ -25,6 +45,10 @@ library BookingTokenOperator {
      * @param amount amount of tokens to approve
      */
     error TokenApprovalFailed(address token, address spender, uint256 amount);
+
+    /***************************************************
+     *                   FUNCS                         *
+     ***************************************************/
 
     /**
      * @dev Mints a booking token.
@@ -44,6 +68,7 @@ library BookingTokenOperator {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool _isCancellable
     ) public {
         IBookingToken(bookingToken).safeMintWithReservation(
@@ -52,6 +77,7 @@ library BookingTokenOperator {
             expirationTimestamp,
             price,
             paymentToken,
+            offchainPaymentCurrency,
             _isCancellable
         );
     }
@@ -67,8 +93,14 @@ library BookingTokenOperator {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
-        // Check if payment is in native currency or in ERC20
-        if (address(paymentToken) != address(0) && price > 0) {
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency. Buy the token by sending the payment
+            // in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            IBookingToken(bookingToken).buyReservedToken(tokenId);
+        } else {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
@@ -80,10 +112,6 @@ library BookingTokenOperator {
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
-        } else {
-            // Payment is in native currency. Buy the token by sending the payment
-            // in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }
 
@@ -130,7 +158,14 @@ library BookingTokenOperator {
         uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
 
         // Check if payment is in native currency or in ERC20
-        if (address(paymentToken) != address(0) && refundAmount > 0) {
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency. Accept the cancellation by sending the
+            // payment in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
+        } else {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // refund amount. BookingToken should do the transfer to the
             // supplier.
@@ -142,10 +177,6 @@ library BookingTokenOperator {
 
             // Accept the cancellation
             IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
-        } else {
-            // Payment is in native currency. Accept the cancellation by sending the
-            // payment in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
         }
     }
 
