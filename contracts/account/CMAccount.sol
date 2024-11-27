@@ -788,9 +788,17 @@ contract CMAccount is
 
     function initiateCancellationProposal(
         uint256 tokenId,
-        uint256 refundAmount
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
     ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.initiateCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+        BookingTokenOperator.initiateCancellationProposal(
+            getBookingTokenAddress(),
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     function acceptCancellationProposal(
@@ -800,8 +808,17 @@ contract CMAccount is
         BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId, checkRefundAmount);
     }
 
-    function rejectCancellationProposal(uint256 tokenId, uint256 reason) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.rejectCancellationProposal(getBookingTokenAddress(), tokenId, reason);
+    function rejectCancellationProposal(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.rejectCancellationProposal(
+            getBookingTokenAddress(),
+            tokenId,
+            rejectionReason,
+            rejectionReasonVersion
+        );
     }
 
     function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(BOOKING_OPERATOR_ROLE) {

@@ -2,9 +2,8 @@
 pragma solidity 0.8.24;
 
 import { BookingToken, Address, SafeERC20, IERC20 } from "./BookingToken.sol";
-import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
-
-//import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
+import { CancellationProposalStatus } from "./IBookingToken.sol";
+import { CancellationUtils } from "./CancellationUtils.sol";
 
 /**
  * @title BookingTokenV2
@@ -41,7 +40,7 @@ contract BookingTokenV2 is BookingToken {
         uint256 refundAmount;
         address proposedBy;
         CancellationProposalStatus status;
-        CancellationRejectionReason rejectionReason;
+        uint256 reasonsPacked;
     }
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
     struct BookingTokenCancellableStorage {
@@ -102,7 +101,13 @@ contract BookingTokenV2 is BookingToken {
      * @param proposedBy address that initiated the cancellation
      * @param refundAmount proposed refund amount
      */
-    event CancellationPending(uint256 indexed tokenId, address indexed proposedBy, uint256 refundAmount);
+    event CancellationPending(
+        uint256 indexed tokenId,
+        address indexed proposedBy,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    );
 
     /**
      * @notice Event emitted when a cancellation is accepted.
@@ -156,9 +161,15 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId token id
      * @param rejectedBy address that rejected the proposal
-     * @param reason reason for rejection
+     * @param rejectionReason rejection reason
+     * @param rejectionReasonVersion rejection reason pkg version from CMP
      */
-    event CancellationRejected(uint256 indexed tokenId, address indexed rejectedBy, CancellationRejectionReason reason);
+    event CancellationRejected(
+        uint256 indexed tokenId,
+        address indexed rejectedBy,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    );
 
     /***************************************************
      *                   ERRORS                        *
@@ -479,7 +490,12 @@ contract BookingTokenV2 is BookingToken {
      * @param tokenId The token id to initiate the cancellation for
      * @param refundAmount The proposed refund amount in aCAM (wei)
      */
-    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external {
+    function initiateCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) external {
         // Revert if the token status is not "bought"
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         if ($._bookingStatus[tokenId] != BookingStatus.Bought) {
@@ -507,19 +523,24 @@ contract BookingTokenV2 is BookingToken {
             refundAmount: refundAmount,
             proposedBy: msg.sender,
             status: CancellationProposalStatus.Pending,
-            rejectionReason: CancellationRejectionReason.Unspecified
+            reasonsPacked: CancellationUtils.packReasons(cancellationReason, cancellationReasonVersion, 0, 0)
         });
 
-        emit CancellationPending(tokenId, msg.sender, refundAmount);
+        emit CancellationPending(tokenId, msg.sender, refundAmount, cancellationReason, cancellationReasonVersion);
     }
 
     /**
      * @notice Reject a cancellation proposal for a bought token.
      *
      * @param tokenId The token id to reject the cancellation for
-     * @param reason The reason for rejecting the cancellation
+     * @param rejectionReason The reason for rejecting the cancellation
+     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
      */
-    function rejectCancellationProposal(uint256 tokenId, CancellationRejectionReason reason) external {
+    function rejectCancellationProposal(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -541,15 +562,23 @@ contract BookingTokenV2 is BookingToken {
 
         // Reject the cancellation proposal
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Rejected;
-        cancellableStorage._cancellationProposals[tokenId].rejectionReason = reason;
 
-        emit CancellationRejected(tokenId, msg.sender, reason);
+        // Store the rejection reason
+        uint256 reasonsPacked = cancellableStorage._cancellationProposals[tokenId].reasonsPacked;
+        cancellableStorage._cancellationProposals[tokenId].reasonsPacked = CancellationUtils.updateRejectionReason(
+            reasonsPacked,
+            rejectionReason,
+            rejectionReasonVersion
+        );
+
+        emit CancellationRejected(tokenId, msg.sender, rejectionReason, rejectionReasonVersion);
     }
 
     /**
      * @notice Accepts a cancellation proposal for a bought token and finalizes it.
      *
      * @param tokenId The token id to accept the cancellation for
+     * @param checkRefundAmount The refund amount to check, this is used to prevent front-running attacks
      */
     function acceptCancellationProposal(
         uint256 tokenId,
@@ -643,9 +672,18 @@ contract BookingTokenV2 is BookingToken {
         // Update the proposal with the new values
         cancellableStorage._cancellationProposals[tokenId].refundAmount = newRefundAmount;
 
+        // Reset rejection reason if the proposal state is rejected
+        if (proposal.status == CancellationProposalStatus.Rejected) {
+            uint256 reasonsPacked = cancellableStorage._cancellationProposals[tokenId].reasonsPacked;
+            cancellableStorage._cancellationProposals[tokenId].reasonsPacked = CancellationUtils.updateRejectionReason(
+                reasonsPacked,
+                0,
+                0
+            );
+        }
+
         // Set cancellation proposal status to "countered"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Countered;
-        cancellableStorage._cancellationProposals[tokenId].rejectionReason = CancellationRejectionReason.Unspecified;
 
         // Emit the countered proposal event
         emit CancellationCountered(tokenId, msg.sender, newRefundAmount);
@@ -654,6 +692,7 @@ contract BookingTokenV2 is BookingToken {
     /**
      * @notice Accept a countered cancellation proposal
      * @param tokenId The token id to accept the countered cancellation proposal for
+     * @param checkRefundAmount The refund amount to check, this is used to prevent front-running attacks
      */
     function acceptCounteredCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external {
         address owner = _requireOwned(tokenId);
@@ -679,8 +718,19 @@ contract BookingTokenV2 is BookingToken {
         // Set status to "Pending"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Pending;
 
+        // Get cancellation reasons
+        (uint256 cancellationReason, uint256 cancellationReasonVersion) = CancellationUtils.getCancellationReason(
+            cancellableStorage._cancellationProposals[tokenId].reasonsPacked
+        );
+
         // Emit the cancellation pending event to notify the supplier
-        emit CancellationPending(tokenId, proposal.proposedBy, proposal.refundAmount);
+        emit CancellationPending(
+            tokenId,
+            proposal.proposedBy,
+            proposal.refundAmount,
+            uint16(cancellationReason),
+            uint16(cancellationReasonVersion)
+        );
     }
 
     /**
@@ -720,6 +770,10 @@ contract BookingTokenV2 is BookingToken {
      * @return refundAmount The proposed refund amount
      * @return proposedBy The address that initiated the cancellation
      * @return status The status of the cancellation proposal
+     * @return cancellationReason The cancellation reason
+     * @return cancellationReasonVersion The cancellation reason version
+     * @return rejectionReason The rejection reason
+     * @return rejectionReasonVersion The rejection reason version
      */
     function getCancellationProposalStatus(
         uint256 tokenId
@@ -730,12 +784,32 @@ contract BookingTokenV2 is BookingToken {
             uint256 refundAmount,
             address proposedBy,
             CancellationProposalStatus status,
-            CancellationRejectionReason rejectionReason
+            uint256 cancellationReason,
+            uint256 cancellationReasonVersion,
+            uint256 rejectionReason,
+            uint256 rejectionReasonVersion
         )
     {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
-        return (proposal.refundAmount, proposal.proposedBy, proposal.status, proposal.rejectionReason);
+
+        // Unpack the cancellation reasons from the packed reasons
+        (
+            uint256 _cancellationReason,
+            uint256 _cancellationReasonVersion,
+            uint256 _rejectionReason,
+            uint256 _rejectionReasonVersion
+        ) = CancellationUtils.unpackReasons(proposal.reasonsPacked);
+
+        return (
+            proposal.refundAmount,
+            proposal.proposedBy,
+            proposal.status,
+            _cancellationReason,
+            _cancellationReasonVersion,
+            _rejectionReason,
+            _rejectionReasonVersion
+        );
     }
 
     /***************************************************

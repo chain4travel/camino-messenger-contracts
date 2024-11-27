@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { IBookingToken, IERC20, CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
+import { IBookingToken, IERC20, CancellationProposalStatus } from "./IBookingToken.sol";
 
 // ERC-20 Utils
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -142,8 +142,19 @@ library BookingTokenOperator {
      * @param tokenId token id
      * @param refundAmount proposed refund amount
      */
-    function initiateCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
-        IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
+    function initiateCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) public {
+        IBookingToken(bookingToken).initiateCancellationProposal(
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     /**
@@ -183,11 +194,18 @@ library BookingTokenOperator {
     /**
      * @notice Reject a cancellation proposal for a bought token.
      *
+     * @param bookingToken booking token contract address
      * @param tokenId The token id to reject the cancellation for
-     * @param reason The reason for rejecting the cancellation
+     * @param rejectionReason The reason for rejecting the cancellation
+     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
      */
-    function rejectCancellationProposal(address bookingToken, uint256 tokenId, uint256 reason) external {
-        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, CancellationRejectionReason(reason));
+    function rejectCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external {
+        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, rejectionReason, rejectionReasonVersion);
     }
 
     /**
@@ -224,26 +242,4 @@ library BookingTokenOperator {
     function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
         IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
     }
-
-    // /**
-    //  * @dev Gets the status of a cancellation proposal.
-    //  *
-    //  * @param bookingToken booking token contract address
-    //  * @param tokenId token id
-    //  */
-    // function getCancellationProposalStatus(
-    //     address bookingToken,
-    //     uint256 tokenId
-    // )
-    //     public
-    //     view
-    //     returns (
-    //         uint256 refundAmount,
-    //         address proposedBy,
-    //         CancellationProposalStatus status,
-    //         CancellationRejectionReason rejectionReason
-    //     )
-    // {
-    //     return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
-    // }
 }
