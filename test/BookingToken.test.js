@@ -455,6 +455,87 @@ describe("BookingToken", function () {
             expect(await bookingToken.ownerOf(0n)).to.equal(await distributorCMAccount.getAddress());
         });
 
+        it("Off-chain: should revert with off-chain payment and msg.value > 0", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.5");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Off-chain payment marker
+            const offChainPaymentMarker = await bookingToken.OFFCHAIN_PAYMENT();
+
+            // address(1)
+            const OneAddress = ethers.getAddress("0x0000000000000000000000000000000000000001");
+
+            expect(offChainPaymentMarker).to.equal(OneAddress);
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    offChainPaymentMarker, // off-chain payment marker, address(1)
+                    6, // off chain payment currency, 6 == Euro
+                    true,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    offChainPaymentMarker, // off-chain payment marker, address(1)
+                    6, // off chain payment currency, 6 == Euro
+                    true,
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
+            // Impersonate the CMAccount contract
+            await network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [await distributorCMAccount.getAddress()],
+            });
+
+            // Give it some CAM balance
+            await network.provider.send("hardhat_setBalance", [
+                await distributorCMAccount.getAddress(),
+                ethers.toBeHex(price + ethers.parseEther("100")),
+            ]);
+
+            // Get the impersonated signer
+            const impersonatedSigner = await ethers.getSigner(await distributorCMAccount.getAddress());
+
+            // Try to buy the token with CAM - should revert
+            await expect(bookingToken.connect(impersonatedSigner).buyReservedToken(0n, { value: price }))
+                .to.be.revertedWithCustomError(bookingToken, "UnexpectedNativePayment")
+                .withArgs(price);
+        });
+
         it("ERC20: should buy a booking token correctly", async function () {
             const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
                 await loadFixture(deployBookingTokenWithNullUSDFixture);
@@ -533,6 +614,80 @@ describe("BookingToken", function () {
 
             // Check token ownership
             expect(await bookingToken.ownerOf(0n)).to.equal(await distributorCMAccount.getAddress());
+        });
+
+        it("ERC20: should revert if msg.value > 0", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, nullUSD } =
+                await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("500");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    nullUSD.getAddress(), // nullUSD address
+                    0, // off chain payment currency
+                    true,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    nullUSD.getAddress(), // nullUSD address
+                    0, // off chain payment currency
+                    true,
+                );
+
+            // Check token ownership
+            expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
+
+            // Impersonate the CMAccount contract
+            await network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [await distributorCMAccount.getAddress()],
+            });
+
+            // Give it some CAM balance
+            await network.provider.send("hardhat_setBalance", [
+                await distributorCMAccount.getAddress(),
+                ethers.toBeHex(price + ethers.parseEther("100")),
+            ]);
+
+            // Get the impersonated signer
+            const impersonatedSigner = await ethers.getSigner(await distributorCMAccount.getAddress());
+
+            // Try to buy the token with CAM - should revert
+            await expect(bookingToken.connect(impersonatedSigner).buyReservedToken(0n, { value: price }))
+                .to.be.revertedWithCustomError(bookingToken, "UnexpectedNativePayment")
+                .withArgs(price);
         });
 
         it("ERC20: should buy a booking token with zero price correctly", async function () {
