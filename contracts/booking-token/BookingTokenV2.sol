@@ -40,7 +40,7 @@ contract BookingTokenV2 is BookingToken {
         uint256 refundAmount;
         address proposedBy;
         CancellationProposalStatus status;
-        uint256 reasonsPacked;
+        uint256 reasonsPacked; // Packed cancellation and rejection reasons. Check CancellationUtils.sol
     }
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
     struct BookingTokenCancellableStorage {
