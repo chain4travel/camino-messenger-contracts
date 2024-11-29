@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -96,9 +96,11 @@ interface IBookingToken {
     function acceptCounteredCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external;
 
     /**
-     * @notice Cancels an active cancellation proposal. Only the initiator can cancel.
+     * @notice Withdraws an active cancellation proposal. Only the initiator can withdraw.
      *
      * @param tokenId The token id for which to cancel the proposal
+     * @param reason The reason for cancelling the proposal
+     * @param reasonVersion The version of the cancellation reason from the CMP
      */
-    function cancelCancellationProposal(uint256 tokenId) external;
+    function withdrawCancellationProposal(uint256 tokenId, uint16 reason, uint16 reasonVersion) external;
 }

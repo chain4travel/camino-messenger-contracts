@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 /**
@@ -12,8 +12,7 @@ pragma solidity 0.8.24;
  *
  * The versions values are the package versions from the [Camino Messenger Protocol](https://github.com/chain4travel/camino-messenger-protocol)
  *
- * Cancellation Reason: camino-messenger-protocol/proto/cmp/services/cancellation/<version>/reason.proto
- * Rejection Reason   : camino-messenger-protocol/proto/cmp/services/cancellation/<version>/rejection_reason.proto
+ * Reason Enums: camino-messenger-protocol/proto/cmp/services/cancellation/<version>/reason.proto
  */
 library CancellationUtils {
     // Constants for bit manipulation
@@ -27,43 +26,26 @@ library CancellationUtils {
     uint256 private constant CANCELLATION_MASK = 0xFFFFFFFF;
     uint256 private constant REJECTION_MASK = 0xFFFFFFFF00000000;
 
-    // Custom errors
-    error ValueExceedsMaxSize(uint256 value, uint256 maxSize);
-
     /**
      * @notice Packs cancellation and rejection data into a single uint256
-     * @param cancellationReason The reason for cancellation (max 16 bits)
-     * @param cancellationVersion Version of the cancellation reason enum (max 16 bits)
-     * @param rejectionReason The reason for rejection (max 16 bits)
-     * @param rejectionVersion Version of the rejection reason enum (max 16 bits)
+     * @param cancellationReason The reason for cancellation
+     * @param cancellationVersion Version of the cancellation reason enum
+     * @param rejectionReason The reason for rejection
+     * @param rejectionVersion Version of the rejection reason enum
      * @return packed The packed uint256 containing all data
      */
     function packReasons(
-        uint256 cancellationReason,
-        uint256 cancellationVersion,
-        uint256 rejectionReason,
-        uint256 rejectionVersion
+        uint16 cancellationReason,
+        uint16 cancellationVersion,
+        uint16 rejectionReason,
+        uint16 rejectionVersion
     ) internal pure returns (uint256) {
-        // Check if any value exceeds 16 bits
-        if (cancellationReason > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(cancellationReason, SEGMENT_MASK);
-        }
-        if (cancellationVersion > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(cancellationVersion, SEGMENT_MASK);
-        }
-        if (rejectionReason > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(rejectionReason, SEGMENT_MASK);
-        }
-        if (rejectionVersion > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(rejectionVersion, SEGMENT_MASK);
-        }
-
         // Pack all values into a single uint256
         return
-            (rejectionVersion << REJECTION_VERSION_SHIFT) |
-            (rejectionReason << REJECTION_REASON_SHIFT) |
-            (cancellationVersion << CANCELLATION_VERSION_SHIFT) |
-            (cancellationReason << CANCELLATION_REASON_SHIFT);
+            (uint256(rejectionVersion) << REJECTION_VERSION_SHIFT) |
+            (uint256(rejectionReason) << REJECTION_REASON_SHIFT) |
+            (uint256(cancellationVersion) << CANCELLATION_VERSION_SHIFT) |
+            (uint256(cancellationReason) << CANCELLATION_REASON_SHIFT);
     }
 
     /**
@@ -79,17 +61,12 @@ library CancellationUtils {
     )
         internal
         pure
-        returns (
-            uint256 cancellationReason,
-            uint256 cancellationVersion,
-            uint256 rejectionReason,
-            uint256 rejectionVersion
-        )
+        returns (uint16 cancellationReason, uint16 cancellationVersion, uint16 rejectionReason, uint16 rejectionVersion)
     {
-        cancellationReason = (packed >> CANCELLATION_REASON_SHIFT) & SEGMENT_MASK;
-        cancellationVersion = (packed >> CANCELLATION_VERSION_SHIFT) & SEGMENT_MASK;
-        rejectionReason = (packed >> REJECTION_REASON_SHIFT) & SEGMENT_MASK;
-        rejectionVersion = (packed >> REJECTION_VERSION_SHIFT) & SEGMENT_MASK;
+        cancellationReason = uint16((packed >> CANCELLATION_REASON_SHIFT) & SEGMENT_MASK);
+        cancellationVersion = uint16((packed >> CANCELLATION_VERSION_SHIFT) & SEGMENT_MASK);
+        rejectionReason = uint16((packed >> REJECTION_REASON_SHIFT) & SEGMENT_MASK);
+        rejectionVersion = uint16((packed >> REJECTION_VERSION_SHIFT) & SEGMENT_MASK);
     }
 
     /**
@@ -101,24 +78,16 @@ library CancellationUtils {
      */
     function updateCancellationReason(
         uint256 packed,
-        uint256 cancellationReason,
-        uint256 cancellationVersion
+        uint16 cancellationReason,
+        uint16 cancellationVersion
     ) internal pure returns (uint256 newPacked) {
-        // Validate inputs
-        if (cancellationReason > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(cancellationReason, SEGMENT_MASK);
-        }
-        if (cancellationVersion > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(cancellationVersion, SEGMENT_MASK);
-        }
-
         // Clear old cancellation values while preserving rejection values
         newPacked = packed & ~CANCELLATION_MASK;
 
         // Add new cancellation values
         newPacked |=
-            (cancellationVersion << CANCELLATION_VERSION_SHIFT) |
-            (cancellationReason << CANCELLATION_REASON_SHIFT);
+            (uint256(cancellationVersion) << CANCELLATION_VERSION_SHIFT) |
+            (uint256(cancellationReason) << CANCELLATION_REASON_SHIFT);
     }
 
     /**
@@ -130,22 +99,16 @@ library CancellationUtils {
      */
     function updateRejectionReason(
         uint256 packed,
-        uint256 rejectionReason,
-        uint256 rejectionVersion
+        uint16 rejectionReason,
+        uint16 rejectionVersion
     ) internal pure returns (uint256 newPacked) {
-        // Validate inputs
-        if (rejectionReason > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(rejectionReason, SEGMENT_MASK);
-        }
-        if (rejectionVersion > SEGMENT_MASK) {
-            revert ValueExceedsMaxSize(rejectionVersion, SEGMENT_MASK);
-        }
-
         // Clear old rejection values while preserving cancellation values
         newPacked = packed & ~REJECTION_MASK;
 
         // Add new rejection values
-        newPacked |= (rejectionVersion << REJECTION_VERSION_SHIFT) | (rejectionReason << REJECTION_REASON_SHIFT);
+        newPacked |=
+            (uint256(rejectionVersion) << REJECTION_VERSION_SHIFT) |
+            (uint256(rejectionReason) << REJECTION_REASON_SHIFT);
     }
 
     /**
@@ -156,9 +119,9 @@ library CancellationUtils {
      */
     function getCancellationReason(
         uint256 packed
-    ) internal pure returns (uint256 cancellationReason, uint256 cancellationVersion) {
-        cancellationReason = (packed >> CANCELLATION_REASON_SHIFT) & SEGMENT_MASK;
-        cancellationVersion = (packed >> CANCELLATION_VERSION_SHIFT) & SEGMENT_MASK;
+    ) internal pure returns (uint16 cancellationReason, uint16 cancellationVersion) {
+        cancellationReason = uint16((packed >> CANCELLATION_REASON_SHIFT) & SEGMENT_MASK);
+        cancellationVersion = uint16((packed >> CANCELLATION_VERSION_SHIFT) & SEGMENT_MASK);
     }
 
     /**
@@ -169,8 +132,8 @@ library CancellationUtils {
      */
     function getRejectionReason(
         uint256 packed
-    ) internal pure returns (uint256 rejectionReason, uint256 rejectionVersion) {
-        rejectionReason = (packed >> REJECTION_REASON_SHIFT) & SEGMENT_MASK;
-        rejectionVersion = (packed >> REJECTION_VERSION_SHIFT) & SEGMENT_MASK;
+    ) internal pure returns (uint16 rejectionReason, uint16 rejectionVersion) {
+        rejectionReason = uint16((packed >> REJECTION_REASON_SHIFT) & SEGMENT_MASK);
+        rejectionVersion = uint16((packed >> REJECTION_VERSION_SHIFT) & SEGMENT_MASK);
     }
 }

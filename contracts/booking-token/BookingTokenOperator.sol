@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 import { IBookingToken, IERC20, CancellationProposalStatus } from "./IBookingToken.sol";
@@ -234,12 +234,19 @@ library BookingTokenOperator {
     }
 
     /**
-     * @notice Cancels a cancellation proposal.
+     * @notice Withdraws a cancellation proposal.
      *
      * @param bookingToken booking token contract address
      * @param tokenId token id
+     * @param reason The reason for cancelling the proposal
+     * @param reasonVersion The version of the cancellation reason from the CMP
      */
-    function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
-        IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
+    function withdrawCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint16 reason,
+        uint16 reasonVersion
+    ) public {
+        IBookingToken(bookingToken).withdrawCancellationProposal(tokenId, reason, reasonVersion);
     }
 }

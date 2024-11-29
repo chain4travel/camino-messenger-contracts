@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 import { BookingToken, Address, SafeERC20, IERC20 } from "./BookingToken.sol";
@@ -125,11 +125,7 @@ contract BookingTokenV2 is BookingToken {
      * @param acceptedBy address that accepted the proposal
      * @param refundAmount proposed refund amount
      */
-    event CancellationProposalAcceptedByTheOwner(
-        uint256 indexed tokenId,
-        address indexed acceptedBy,
-        uint256 refundAmount
-    );
+    event CancellationAcceptedByTheOwner(uint256 indexed tokenId, address indexed acceptedBy, uint256 refundAmount);
 
     /**
      * @notice Event emitted when a cancellation proposal is countered.
@@ -146,7 +142,12 @@ contract BookingTokenV2 is BookingToken {
      * @param tokenId token id
      * @param cancelledBy address that cancelled the proposal
      */
-    event CancellationProposalCancelled(uint256 indexed tokenId, address indexed cancelledBy);
+    event CancellationWithdrawn(
+        uint256 indexed tokenId,
+        address indexed cancelledBy,
+        uint16 reason,
+        uint16 reasonVersion
+    );
 
     /**
      * @notice Event emitted when the cancellable flag for a token is updated.
@@ -611,7 +612,7 @@ contract BookingTokenV2 is BookingToken {
             cancellableStorage._cancellationProposals[tokenId].proposedBy = owner;
 
             // Emit event so the supplier can get notified
-            emit CancellationProposalAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
+            emit CancellationAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
 
             // Exit early as there's nothing else to do for the owner.
             return;
@@ -719,7 +720,7 @@ contract BookingTokenV2 is BookingToken {
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Pending;
 
         // Get cancellation reasons
-        (uint256 cancellationReason, uint256 cancellationReasonVersion) = CancellationUtils.getCancellationReason(
+        (uint16 cancellationReason, uint16 cancellationReasonVersion) = CancellationUtils.getCancellationReason(
             cancellableStorage._cancellationProposals[tokenId].reasonsPacked
         );
 
@@ -728,18 +729,20 @@ contract BookingTokenV2 is BookingToken {
             tokenId,
             proposal.proposedBy,
             proposal.refundAmount,
-            uint16(cancellationReason),
-            uint16(cancellationReasonVersion)
+            cancellationReason,
+            cancellationReasonVersion
         );
     }
 
     /**
-     * @notice Cancels a pending cancellation proposal. Only the proposer can cancel
-     * the proposal.
+     * @notice Withdraws a pending cancellation proposal. Only the proposer can
+     * withdraw the proposal.
      *
-     * @param tokenId The token id for which to cancel the proposal
+     * @param tokenId The token id for the cancellation proposal
+     * @param reason The cancellation reason for the proposal
+     * @param reasonVersion The version of the cancellation reason
      */
-    function cancelCancellationProposal(uint256 tokenId) external {
+    function withdrawCancellationProposal(uint256 tokenId, uint16 reason, uint16 reasonVersion) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -759,8 +762,8 @@ contract BookingTokenV2 is BookingToken {
         // Cancel the proposal by deleting it from the storage
         delete cancellableStorage._cancellationProposals[tokenId];
 
-        // Emit the cancellation proposal cancelled event
-        emit CancellationProposalCancelled(tokenId, msg.sender);
+        // Emit the cancellation proposal withdrawn event
+        emit CancellationWithdrawn(tokenId, msg.sender, reason, reasonVersion);
     }
 
     /**
@@ -784,10 +787,10 @@ contract BookingTokenV2 is BookingToken {
             uint256 refundAmount,
             address proposedBy,
             CancellationProposalStatus status,
-            uint256 cancellationReason,
-            uint256 cancellationReasonVersion,
-            uint256 rejectionReason,
-            uint256 rejectionReasonVersion
+            uint16 cancellationReason,
+            uint16 cancellationReasonVersion,
+            uint16 rejectionReason,
+            uint16 rejectionReasonVersion
         )
     {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
@@ -795,10 +798,10 @@ contract BookingTokenV2 is BookingToken {
 
         // Unpack the cancellation reasons from the packed reasons
         (
-            uint256 _cancellationReason,
-            uint256 _cancellationReasonVersion,
-            uint256 _rejectionReason,
-            uint256 _rejectionReasonVersion
+            uint16 _cancellationReason,
+            uint16 _cancellationReasonVersion,
+            uint16 _rejectionReason,
+            uint16 _rejectionReasonVersion
         ) = CancellationUtils.unpackReasons(proposal.reasonsPacked);
 
         return (

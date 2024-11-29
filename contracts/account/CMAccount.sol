@@ -192,16 +192,6 @@ contract CMAccount is
     error CMAccountNoUpgradeNeeded(address oldImplementation, address newImplementation);
 
     /**
-     * @notice Error to revert with if depositer is not allowed
-     */
-    error DepositorNotAllowed(address sender);
-
-    /**
-     * @notice Error to revert zero value deposits
-     */
-    error ZeroValueDeposit(address sender);
-
-    /**
      * @notice Error to revert with if the prefund is not spent yet
      */
     error PrefundNotSpentYet(uint256 withdrawableAmount, uint256 prefundLeft, uint256 amount);
@@ -340,7 +330,7 @@ contract CMAccount is
         // prefund amount it's ok to withdraw any amount
         if (totalChequePayments < prefundAmount) {
             // Balance should be bigger or equal to the { prefundLeft } because the
-            // total sum of prefund is not yet spent. So, we substact that
+            // total sum of prefund is not yet spent. So, we subtract that
             // (prefundLeft) from the balance to find the withdrawable amount.
             uint256 prefundLeft = prefundAmount - totalChequePayments;
             uint256 withdrawableAmount = address(this).balance - prefundLeft;
@@ -832,7 +822,18 @@ contract CMAccount is
         BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function cancelCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
+    /**
+     * @notice Withdraws an active cancellation proposal. Only the initiator can withdraw.
+     *
+     * @param tokenId The token id for which to cancel the proposal
+     * @param reason The reason for cancelling the proposal
+     * @param reasonVersion The version of the cancellation reason from the CMP
+     */
+    function withdrawCancellationProposal(
+        uint256 tokenId,
+        uint16 reason,
+        uint16 reasonVersion
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.withdrawCancellationProposal(getBookingTokenAddress(), tokenId, reason, reasonVersion);
     }
 }

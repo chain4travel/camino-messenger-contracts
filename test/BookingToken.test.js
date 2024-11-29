@@ -1395,9 +1395,15 @@ describe("BookingToken", function () {
             ]);
 
             // Test cancelling a cancellation proposal
-            await expect(supplierCMAccount.connect(signers.btAdmin).cancelCancellationProposal(0n))
-                .to.emit(bookingToken, "CancellationProposalCancelled")
-                .withArgs(token_id, await supplierCMAccount.getAddress());
+            await expect(
+                supplierCMAccount.connect(signers.btAdmin).withdrawCancellationProposal(
+                    token_id,
+                    42, // Reason
+                    1, // Reason Version
+                ),
+            )
+                .to.emit(bookingToken, "CancellationWithdrawn")
+                .withArgs(token_id, await supplierCMAccount.getAddress(), 42n, 1n);
 
             // Sanity check
             expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
@@ -1434,9 +1440,15 @@ describe("BookingToken", function () {
             ]);
 
             // Test cancelling a cancellation proposal
-            await expect(distributorCMAccount.connect(signers.btAdmin).cancelCancellationProposal(0n))
-                .to.emit(bookingToken, "CancellationProposalCancelled")
-                .withArgs(token_id, await distributorCMAccount.getAddress());
+            await expect(
+                distributorCMAccount.connect(signers.btAdmin).withdrawCancellationProposal(
+                    0n,
+                    42n, // Reason
+                    1n, // Reason Version
+                ),
+            )
+                .to.emit(bookingToken, "CancellationWithdrawn")
+                .withArgs(token_id, await distributorCMAccount.getAddress(), 42n, 1n);
 
             // Sanity check
             expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
@@ -1772,7 +1784,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount.connect(signers.btAdmin).acceptCancellationProposal(token_id, refundAmount),
             )
-                .to.emit(bookingToken, "CancellationProposalAcceptedByTheOwner")
+                .to.emit(bookingToken, "CancellationAcceptedByTheOwner")
                 .withArgs(token_id, await distributorCMAccount.getAddress(), refundAmount);
 
             // Now the supplier's proposal is accepted by the owner/distributor. Try
@@ -2467,11 +2479,17 @@ describe("BookingToken", function () {
                 0n, // Rejection Reason Version: Unspecified
             ]);
 
-            // DETOUR: Test "cancel counter proposal" by distributor cm account
+            // DETOUR: Test "withdraw counter proposal" by distributor cm account
 
-            await expect(distributorCMAccount.connect(signers.btAdmin).cancelCancellationProposal(token_id))
-                .to.emit(bookingToken, "CancellationProposalCancelled")
-                .withArgs(token_id, await distributorCMAccount.getAddress());
+            await expect(
+                distributorCMAccount.connect(signers.btAdmin).withdrawCancellationProposal(
+                    token_id,
+                    42n, // Reason
+                    1n, // Reason Version
+                ),
+            )
+                .to.emit(bookingToken, "CancellationWithdrawn")
+                .withArgs(token_id, await distributorCMAccount.getAddress(), 42n, 1n);
 
             // Check proposal
             expect(await bookingToken.getCancellationProposalStatus(token_id)).to.be.deep.equal([
