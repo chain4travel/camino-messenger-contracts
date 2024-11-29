@@ -738,9 +738,9 @@ contract BookingTokenV2 is BookingToken {
      * @notice Withdraws a pending cancellation proposal. Only the proposer can
      * withdraw the proposal.
      *
-     * @param tokenId The token id for the cancellation proposal
-     * @param reason The cancellation reason for the proposal
-     * @param reasonVersion The version of the cancellation reason
+     * @param tokenId The token id for withdrawing the cancellation proposal
+     * @param reason The withdrawal reason for the proposal
+     * @param reasonVersion The version of the withdrawal reason from CMP
      */
     function withdrawCancellationProposal(uint256 tokenId, uint16 reason, uint16 reasonVersion) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
@@ -759,7 +759,7 @@ contract BookingTokenV2 is BookingToken {
             revert NoPendingCancellationProposal(tokenId);
         }
 
-        // Cancel the proposal by deleting it from the storage
+        // Withdraw the proposal by deleting it from the storage
         delete cancellableStorage._cancellationProposals[tokenId];
 
         // Emit the cancellation proposal withdrawn event

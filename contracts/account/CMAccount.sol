@@ -825,9 +825,9 @@ contract CMAccount is
     /**
      * @notice Withdraws an active cancellation proposal. Only the initiator can withdraw.
      *
-     * @param tokenId The token id for which to cancel the proposal
-     * @param reason The reason for cancelling the proposal
-     * @param reasonVersion The version of the cancellation reason from the CMP
+     * @param tokenId The token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
      */
     function withdrawCancellationProposal(
         uint256 tokenId,

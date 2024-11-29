@@ -237,9 +237,9 @@ library BookingTokenOperator {
      * @notice Withdraws a cancellation proposal.
      *
      * @param bookingToken booking token contract address
-     * @param tokenId token id
-     * @param reason The reason for cancelling the proposal
-     * @param reasonVersion The version of the cancellation reason from the CMP
+     * @param tokenId token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
      */
     function withdrawCancellationProposal(
         address bookingToken,
