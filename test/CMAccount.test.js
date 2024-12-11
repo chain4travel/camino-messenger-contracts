@@ -355,6 +355,7 @@ describe("CMAccount", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // zero address
+                    0, // off chain payment currency
                     true,
                 ),
             )
@@ -366,6 +367,7 @@ describe("CMAccount", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
+                    0, // off chain payment currency
                     true,
                 );
 

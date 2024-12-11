@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 import { BookingToken, Address, SafeERC20, IERC20 } from "./BookingToken.sol";
-import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
-
-//import { CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
+import { CancellationProposalStatus } from "./IBookingToken.sol";
+import { CancellationUtils } from "./CancellationUtils.sol";
 
 /**
  * @title BookingTokenV2
@@ -16,6 +15,24 @@ contract BookingTokenV2 is BookingToken {
     using SafeERC20 for IERC20;
 
     /***************************************************
+     *                   CONSTANTS                     *
+     ***************************************************/
+
+    /**
+     * @dev Special address for native payments.
+     * @notice Tokens are directly transferred to the recipient.
+     */
+    address public constant NATIVE_PAYMENT = address(0);
+
+    /**
+     * @dev Special address for offchain payments. The enum for this
+     * is defined in the Camino Messenger Protocol's
+     * cmp.types.<version>.IsoCurrency enum (currency.proto file).
+     * @notice A third-party service is used to handle payments.
+     */
+    address public constant OFFCHAIN_PAYMENT = address(1);
+
+    /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
@@ -23,7 +40,7 @@ contract BookingTokenV2 is BookingToken {
         uint256 refundAmount;
         address proposedBy;
         CancellationProposalStatus status;
-        CancellationRejectionReason rejectionReason;
+        uint256 reasonsPacked; // Packed cancellation and rejection reasons. Check CancellationUtils.sol
     }
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
     struct BookingTokenCancellableStorage {
@@ -31,6 +48,10 @@ contract BookingTokenV2 is BookingToken {
         mapping(uint256 tokenId => CancellationProposal cancellationProposal) _cancellationProposals;
         // Mapping to store the cancellable flag for each token
         mapping(uint256 tokenId => bool cancellable) _isCancellable;
+        // Mapping to store the off-chain payment currency for each token. The enum
+        // for the `offchainPaymentCurrency` is defined in the Camino Messenger
+        // Protocol's cmp.types.<version>.IsoCurrency enum (currency.proto file).
+        mapping(uint256 tokenId => uint256 offchainPaymentCurrency) _offchainPaymentCurrencies;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenCancellable")) - 1)) & ~bytes32(uint256(0xff));
@@ -69,6 +90,7 @@ contract BookingTokenV2 is BookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool isCancellable
     );
 
@@ -79,7 +101,13 @@ contract BookingTokenV2 is BookingToken {
      * @param proposedBy address that initiated the cancellation
      * @param refundAmount proposed refund amount
      */
-    event CancellationPending(uint256 indexed tokenId, address indexed proposedBy, uint256 refundAmount);
+    event CancellationPending(
+        uint256 indexed tokenId,
+        address indexed proposedBy,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    );
 
     /**
      * @notice Event emitted when a cancellation is accepted.
@@ -97,11 +125,7 @@ contract BookingTokenV2 is BookingToken {
      * @param acceptedBy address that accepted the proposal
      * @param refundAmount proposed refund amount
      */
-    event CancellationProposalAcceptedByTheOwner(
-        uint256 indexed tokenId,
-        address indexed acceptedBy,
-        uint256 refundAmount
-    );
+    event CancellationAcceptedByTheOwner(uint256 indexed tokenId, address indexed acceptedBy, uint256 refundAmount);
 
     /**
      * @notice Event emitted when a cancellation proposal is countered.
@@ -118,7 +142,12 @@ contract BookingTokenV2 is BookingToken {
      * @param tokenId token id
      * @param cancelledBy address that cancelled the proposal
      */
-    event CancellationProposalCancelled(uint256 indexed tokenId, address indexed cancelledBy);
+    event CancellationWithdrawn(
+        uint256 indexed tokenId,
+        address indexed cancelledBy,
+        uint16 reason,
+        uint16 reasonVersion
+    );
 
     /**
      * @notice Event emitted when the cancellable flag for a token is updated.
@@ -133,9 +162,15 @@ contract BookingTokenV2 is BookingToken {
      *
      * @param tokenId token id
      * @param rejectedBy address that rejected the proposal
-     * @param reason reason for rejection
+     * @param rejectionReason rejection reason
+     * @param rejectionReasonVersion rejection reason pkg version from CMP
      */
-    event CancellationRejected(uint256 indexed tokenId, address indexed rejectedBy, CancellationRejectionReason reason);
+    event CancellationRejected(
+        uint256 indexed tokenId,
+        address indexed rejectedBy,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    );
 
     /***************************************************
      *                   ERRORS                        *
@@ -225,6 +260,13 @@ contract BookingTokenV2 is BookingToken {
      */
     error NotAuthorizedToSetCancellable(uint256 tokenId, address caller);
 
+    /**
+     * @notice Error for when there is unexpected native payment.
+     *
+     * @param amount The unexpected amount
+     */
+    error UnexpectedNativePayment(uint256 amount);
+
     /***************************************************
      *                  REINITIALIZE                   *
      ***************************************************/
@@ -253,7 +295,7 @@ contract BookingTokenV2 is BookingToken {
      * @param expirationTimestamp The expiration timestamp
      * @param price The price of the token
      * @param paymentToken The token used to pay for the reservation. If address(0) then native.
-     * @param _isCancellable The cancellable flag
+     * @param cancellable The cancellable flag
      */
     function safeMintWithReservation(
         address reservedFor,
@@ -261,7 +303,8 @@ contract BookingTokenV2 is BookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
-        bool _isCancellable
+        uint256 offchainPaymentCurrency,
+        bool cancellable
     ) public virtual onlyCMAccount(msg.sender) {
         // Require reservedFor to be a CM Account
         requireCMAccount(reservedFor);
@@ -289,9 +332,21 @@ contract BookingTokenV2 is BookingToken {
         $._bookingStatus[tokenId] = BookingStatus.Reserved;
 
         // Set the cancellable flag
-        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = _isCancellable;
+        _getBookingTokenCancellableStorage()._isCancellable[tokenId] = cancellable;
 
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken, _isCancellable);
+        // Set the offchain payment currency. This is only used if the paymentToken is `address(1)`.
+        _getBookingTokenCancellableStorage()._offchainPaymentCurrencies[tokenId] = offchainPaymentCurrency;
+
+        emit TokenReserved(
+            tokenId,
+            reservedFor,
+            msg.sender,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
     }
 
     /**
@@ -312,7 +367,84 @@ contract BookingTokenV2 is BookingToken {
         uint256 price,
         IERC20 paymentToken
     ) public {
-        safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken, false);
+        safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken, 0, false);
+    }
+
+    /**
+     * @notice Buys a reserved token. The reservation must be for the message sender.
+     *
+     * Also the message sender should set allowance for the payment token to this
+     * contract to at least the reservation price. (only for ERC20 tokens)
+     *
+     * For native coin, the message sender should send the exact amount.
+     *
+     * Only CM Accounts can call this function
+     *
+     * @param tokenId The token id
+     */
+    function buyReservedToken(uint256 tokenId) external payable nonReentrant onlyCMAccount(msg.sender) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Get the reservation for the token
+        TokenReservation memory reservation = $._reservations[tokenId];
+
+        // Check if `reservedFor` and `msg.sender` match
+        if (reservation.reservedFor != msg.sender) {
+            revert ReservationMismatch(reservation.reservedFor, msg.sender);
+        }
+
+        // Check expiration timestamp
+        if (block.timestamp > reservation.expirationTimestamp) {
+            revert ReservationExpired(tokenId, reservation.expirationTimestamp);
+        }
+
+        // Check if supplier is still the owner
+        address owner = ownerOf(tokenId);
+        if (owner != reservation.supplier) {
+            revert SupplierIsNotOwner(tokenId, reservation.supplier);
+        }
+
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Do the payment at the end
+        processPayment(reservation.paymentToken, reservation.price, reservation.supplier);
+
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.Bought;
+
+        // Emit event
+        emit TokenBought(tokenId, msg.sender);
+    }
+
+    function processPayment(IERC20 paymentToken, uint256 paymentAmount, address recipient) internal {
+        // Handle the payment based on payment type
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency (CAM)
+            if (msg.value != paymentAmount) {
+                revert IncorrectPrice(msg.value, paymentAmount);
+            }
+
+            // Transfer payment to the supplier
+            payable(recipient).sendValue(msg.value);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+        } else {
+            // Payment is in ERC20
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+
+            // Transfer the ERC20 tokens from distributor to supplier
+            IERC20(paymentToken).safeTransferFrom(msg.sender, recipient, paymentAmount);
+        }
     }
 
     /**
@@ -327,7 +459,7 @@ contract BookingTokenV2 is BookingToken {
      * @notice Retrieves the refund amount for a given token.
      *
      * @param tokenId The token id to retrieve the refund amount for
-     * @return refundAmount The refund amount in wei
+     * @return refundAmount The refund amount in aCAM (wei)
      */
     function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount) {
         return _getBookingTokenCancellableStorage()._cancellationProposals[tokenId].refundAmount;
@@ -344,12 +476,27 @@ contract BookingTokenV2 is BookingToken {
     }
 
     /**
+     * @notice Retrieves the reservation for a given token.
+     *
+     * @param tokenId The token id to retrieve the reservation for
+     * @return reservation The reservation
+     */
+    function getTokenReservation(uint256 tokenId) external view returns (TokenReservation memory) {
+        return _getBookingTokenStorage()._reservations[tokenId];
+    }
+
+    /**
      * @notice Initiates a cancellation for a bought token.
      *
      * @param tokenId The token id to initiate the cancellation for
-     * @param refundAmount The proposed refund amount in wei
+     * @param refundAmount The proposed refund amount in aCAM (wei)
      */
-    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external {
+    function initiateCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) external {
         // Revert if the token status is not "bought"
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         if ($._bookingStatus[tokenId] != BookingStatus.Bought) {
@@ -377,19 +524,24 @@ contract BookingTokenV2 is BookingToken {
             refundAmount: refundAmount,
             proposedBy: msg.sender,
             status: CancellationProposalStatus.Pending,
-            rejectionReason: CancellationRejectionReason.Unspecified
+            reasonsPacked: CancellationUtils.packReasons(cancellationReason, cancellationReasonVersion, 0, 0)
         });
 
-        emit CancellationPending(tokenId, msg.sender, refundAmount);
+        emit CancellationPending(tokenId, msg.sender, refundAmount, cancellationReason, cancellationReasonVersion);
     }
 
     /**
      * @notice Reject a cancellation proposal for a bought token.
      *
      * @param tokenId The token id to reject the cancellation for
-     * @param reason The reason for rejecting the cancellation
+     * @param rejectionReason The reason for rejecting the cancellation
+     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
      */
-    function rejectCancellationProposal(uint256 tokenId, CancellationRejectionReason reason) external {
+    function rejectCancellationProposal(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -411,15 +563,23 @@ contract BookingTokenV2 is BookingToken {
 
         // Reject the cancellation proposal
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Rejected;
-        cancellableStorage._cancellationProposals[tokenId].rejectionReason = reason;
 
-        emit CancellationRejected(tokenId, msg.sender, reason);
+        // Store the rejection reason
+        uint256 reasonsPacked = cancellableStorage._cancellationProposals[tokenId].reasonsPacked;
+        cancellableStorage._cancellationProposals[tokenId].reasonsPacked = CancellationUtils.updateRejectionReason(
+            reasonsPacked,
+            rejectionReason,
+            rejectionReasonVersion
+        );
+
+        emit CancellationRejected(tokenId, msg.sender, rejectionReason, rejectionReasonVersion);
     }
 
     /**
      * @notice Accepts a cancellation proposal for a bought token and finalizes it.
      *
      * @param tokenId The token id to accept the cancellation for
+     * @param checkRefundAmount The refund amount to check, this is used to prevent front-running attacks
      */
     function acceptCancellationProposal(
         uint256 tokenId,
@@ -452,7 +612,7 @@ contract BookingTokenV2 is BookingToken {
             cancellableStorage._cancellationProposals[tokenId].proposedBy = owner;
 
             // Emit event so the supplier can get notified
-            emit CancellationProposalAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
+            emit CancellationAcceptedByTheOwner(tokenId, owner, proposal.refundAmount);
 
             // Exit early as there's nothing else to do for the owner.
             return;
@@ -479,41 +639,15 @@ contract BookingTokenV2 is BookingToken {
         // Emit the cancellation accepted event
         emit CancellationAccepted(tokenId, msg.sender, proposal.refundAmount);
 
-        // Interactions: Perform external calls after state updates.
-
         // Process the refund payment
-        if (address(reservation.paymentToken) != address(0) && proposal.refundAmount > 0) {
-            // Payment is in ERC20.
-            //
-            // Message sender (supplier of the Booking Token) must provide enough
-            // allowance for this (BookingToken) contract to pay the cancellation
-            // refund amount to the owner.
-            uint256 allowance = reservation.paymentToken.allowance(msg.sender, address(this));
-            if (allowance < proposal.refundAmount) {
-                revert InsufficientAllowance(msg.sender, reservation.paymentToken, proposal.refundAmount, allowance);
-            }
-
-            // Transfer proposal refund amount as ERC20 tokens from the supplier to
-            // the owner
-            reservation.paymentToken.safeTransferFrom(msg.sender, owner, proposal.refundAmount);
-        } else {
-            // Payment is in native currency or refund is zero.
-
-            // Check if we receive the correct refund amount
-            if (msg.value != proposal.refundAmount) {
-                revert IncorrectAmount(msg.value, proposal.refundAmount);
-            }
-
-            // Transfer payment to the owner
-            payable(owner).sendValue(msg.value);
-        }
+        processPayment(reservation.paymentToken, proposal.refundAmount, owner);
     }
 
     /**
      * @notice Counters a cancellation proposal with a new proposal.
      *
      * @param tokenId The token id to counter the cancellation for
-     * @param newRefundAmount The new proposed refund amount in wei
+     * @param newRefundAmount The new proposed refund amount in aCAM (wei)
      */
     function counterCancellationProposal(uint256 tokenId, uint256 newRefundAmount) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
@@ -539,9 +673,18 @@ contract BookingTokenV2 is BookingToken {
         // Update the proposal with the new values
         cancellableStorage._cancellationProposals[tokenId].refundAmount = newRefundAmount;
 
+        // Reset rejection reason if the proposal state is rejected
+        if (proposal.status == CancellationProposalStatus.Rejected) {
+            uint256 reasonsPacked = cancellableStorage._cancellationProposals[tokenId].reasonsPacked;
+            cancellableStorage._cancellationProposals[tokenId].reasonsPacked = CancellationUtils.updateRejectionReason(
+                reasonsPacked,
+                0,
+                0
+            );
+        }
+
         // Set cancellation proposal status to "countered"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Countered;
-        cancellableStorage._cancellationProposals[tokenId].rejectionReason = CancellationRejectionReason.Unspecified;
 
         // Emit the countered proposal event
         emit CancellationCountered(tokenId, msg.sender, newRefundAmount);
@@ -550,6 +693,7 @@ contract BookingTokenV2 is BookingToken {
     /**
      * @notice Accept a countered cancellation proposal
      * @param tokenId The token id to accept the countered cancellation proposal for
+     * @param checkRefundAmount The refund amount to check, this is used to prevent front-running attacks
      */
     function acceptCounteredCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external {
         address owner = _requireOwned(tokenId);
@@ -575,17 +719,30 @@ contract BookingTokenV2 is BookingToken {
         // Set status to "Pending"
         cancellableStorage._cancellationProposals[tokenId].status = CancellationProposalStatus.Pending;
 
+        // Get cancellation reasons
+        (uint16 cancellationReason, uint16 cancellationReasonVersion) = CancellationUtils.getCancellationReason(
+            cancellableStorage._cancellationProposals[tokenId].reasonsPacked
+        );
+
         // Emit the cancellation pending event to notify the supplier
-        emit CancellationPending(tokenId, proposal.proposedBy, proposal.refundAmount);
+        emit CancellationPending(
+            tokenId,
+            proposal.proposedBy,
+            proposal.refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     /**
-     * @notice Cancels a pending cancellation proposal. Only the proposer can cancel
-     * the proposal.
+     * @notice Withdraws a pending cancellation proposal. Only the proposer can
+     * withdraw the proposal.
      *
-     * @param tokenId The token id for which to cancel the proposal
+     * @param tokenId The token id for withdrawing the cancellation proposal
+     * @param reason The withdrawal reason for the proposal
+     * @param reasonVersion The version of the withdrawal reason from CMP
      */
-    function cancelCancellationProposal(uint256 tokenId) external {
+    function withdrawCancellationProposal(uint256 tokenId, uint16 reason, uint16 reasonVersion) external {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal storage proposal = cancellableStorage._cancellationProposals[tokenId];
 
@@ -602,11 +759,11 @@ contract BookingTokenV2 is BookingToken {
             revert NoPendingCancellationProposal(tokenId);
         }
 
-        // Cancel the proposal by deleting it from the storage
+        // Withdraw the proposal by deleting it from the storage
         delete cancellableStorage._cancellationProposals[tokenId];
 
-        // Emit the cancellation proposal cancelled event
-        emit CancellationProposalCancelled(tokenId, msg.sender);
+        // Emit the cancellation proposal withdrawn event
+        emit CancellationWithdrawn(tokenId, msg.sender, reason, reasonVersion);
     }
 
     /**
@@ -616,6 +773,10 @@ contract BookingTokenV2 is BookingToken {
      * @return refundAmount The proposed refund amount
      * @return proposedBy The address that initiated the cancellation
      * @return status The status of the cancellation proposal
+     * @return cancellationReason The cancellation reason
+     * @return cancellationReasonVersion The cancellation reason version
+     * @return rejectionReason The rejection reason
+     * @return rejectionReasonVersion The rejection reason version
      */
     function getCancellationProposalStatus(
         uint256 tokenId
@@ -626,12 +787,32 @@ contract BookingTokenV2 is BookingToken {
             uint256 refundAmount,
             address proposedBy,
             CancellationProposalStatus status,
-            CancellationRejectionReason rejectionReason
+            uint16 cancellationReason,
+            uint16 cancellationReasonVersion,
+            uint16 rejectionReason,
+            uint16 rejectionReasonVersion
         )
     {
         BookingTokenCancellableStorage storage cancellableStorage = _getBookingTokenCancellableStorage();
         CancellationProposal memory proposal = cancellableStorage._cancellationProposals[tokenId];
-        return (proposal.refundAmount, proposal.proposedBy, proposal.status, proposal.rejectionReason);
+
+        // Unpack the cancellation reasons from the packed reasons
+        (
+            uint16 _cancellationReason,
+            uint16 _cancellationReasonVersion,
+            uint16 _rejectionReason,
+            uint16 _rejectionReasonVersion
+        ) = CancellationUtils.unpackReasons(proposal.reasonsPacked);
+
+        return (
+            proposal.refundAmount,
+            proposal.proposedBy,
+            proposal.status,
+            _cancellationReason,
+            _cancellationReasonVersion,
+            _rejectionReason,
+            _rejectionReasonVersion
+        );
     }
 
     /***************************************************

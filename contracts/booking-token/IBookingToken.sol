@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -11,19 +11,6 @@ enum CancellationProposalStatus {
     Accepted // 4
 }
 
-enum CancellationRejectionReason {
-    Unspecified, // 0, default
-    TechnicalError, // 1
-    InvalidServiceOrBookingReference, // 2
-    BookingIsAlreadyCancelled, // 3
-    ServiceHasStartedOrHasBeenDelivered, // 4
-    CancellationWindowExpired, // 5
-    ServiceCannotBeCancelledOnline, // 6
-    RateOrFareCannotBeCancelled, // 7
-    EntirePackageMustBeCancelled, // 8, service forms part of a package, the entire package must be cancelled
-    RefundCurrencyNotSupported // 9
-}
-
 interface IBookingToken {
     function safeMintWithReservation(
         address reservedFor,
@@ -31,6 +18,7 @@ interface IBookingToken {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool isCancellable
     ) external;
 
@@ -61,13 +49,21 @@ interface IBookingToken {
      *
      * @param tokenId The token id to initiate the cancellation for
      * @param refundAmount The proposed refund amount in wei
+     * @param cancellationReason The reason for cancellation
+     * @param cancellationReasonVersion The version of the cancellation reason
      */
-    function initiateCancellationProposal(uint256 tokenId, uint256 refundAmount) external;
+    function initiateCancellationProposal(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) external;
 
     /**
      * @notice Accepts a cancellation proposal for a bought token.
      *
      * @param tokenId The token id to accept the cancellation for
+     * @param checkRefundAmount The refund amount to check, this is to prevent front-running attacks
      */
     function acceptCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external payable;
 
@@ -75,9 +71,14 @@ interface IBookingToken {
      * @notice Reject a cancellation proposal for a bought token.
      *
      * @param tokenId The token id to reject the cancellation for
-     * @param reason The reason for rejecting the cancellation
+     * @param rejectionReason The reason for rejection
+     * @param rejectionReasonVersion The version of the rejection reason
      */
-    function rejectCancellationProposal(uint256 tokenId, CancellationRejectionReason reason) external;
+    function rejectCancellationProposal(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external;
 
     /**
      * @notice Counters a cancellation proposal with a new proposal.
@@ -90,35 +91,16 @@ interface IBookingToken {
     /**
      * @notice Accept a countered cancellation proposal
      * @param tokenId The token id to accept the countered cancellation proposal for
-     * @param checkRefundAmount The refund amount to check against the proposal
+     * @param checkRefundAmount The refund amount to check, this is to prevent front-running attacks
      */
     function acceptCounteredCancellationProposal(uint256 tokenId, uint256 checkRefundAmount) external;
 
     /**
-     * @notice Cancels an active cancellation proposal. Only the initiator can cancel.
+     * @notice Withdraws an active cancellation proposal. Only the initiator can withdraw.
      *
-     * @param tokenId The token id for which to cancel the proposal
+     * @param tokenId The token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
      */
-    function cancelCancellationProposal(uint256 tokenId) external;
-
-    // /**
-    //  * @notice Retrieves the current cancellation proposal status for a given token.
-    //  *
-    //  * @param tokenId The token id to check the proposal status for
-    //  * @return refundAmount The proposed refund amount
-    //  * @return initiatedBy The address that initiated the cancellation
-    //  * @return status The status of the cancellation proposal
-    //  * @return rejectionReason The reason for rejecting the cancellation
-    //  */
-    // function getCancellationProposalStatus(
-    //     uint256 tokenId
-    // )
-    //     external
-    //     view
-    //     returns (
-    //         uint256 refundAmount,
-    //         address initiatedBy,
-    //         CancellationProposalStatus status,
-    //         CancellationRejectionReason rejectionReason
-    //     );
+    function withdrawCancellationProposal(uint256 tokenId, uint16 reason, uint16 reasonVersion) external;
 }

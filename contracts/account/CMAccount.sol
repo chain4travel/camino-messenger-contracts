@@ -192,16 +192,6 @@ contract CMAccount is
     error CMAccountNoUpgradeNeeded(address oldImplementation, address newImplementation);
 
     /**
-     * @notice Error to revert with if depositer is not allowed
-     */
-    error DepositorNotAllowed(address sender);
-
-    /**
-     * @notice Error to revert zero value deposits
-     */
-    error ZeroValueDeposit(address sender);
-
-    /**
      * @notice Error to revert with if the prefund is not spent yet
      */
     error PrefundNotSpentYet(uint256 withdrawableAmount, uint256 prefundLeft, uint256 amount);
@@ -340,7 +330,7 @@ contract CMAccount is
         // prefund amount it's ok to withdraw any amount
         if (totalChequePayments < prefundAmount) {
             // Balance should be bigger or equal to the { prefundLeft } because the
-            // total sum of prefund is not yet spent. So, we substact that
+            // total sum of prefund is not yet spent. So, we subtract that
             // (prefundLeft) from the balance to find the withdrawable amount.
             uint256 prefundLeft = prefundAmount - totalChequePayments;
             uint256 withdrawableAmount = address(this).balance - prefundLeft;
@@ -387,6 +377,7 @@ contract CMAccount is
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool _isCancellable
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
@@ -397,6 +388,7 @@ contract CMAccount is
             expirationTimestamp,
             price,
             paymentToken,
+            offchainPaymentCurrency,
             _isCancellable
         );
     }
@@ -786,9 +778,17 @@ contract CMAccount is
 
     function initiateCancellationProposal(
         uint256 tokenId,
-        uint256 refundAmount
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
     ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.initiateCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+        BookingTokenOperator.initiateCancellationProposal(
+            getBookingTokenAddress(),
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     function acceptCancellationProposal(
@@ -798,8 +798,17 @@ contract CMAccount is
         BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId, checkRefundAmount);
     }
 
-    function rejectCancellationProposal(uint256 tokenId, uint256 reason) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.rejectCancellationProposal(getBookingTokenAddress(), tokenId, reason);
+    function rejectCancellationProposal(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.rejectCancellationProposal(
+            getBookingTokenAddress(),
+            tokenId,
+            rejectionReason,
+            rejectionReasonVersion
+        );
     }
 
     function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(BOOKING_OPERATOR_ROLE) {
@@ -813,7 +822,18 @@ contract CMAccount is
         BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function cancelCancellationProposal(uint256 tokenId) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.cancelCancellationProposal(getBookingTokenAddress(), tokenId);
+    /**
+     * @notice Withdraws an active cancellation proposal. Only the initiator can withdraw.
+     *
+     * @param tokenId The token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
+     */
+    function withdrawCancellationProposal(
+        uint256 tokenId,
+        uint16 reason,
+        uint16 reasonVersion
+    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.withdrawCancellationProposal(getBookingTokenAddress(), tokenId, reason, reasonVersion);
     }
 }

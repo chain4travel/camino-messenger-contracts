@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
 // UUPS Proxy
@@ -241,77 +241,6 @@ contract BookingToken is
     /***************************************************
      *             BOOKING-TOKEN LOGIC                 *
      ***************************************************/
-
-    /**
-     * @notice Buys a reserved token. The reservation must be for the message sender.
-     *
-     * Also the message sender should set allowance for the payment token to this
-     * contract to at least the reservation price. (only for ERC20 tokens)
-     *
-     * For native coin, the message sender should send the exact amount.
-     *
-     * Only CM Accounts can call this function
-     *
-     * @param tokenId The token id
-     */
-    function buyReservedToken(uint256 tokenId) external payable nonReentrant onlyCMAccount(msg.sender) {
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-
-        // Get the reservation for the token
-        TokenReservation memory reservation = $._reservations[tokenId];
-
-        // Check if `reservedFor` and `msg.sender` match
-        if (reservation.reservedFor != msg.sender) {
-            revert ReservationMismatch(reservation.reservedFor, msg.sender);
-        }
-
-        // Check expiration timestamp
-        if (block.timestamp > reservation.expirationTimestamp) {
-            revert ReservationExpired(tokenId, reservation.expirationTimestamp);
-        }
-
-        // Check if supplier is still the owner
-        address owner = ownerOf(tokenId);
-        if (owner != reservation.supplier) {
-            revert SupplierIsNotOwner(tokenId, reservation.supplier);
-        }
-
-        // Transfer the token. We are using `_transfer` instead of
-        // `safeTransferFrom` because this is special transfer without a auth check.
-        // Only in this function and only for buying a reserved token
-        _transfer(reservation.supplier, msg.sender, tokenId);
-
-        // Do the payment at the end
-        if (address(reservation.paymentToken) != address(0) && reservation.price > 0) {
-            // Payment is in ERC20.
-            //
-            // Message sender (buyer of the Booking Token, generally the
-            // distributor) must provide enough allowance for this (BookingToken)
-            // contract to pay the reservation price for the token to the supplier.
-            uint256 allowance = reservation.paymentToken.allowance(msg.sender, address(this));
-            if (allowance < reservation.price) {
-                revert InsufficientAllowance(msg.sender, reservation.paymentToken, reservation.price, allowance);
-            }
-
-            // Transfer the ERC20 tokens from buyer to supplier
-            reservation.paymentToken.safeTransferFrom(msg.sender, reservation.supplier, reservation.price);
-        } else {
-            // Payment is in native currency
-            // Check if we receive the right price
-            if (msg.value != reservation.price) {
-                revert IncorrectPrice(msg.value, reservation.price);
-            }
-
-            // Transfer payment to the supplier
-            payable(reservation.supplier).sendValue(msg.value);
-        }
-
-        // Set the status
-        $._bookingStatus[tokenId] = BookingStatus.Bought;
-
-        // Emit event
-        emit TokenBought(tokenId, msg.sender);
-    }
 
     /**
      * @notice Return booking status

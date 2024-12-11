@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import { IBookingToken, IERC20, CancellationProposalStatus, CancellationRejectionReason } from "./IBookingToken.sol";
+import { IBookingToken, IERC20, CancellationProposalStatus } from "./IBookingToken.sol";
 
 // ERC-20 Utils
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -17,6 +17,26 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 library BookingTokenOperator {
     using SafeERC20 for IERC20;
 
+    /***************************************************
+     *                   CONSTANTS                     *
+     ***************************************************/
+
+    /**
+     * @dev Special address for native payments.
+     * @notice Tokens are directly transferred to the recipient.
+     */
+    address public constant NATIVE_PAYMENT = address(0);
+
+    /**
+     * @dev Special address for offchain payments.
+     * @notice A third-party service is used to handle payments.
+     */
+    address public constant OFFCHAIN_PAYMENT = address(1);
+
+    /***************************************************
+     *                   ERRORS                        *
+     ***************************************************/
+
     /**
      * @dev Token approval for the BookingToken address failed.
      *
@@ -25,6 +45,10 @@ library BookingTokenOperator {
      * @param amount amount of tokens to approve
      */
     error TokenApprovalFailed(address token, address spender, uint256 amount);
+
+    /***************************************************
+     *                   FUNCS                         *
+     ***************************************************/
 
     /**
      * @dev Mints a booking token.
@@ -44,6 +68,7 @@ library BookingTokenOperator {
         uint256 expirationTimestamp,
         uint256 price,
         IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
         bool _isCancellable
     ) public {
         IBookingToken(bookingToken).safeMintWithReservation(
@@ -52,6 +77,7 @@ library BookingTokenOperator {
             expirationTimestamp,
             price,
             paymentToken,
+            offchainPaymentCurrency,
             _isCancellable
         );
     }
@@ -67,8 +93,14 @@ library BookingTokenOperator {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
-        // Check if payment is in native currency or in ERC20
-        if (address(paymentToken) != address(0) && price > 0) {
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency. Buy the token by sending the payment
+            // in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            IBookingToken(bookingToken).buyReservedToken(tokenId);
+        } else {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
@@ -80,10 +112,6 @@ library BookingTokenOperator {
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
-        } else {
-            // Payment is in native currency. Buy the token by sending the payment
-            // in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).buyReservedToken{ value: price }(tokenId);
         }
     }
 
@@ -114,8 +142,19 @@ library BookingTokenOperator {
      * @param tokenId token id
      * @param refundAmount proposed refund amount
      */
-    function initiateCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
-        IBookingToken(bookingToken).initiateCancellationProposal(tokenId, refundAmount);
+    function initiateCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) public {
+        IBookingToken(bookingToken).initiateCancellationProposal(
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     /**
@@ -130,7 +169,14 @@ library BookingTokenOperator {
         uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
 
         // Check if payment is in native currency or in ERC20
-        if (address(paymentToken) != address(0) && refundAmount > 0) {
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency. Accept the cancellation by sending the
+            // payment in native currency to the BookingToken contract.
+            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
+        } else {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // refund amount. BookingToken should do the transfer to the
             // supplier.
@@ -142,21 +188,24 @@ library BookingTokenOperator {
 
             // Accept the cancellation
             IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
-        } else {
-            // Payment is in native currency. Accept the cancellation by sending the
-            // payment in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
         }
     }
 
     /**
      * @notice Reject a cancellation proposal for a bought token.
      *
+     * @param bookingToken booking token contract address
      * @param tokenId The token id to reject the cancellation for
-     * @param reason The reason for rejecting the cancellation
+     * @param rejectionReason The reason for rejecting the cancellation
+     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
      */
-    function rejectCancellationProposal(address bookingToken, uint256 tokenId, uint256 reason) external {
-        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, CancellationRejectionReason(reason));
+    function rejectCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external {
+        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, rejectionReason, rejectionReasonVersion);
     }
 
     /**
@@ -185,34 +234,19 @@ library BookingTokenOperator {
     }
 
     /**
-     * @notice Cancels a cancellation proposal.
+     * @notice Withdraws a cancellation proposal.
      *
      * @param bookingToken booking token contract address
-     * @param tokenId token id
+     * @param tokenId token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
      */
-    function cancelCancellationProposal(address bookingToken, uint256 tokenId) public {
-        IBookingToken(bookingToken).cancelCancellationProposal(tokenId);
+    function withdrawCancellationProposal(
+        address bookingToken,
+        uint256 tokenId,
+        uint16 reason,
+        uint16 reasonVersion
+    ) public {
+        IBookingToken(bookingToken).withdrawCancellationProposal(tokenId, reason, reasonVersion);
     }
-
-    // /**
-    //  * @dev Gets the status of a cancellation proposal.
-    //  *
-    //  * @param bookingToken booking token contract address
-    //  * @param tokenId token id
-    //  */
-    // function getCancellationProposalStatus(
-    //     address bookingToken,
-    //     uint256 tokenId
-    // )
-    //     public
-    //     view
-    //     returns (
-    //         uint256 refundAmount,
-    //         address proposedBy,
-    //         CancellationProposalStatus status,
-    //         CancellationRejectionReason rejectionReason
-    //     )
-    // {
-    //     return IBookingToken(bookingToken).getCancellationProposalStatus(tokenId);
-    // }
 }
