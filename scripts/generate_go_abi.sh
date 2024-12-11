@@ -13,6 +13,7 @@ CONTRACTS=(
 
 ABI_PATH="abi"
 GEN_PATH="go/contracts"
+ARTIFACTS_PATH="artifacts"
 
 for CONTRACT in "${CONTRACTS[@]}"; do
     CONTRACT_NAME=$(basename "$CONTRACT" .json)
@@ -22,5 +23,13 @@ for CONTRACT in "${CONTRACTS[@]}"; do
 
     mkdir -p "$PACKAGE_DIR"
 
-    abigen --abi "$ABI_PATH/${CONTRACT}" --pkg $PACKAGE_NAME --out="$PACKAGE_DIR/${CONTRACT_NAME}.go"
+    # Create temporary bin file from the bytecode in JSON
+    CONTRACT_JSON=$(find "$ARTIFACTS_PATH" -name "$CONTRACT_NAME".json)
+    TMP_BIN_FILE=$(mktemp)
+    jq -r '.bytecode' "$CONTRACT_JSON" >"$TMP_BIN_FILE"
+
+    abigen --abi "$ABI_PATH/${CONTRACT}" --bin "$TMP_BIN_FILE" --pkg $PACKAGE_NAME --out="$PACKAGE_DIR/${CONTRACT_NAME}.go"
+
+    # Clean up temporary file
+    rm "$TMP_BIN_FILE"
 done
