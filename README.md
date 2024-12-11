@@ -47,9 +47,9 @@ Chain4Travel is running the first and currently only messenger server.
 
 For network fee cheques, the Camino Messenger Bot should use the values above for:
 
--   `fromCMAccount`: Partner's CM Account address.
--   `toCMAccount`: The "**Messenger CM Account**" address from the tables above.
--   `toBot`: The "**Messenger Service Bot**" address from the tables above.
+- `fromCMAccount`: Partner's CM Account address.
+- `toCMAccount`: The "**Messenger CM Account**" address from the tables above.
+- `toBot`: The "**Messenger Service Bot**" address from the tables above.
 
 ## Quickstart
 
@@ -244,7 +244,7 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
 
 #### Cheque Typehash, Domain Typehash, and Domain Separator
 
--   **Cheque Typehash:** This is the `keccak256` hash of the MessengerCheque struct type.
+- **Cheque Typehash:** This is the `keccak256` hash of the MessengerCheque struct type.
 
     ```js
     function calculateMessengerChequeTypeHash() {
@@ -257,7 +257,7 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
     }
     ```
 
--   **Domain Typehash:** This is the `keccak256` hash of the EIP-712 domain type.
+- **Domain Typehash:** This is the `keccak256` hash of the EIP-712 domain type.
 
     ```js
     function calculateDomainTypeHash() {
@@ -268,8 +268,8 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
     }
     ```
 
--   **Domain Separator:** This is a hash that combines the domain typehash with the
-    name, version, and chain ID of the domain.
+- **Domain Separator:** This is a hash that combines the domain typehash with the
+  name, version, and chain ID of the domain.
 
     ```js
     function calculateDomainSeparator(domainName, domainVersion, chainId) {
@@ -426,11 +426,11 @@ function verifyCheque(
 This function does not only verify that the signer of the cheque is a registered bot
 on the CM Account, but also other verifications like:
 
--   If the `fromCMAccount` is the contract itself
--   If the address of `toCMAccount` is a registered CM Account on the manager
--   If `expiresAt` timestamp is bigger then `block.timestamp`
--   Last counter and last amount recorded on the contract are lower then the cheque's
--   If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
+- If the `fromCMAccount` is the contract itself
+- If the address of `toCMAccount` is a registered CM Account on the manager
+- If `expiresAt` timestamp is bigger then `block.timestamp`
+- Last counter and last amount recorded on the contract are lower then the cheque's
+- If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
 
 So, to only verify if cheque's signature is valid, without doing the verifications
 above (which can only be done on-chain), you can use the examples below.
