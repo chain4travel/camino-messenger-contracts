@@ -90,6 +90,19 @@ function handleTransactionError(error, contract) {
     }
 }
 
+async function getImplementationAddressForProxy(proxyAddress) {
+    // Implementation slot for ERC1967Proxy
+    const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+
+    // Read the implementation slot from the proxy
+    const paddedAddress = await ethers.provider.getStorage(proxyAddress, IMPLEMENTATION_SLOT);
+
+    // Convert the result to an address
+    const address = ethers.getAddress(ethers.dataSlice(paddedAddress, 12));
+
+    return address;
+}
+
 ACCOUNT_SCOPE.task("role:grant", "Grant role")
     .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
     .addParam("role", "Role to grant. Ex: SERVICE_ADMIN_ROLE")
@@ -626,18 +639,64 @@ ACCOUNT_SCOPE.task("upgrade", "Upgrade CMAccount to latest implementation")
 
         // Get new implementation
         const manager = await getManager(hre);
-        const implementation = await manager.getAccountImplementation();
-        console.log("New Implementation on the Manager:", implementation);
+        const currentImplOnManager = await manager.getAccountImplementation();
+        console.log("Implementation on the Manager  :", currentImplOnManager);
+
+        // Get implementation on CMAccount
+        const implementation = await getImplementationAddressForProxy(await cmAccount.getAddress());
+        console.log("Implementation on the CMAccount:", implementation);
+
+        if (implementation === currentImplOnManager) {
+            console.log("✅ CMAccount is using the latest implementation!");
+            console.log("No need for upgrade!");
+            return;
+        } else {
+            console.log("⏫ There is an upgrade available for the CMAccount! Starting upgrade...");
+        }
 
         try {
             const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
             console.log("Upgrading CMAccount implementation...");
             console.log("Signer:", signer.address);
-            const tx = await cmAccount.connect(signer).upgradeToAndCall(implementation, "0x");
+            const tx = await cmAccount.connect(signer).upgradeToAndCall(currentImplOnManager, "0x");
             const receipt = await tx.wait();
             console.log("Tx:", receipt.hash);
         } catch (error) {
             handleTransactionError(error, cmAccount);
+        }
+    });
+
+ACCOUNT_SCOPE.task("upgrade:check", "Check if CMAccount is upgradable")
+    .addOptionalParam(
+        "cmAccount",
+        "CMAccount address, default: CMACCOUNT_ADDRESS env variable",
+        process.env.CMACCOUNT_ADDRESS,
+    )
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        console.log("Manager:", await manager.getAddress());
+        const cmAccount = await getCMAccount(taskArgs.cmAccount);
+        console.log("CMAccount:", taskArgs.cmAccount);
+
+        console.log(`📜 ${bold("Implementation:")}`);
+        const implementation = await getImplementationAddressForProxy(await cmAccount.getAddress());
+
+        const currentImplOnManager = await manager.getAccountImplementation();
+
+        // Create visual diff of the addresses using ANSI red color code
+        const addressDiff = Array.from(implementation)
+            .map((char, i) => {
+                return char === currentImplOnManager[i] ? char : `\x1b[31m${char}\x1b[0m`;
+            })
+            .join("");
+
+        console.log(`${bold("   - Active:")}`, addressDiff);
+        console.log(`${bold("   - Latest:")}`, currentImplOnManager);
+
+        if (implementation !== currentImplOnManager) {
+            console.log("⏫ CMAccount needs an upgrade!");
+        } else {
+            console.log("✅ CMAccount is using the latest implementation!");
         }
     });
 
