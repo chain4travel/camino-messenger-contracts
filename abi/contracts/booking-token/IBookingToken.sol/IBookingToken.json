@@ -54,19 +54,6 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
-      }
-    ],
-    "name": "cancelCancellationProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -152,6 +139,16 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "initiateCancellationProposal",
@@ -180,9 +177,14 @@
         "type": "uint256"
       },
       {
-        "internalType": "enum CancellationRejectionReason",
-        "name": "reason",
-        "type": "uint8"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "rejectCancellationProposal",
@@ -218,6 +220,11 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
+      },
+      {
         "internalType": "bool",
         "name": "isCancellable",
         "type": "bool"
@@ -242,6 +249,29 @@
       }
     ],
     "name": "setCancellable",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reasonVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "withdrawCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

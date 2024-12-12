@@ -40,17 +40,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "AddressInsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "admin",
         "type": "address"
       }
@@ -97,7 +86,7 @@
   },
   {
     "inputs": [],
-    "name": "FailedInnerCall",
+    "name": "FailedCall",
     "type": "error"
   },
   {
@@ -114,6 +103,22 @@
       }
     ],
     "name": "IncorrectPrefundAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "needed",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientBalance",
     "type": "error"
   },
   {
@@ -798,6 +803,25 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getRoleMembers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
       }
     ],
     "stateMutability": "view",

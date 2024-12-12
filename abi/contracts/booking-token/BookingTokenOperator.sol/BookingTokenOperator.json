@@ -19,5 +19,31 @@
     ],
     "name": "TokenApprovalFailed",
     "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NATIVE_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "OFFCHAIN_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ]

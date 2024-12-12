@@ -40,17 +40,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "AddressInsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "latestImplementation",
         "type": "address"
       },
@@ -88,17 +77,6 @@
       }
     ],
     "name": "ChequeExpired",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "DepositorNotAllowed",
     "type": "error"
   },
   {
@@ -146,7 +124,23 @@
   },
   {
     "inputs": [],
-    "name": "FailedInnerCall",
+    "name": "FailedCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "needed",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientBalance",
     "type": "error"
   },
   {
@@ -411,17 +405,6 @@
       }
     ],
     "name": "WithdrawalLimitExceededForPeriod",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "ZeroValueDeposit",
     "type": "error"
   },
   {
@@ -1210,19 +1193,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "cancelCancellationProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "fromCMAccount",
         "type": "address"
@@ -1521,6 +1491,25 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getRoleMembers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
       }
     ],
     "stateMutability": "view",
@@ -1947,6 +1936,16 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "initiateCancellationProposal",
@@ -1999,6 +1998,11 @@
         "internalType": "contract IERC20",
         "name": "paymentToken",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
       },
       {
         "internalType": "bool",
@@ -2092,9 +2096,14 @@
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "reason",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "rejectCancellationProposal",
@@ -2480,6 +2489,29 @@
       }
     ],
     "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reasonVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "withdrawCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

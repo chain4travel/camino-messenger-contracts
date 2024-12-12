@@ -35,17 +35,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "AddressInsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "implementation",
         "type": "address"
       }
@@ -200,7 +189,7 @@
   },
   {
     "inputs": [],
-    "name": "FailedInnerCall",
+    "name": "FailedCall",
     "type": "error"
   },
   {
@@ -259,6 +248,22 @@
       }
     ],
     "name": "InsufficientAllowance",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "needed",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientBalance",
     "type": "error"
   },
   {
@@ -535,6 +540,17 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UnexpectedNativePayment",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -640,6 +656,31 @@
       {
         "indexed": true,
         "internalType": "address",
+        "name": "acceptedBy",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CancellationAcceptedByTheOwner",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "counteredBy",
         "type": "address"
       },
@@ -673,53 +714,21 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
-      }
-    ],
-    "name": "CancellationPending",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "acceptedBy",
-        "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "refundAmount",
-        "type": "uint256"
-      }
-    ],
-    "name": "CancellationProposalAcceptedByTheOwner",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "cancelledBy",
-        "type": "address"
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "CancellationProposalCancelled",
+    "name": "CancellationPending",
     "type": "event"
   },
   {
@@ -739,12 +748,49 @@
       },
       {
         "indexed": false,
-        "internalType": "enum CancellationRejectionReason",
-        "name": "reason",
-        "type": "uint8"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "CancellationRejected",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "cancelledBy",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "reason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "reasonVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "CancellationWithdrawn",
     "type": "event"
   },
   {
@@ -940,6 +986,12 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "bool",
         "name": "isCancellable",
         "type": "bool"
@@ -1007,6 +1059,32 @@
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "NATIVE_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "OFFCHAIN_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1130,19 +1208,6 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
-      }
-    ],
-    "name": "cancelCancellationProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -1238,9 +1303,24 @@
         "type": "uint8"
       },
       {
-        "internalType": "enum CancellationRejectionReason",
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
         "name": "rejectionReason",
-        "type": "uint8"
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -1337,6 +1417,52 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTokenReservation",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "reservedFor",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "supplier",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationTimestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "contract IERC20",
+            "name": "paymentToken",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct BookingToken.TokenReservation",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -1410,6 +1536,16 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "initiateCancellationProposal",
@@ -1540,14 +1676,37 @@
   {
     "inputs": [
       {
+        "internalType": "string",
+        "name": "newName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "newSymbol",
+        "type": "string"
+      }
+    ],
+    "name": "reinitializeV2",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
       },
       {
-        "internalType": "enum CancellationRejectionReason",
-        "name": "reason",
-        "type": "uint8"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
     "name": "rejectCancellationProposal",
@@ -1652,8 +1811,13 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
+      },
+      {
         "internalType": "bool",
-        "name": "_isCancellable",
+        "name": "cancellable",
         "type": "bool"
       }
     ],
@@ -1903,6 +2067,29 @@
     "name": "upgradeToAndCall",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reasonVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "withdrawCancellationProposal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]
