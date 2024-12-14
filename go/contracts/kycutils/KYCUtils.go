@@ -32,11 +32,33 @@ var (
 // KycutilsMetaData contains all meta data concerning the Kycutils contract.
 var KycutilsMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"NotKYBVerified\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"NotKYCVerified\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"NotVerified\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ADMIN_ADDR\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"KYB_VERIFIED\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"KYC_EXPIRED\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"KYC_VERIFIED\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x60d9610039600b82828239805160001a60731461002c57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060515760003560e01c8063517103bf14605657806397041685146070578063a58a021e146077578063b11569f514607f575b600080fd5b605d600181565b6040519081526020015b60405180910390f35b605d600281565b605d61010081565b608c600a600160981b0181565b6040516001600160a01b039091168152602001606756fea264697066735822122070ef18e9f76eed6751bfc549bc0e83bd131347a725c5895a0993722501f4821764736f6c63430008180033",
 }
 
 // KycutilsABI is the input ABI used to generate the binding from.
 // Deprecated: Use KycutilsMetaData.ABI instead.
 var KycutilsABI = KycutilsMetaData.ABI
+
+// KycutilsBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use KycutilsMetaData.Bin instead.
+var KycutilsBin = KycutilsMetaData.Bin
+
+// DeployKycutils deploys a new Ethereum contract, binding an instance of Kycutils to it.
+func DeployKycutils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Kycutils, error) {
+	parsed, err := KycutilsMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(KycutilsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Kycutils{KycutilsCaller: KycutilsCaller{contract: contract}, KycutilsTransactor: KycutilsTransactor{contract: contract}, KycutilsFilterer: KycutilsFilterer{contract: contract}}, nil
+}
 
 // Kycutils is an auto generated Go binding around an Ethereum contract.
 type Kycutils struct {
