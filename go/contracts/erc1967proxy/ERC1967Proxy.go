@@ -26,7 +26,6 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
-	_ = abi.ConvertType
 )
 
 // Erc1967proxyMetaData contains all meta data concerning the Erc1967proxy contract.
@@ -157,11 +156,11 @@ func NewErc1967proxyFilterer(address common.Address, filterer bind.ContractFilte
 
 // bindErc1967proxy binds a generic wrapper to an already deployed contract.
 func bindErc1967proxy(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := Erc1967proxyMetaData.GetAbi()
+	parsed, err := abi.JSON(strings.NewReader(Erc1967proxyABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
