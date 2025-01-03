@@ -42,17 +42,13 @@ describe("BookingToken", function () {
             const price = ethers.parseEther("0.05");
 
             await expect(
-                bookingToken
-                    .connect(signers.btAdmin)
-                    ["safeMintWithReservation(address,string,uint256,uint256,address,uint256,bool)"](
-                        distributorCMAccount.getAddress(), // reservedFor
-                        tokenURI, // tokenURI
-                        expirationTimestamp, // expiration
-                        price, // price
-                        ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                        0, // off chain payment currency
-                        true,
-                    ),
+                bookingToken.connect(signers.btAdmin).safeMintWithReservation(
+                    distributorCMAccount.getAddress(), // reservedFor
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
                 .withArgs(signers.btAdmin.address);
@@ -84,8 +80,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
@@ -118,8 +112,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -130,8 +122,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -140,8 +130,8 @@ describe("BookingToken", function () {
             // Check token booking status
             expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
 
-            // Check cancellable flag
-            expect(await bookingToken.isCancellable(0n)).to.equal(true);
+            // Check cancellable flag FIXME: We'll test this in V2
+            // expect(await bookingToken.isCancellable(0n)).to.equal(true);
 
             // Mint again to make sure the token id is incremented
             await expect(
@@ -151,8 +141,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -163,8 +151,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -200,8 +186,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -212,8 +196,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Sanity check
@@ -252,8 +234,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -264,8 +244,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -331,8 +309,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -343,8 +319,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -406,14 +380,14 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
                     price, // price
                     offChainPaymentMarker, // off-chain payment marker, address(1)
                     6, // off chain payment currency, 6 == Euro
-                    true,
+                    true, // cancellable
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -424,8 +398,12 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
+                )
+                .to.emit(bookingToken, "TokenReservedV2")
+                .withArgs(
+                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
-                    true,
+                    true, // cancellable
                 );
 
             // Check token ownership
@@ -487,7 +465,7 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -505,8 +483,12 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
+                )
+                .to.emit(bookingToken, "TokenReservedV2")
+                .withArgs(
+                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
-                    true,
+                    true, // cancellable
                 );
 
             // Check token ownership
@@ -568,7 +550,7 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -586,8 +568,12 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
+                )
+                .to.emit(bookingToken, "TokenReservedV2")
+                .withArgs(
+                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
-                    true,
+                    true, // cancellable
                 );
 
             // Check token ownership
@@ -647,8 +633,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -659,8 +643,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -727,8 +709,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -739,8 +719,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -801,8 +779,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -813,8 +789,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -881,8 +855,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -893,8 +865,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             /***************************************************
@@ -945,8 +915,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -957,8 +925,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1002,8 +968,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1014,8 +978,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1096,8 +1058,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1108,8 +1068,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1165,8 +1123,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1177,8 +1133,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1247,8 +1201,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1259,8 +1211,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1333,8 +1283,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1345,8 +1293,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1492,8 +1438,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1504,8 +1448,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1587,8 +1529,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1599,8 +1539,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1702,8 +1640,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1714,8 +1650,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -1848,8 +1782,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1860,8 +1792,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -2076,8 +2006,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -2088,8 +2016,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -2232,8 +2158,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -2244,8 +2168,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -2388,8 +2310,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -2400,8 +2320,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership
@@ -2622,8 +2540,6 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -2634,8 +2550,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
-                    0, // off chain payment currency
-                    true,
                 );
 
             // Check token ownership

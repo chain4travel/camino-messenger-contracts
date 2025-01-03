@@ -376,9 +376,7 @@ contract CMAccount is
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken,
-        uint256 offchainPaymentCurrency,
-        bool _isCancellable
+        IERC20 paymentToken
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
         // Mint the token
         BookingTokenOperator.mintBookingToken(
@@ -387,9 +385,28 @@ contract CMAccount is
             uri,
             expirationTimestamp,
             price,
+            paymentToken
+        );
+    }
+
+    function mintBookingTokenV2(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
+        bool cancellable
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.mintBookingTokenV2(
+            getBookingTokenAddress(),
+            reservedFor,
+            uri,
+            expirationTimestamp,
+            price,
             paymentToken,
             offchainPaymentCurrency,
-            _isCancellable
+            cancellable
         );
     }
 

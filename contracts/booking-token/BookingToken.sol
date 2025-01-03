@@ -22,6 +22,9 @@ import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+// Cancellable
+import { BookingTokenCancellable } from "./BookingTokenCancellable.sol";
+
 /**
  * @title BookingToken
  * @notice Booking Token contract represents a booking done on the Camino Messenger.
@@ -42,7 +45,8 @@ contract BookingToken is
     ERC721URIStorageUpgradeable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    BookingTokenCancellable
 {
     using Address for address payable;
     using SafeERC20 for IERC20;
@@ -61,16 +65,30 @@ contract BookingToken is
      */
     bytes32 public constant MIN_EXPIRATION_ADMIN_ROLE = keccak256("MIN_EXPIRATION_ADMIN_ROLE");
 
+    /**
+     * @dev Special address for native payments.
+     * @notice Tokens are directly transferred to the recipient.
+     */
+    address public constant NATIVE_PAYMENT = address(0);
+
+    /**
+     * @dev Special address for offchain payments. The enum for this
+     * is defined in the Camino Messenger Protocol's
+     * cmp.types.<version>.IsoCurrency enum (currency.proto file).
+     * @notice A third-party service is used to handle payments.
+     */
+    address public constant OFFCHAIN_PAYMENT = address(1);
+
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
 
     enum BookingStatus {
-        Unspecified, // 0, default value
-        Reserved, // 1
-        Expired, // 2
-        Bought, // 3
-        Cancelled // 4
+        UNSPECIFIED, // 0, default value
+        RESERVED, // 1
+        RESERVATION_EXPIRED, // 2
+        BOUGHT, // 3
+        CANCELLED // 4
     }
 
     // Reservation details
@@ -80,6 +98,8 @@ contract BookingToken is
         uint256 expirationTimestamp; // Timestamp when the reservation expires
         uint256 price; // Price of the token, only native for now
         IERC20 paymentToken; // Token used to pay for the reserved token
+        uint256 offchainPaymentCurrency; // Offchain payment currency
+        bool cancellable; // Is the token (booking) cancellable
     }
 
     /// @custom:storage-location erc7201:camino.messenger.storage.BookingToken
@@ -111,6 +131,27 @@ contract BookingToken is
      ***************************************************/
 
     /**
+     * @notice Event emitted when a token is reserved.
+     *
+     * @param tokenId token id
+     * @param reservedFor reserved for address
+     * @param supplier supplier address
+     * @param expirationTimestamp expiration timestamp
+     * @param price price of the token
+     * @param paymentToken payment token address
+     */
+    event TokenReserved(
+        uint256 indexed tokenId,
+        address indexed reservedFor,
+        address indexed supplier,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken
+    );
+
+    event TokenReservedV2(uint256 indexed tokenId, uint256 offchainPaymentCurrency, bool cancellable);
+
+    /**
      * @notice Event emitted when a token is bought.
      *
      * @param tokenId token id
@@ -123,7 +164,7 @@ contract BookingToken is
      *
      * @param tokenId token id
      */
-    event TokenExpired(uint256 indexed tokenId);
+    event TokenReservationExpired(uint256 indexed tokenId);
 
     /***************************************************
      *                    ERRORS                       *
@@ -200,6 +241,21 @@ contract BookingToken is
      */
     error InvalidTokenStatus(uint256 tokenId, BookingStatus status);
 
+    /**
+     * @notice Unexpected offchain payment currency. Thrown when offchain payment currency is provided
+     * but payment token is not address(1).
+     *
+     * @param offchainPaymentCurrency offchain payment currency
+     */
+    error UnexpectedOffchainPaymentCurrency(uint256 offchainPaymentCurrency);
+
+    /**
+     * @notice Error for when there is unexpected native payment.
+     *
+     * @param amount The unexpected amount
+     */
+    error UnexpectedNativePayment(uint256 amount);
+
     /***************************************************
      *                  MODIFIERS                      *
      ***************************************************/
@@ -213,7 +269,7 @@ contract BookingToken is
     }
 
     /***************************************************
-     *                    FUNCS                        *
+     *                   INITIALIZE                    *
      ***************************************************/
 
     function initialize(address manager, address defaultAdmin, address upgrader) public initializer {
@@ -232,15 +288,202 @@ contract BookingToken is
         $._minExpirationTimestampDiff = 60;
     }
 
-    /**
-     * @notice Function to authorize an upgrade for UUPS proxy.
-     */
+    /***************************************************
+     *                  REINITIALIZE                   *
+     ***************************************************/
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+    /**
+     * @notice This function allows reinitializing the contract to update the name and symbol
+     * @dev Only callable by DEFAULT_ADMIN_ROLE
+     * @param newName New token name
+     * @param newSymbol New token symbol
+     */
+    function reinitializeV2(
+        string memory newName,
+        string memory newSymbol
+    ) public reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
+        __ERC721_init(newName, newSymbol);
+    }
 
     /***************************************************
      *             BOOKING-TOKEN LOGIC                 *
      ***************************************************/
+
+    /**
+     * @notice Returns the version of the contract.
+     *
+     * - no version() func: Legacy version without Cancellation support
+     * - v0.1.0: Version with Cancellation support
+     */
+    function version() public pure virtual returns (uint16 major, uint16 minor, uint16 patch) {
+        return (0, 1, 0);
+    }
+
+    /**
+     * @notice Function to authorize an upgrade for UUPS proxy.
+     */
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(UPGRADER_ROLE) {}
+
+    /**
+     * @notice Mints a new token with a reservation for a specific address.
+     *
+     * @param reservedFor The CM Account address that can buy the token
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The token used to pay for the reservation. If address(0) then native.
+     * @param offchainPaymentCurrency The offchain payment currency
+     * @param cancellable The flag that represents whether the booking is cancellable
+     */
+    function safeMintWithReservationV2(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
+        bool cancellable
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Require reservedFor to be a CM Account
+        requireCMAccount(reservedFor);
+
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Expiration timestamp should be at least `_minExpirationTimestampDiff`
+        // seconds in the future
+        uint256 minExpirationTimestampDiff = $._minExpirationTimestampDiff;
+        if (!(expirationTimestamp > (block.timestamp + minExpirationTimestampDiff))) {
+            revert ExpirationTimestampTooSoon(expirationTimestamp, minExpirationTimestampDiff);
+        }
+
+        // Revert if the off chain payment currency is provided but payment token is not address(1)
+        if (offchainPaymentCurrency > 0 && address(paymentToken) != OFFCHAIN_PAYMENT) {
+            revert UnexpectedOffchainPaymentCurrency(offchainPaymentCurrency);
+        }
+
+        // Increment the token id
+        uint256 tokenId = $._nextTokenId++;
+
+        // Mint the token for the supplier (the caller)
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, uri);
+
+        // Store the reservation
+        _reserve(
+            tokenId,
+            reservedFor,
+            msg.sender,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
+
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.RESERVED;
+
+        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
+        emit TokenReservedV2(tokenId, offchainPaymentCurrency, cancellable);
+    }
+
+    /**
+     * @notice Mints a new token with a reservation for a specific address. Setting
+     * off chain currency to 0 and cancellable flag to false. Original function signature.
+     *
+     * @param reservedFor The CM Account address that can buy the token
+     * @param uri The URI of the token
+     * @param expirationTimestamp The expiration timestamp
+     * @param price The price of the token
+     * @param paymentToken The token used to pay for the reservation. If address(0)
+       then native.
+     */
+    function safeMintWithReservation(
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken
+    ) public virtual {
+        safeMintWithReservationV2(reservedFor, uri, expirationTimestamp, price, paymentToken, 0, false);
+    }
+
+    /**
+     * @notice Buys a reserved token. The reservation must be for the message sender.
+     *
+     * Also the message sender should set allowance for the payment token to this
+     * contract to at least the reservation price. (only for ERC20 tokens)
+     *
+     * For native coin, the message sender should send the exact amount.
+     *
+     * Only CM Accounts can call this function
+     *
+     * @param tokenId The token id
+     */
+    function buyReservedToken(uint256 tokenId) external payable virtual nonReentrant onlyCMAccount(msg.sender) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Get the reservation for the token
+        TokenReservation memory reservation = $._reservations[tokenId];
+
+        // Check if `reservedFor` and `msg.sender` match
+        if (reservation.reservedFor != msg.sender) {
+            revert ReservationMismatch(reservation.reservedFor, msg.sender);
+        }
+
+        // Check expiration timestamp
+        if (block.timestamp > reservation.expirationTimestamp) {
+            revert ReservationExpired(tokenId, reservation.expirationTimestamp);
+        }
+
+        // Check if supplier is still the owner
+        address owner = ownerOf(tokenId);
+        if (owner != reservation.supplier) {
+            revert SupplierIsNotOwner(tokenId, reservation.supplier);
+        }
+
+        // Transfer the token. We are using `_transfer` instead of
+        // `safeTransferFrom` because this is special transfer without a auth check.
+        // Only in this function and only for buying a reserved token
+        _transfer(reservation.supplier, msg.sender, tokenId);
+
+        // Do the payment at the end
+        processPayment(reservation.paymentToken, reservation.price, reservation.supplier);
+
+        // Set the status
+        $._bookingStatus[tokenId] = BookingStatus.BOUGHT;
+
+        // Emit event
+        emit TokenBought(tokenId, msg.sender);
+    }
+
+    function processPayment(IERC20 paymentToken, uint256 paymentAmount, address recipient) internal virtual {
+        // Handle the payment based on payment type
+        if (address(paymentToken) == NATIVE_PAYMENT) {
+            // Payment is in native currency (CAM)
+            if (msg.value != paymentAmount) {
+                revert IncorrectPrice(msg.value, paymentAmount);
+            }
+
+            // Transfer payment to the supplier
+            payable(recipient).sendValue(msg.value);
+        } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
+            // Off-chain payment - no on-chain transfer needed
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+        } else {
+            // Payment is in ERC20
+            // Ensure no native currency was sent
+            if (msg.value > 0) {
+                revert UnexpectedNativePayment(msg.value);
+            }
+
+            // Transfer the ERC20 tokens from distributor to supplier
+            IERC20(paymentToken).safeTransferFrom(msg.sender, recipient, paymentAmount);
+        }
+    }
 
     /**
      * @notice Return booking status
@@ -248,7 +491,7 @@ contract BookingToken is
      * @param tokenId The token id
      * @return The booking status
      */
-    function getBookingStatus(uint256 tokenId) public view returns (BookingStatus) {
+    function getBookingStatus(uint256 tokenId) public view virtual returns (BookingStatus) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         return $._bookingStatus[tokenId];
     }
@@ -262,10 +505,21 @@ contract BookingToken is
         address supplier,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
-    ) internal {
+        IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
+        bool cancellable
+    ) internal virtual {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-        $._reservations[tokenId] = TokenReservation(reservedFor, supplier, expirationTimestamp, price, paymentToken);
+
+        $._reservations[tokenId] = TokenReservation(
+            reservedFor,
+            supplier,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
     }
 
     /**
@@ -275,27 +529,27 @@ contract BookingToken is
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         BookingStatus status = $._bookingStatus[tokenId];
 
-        // If token is bought, expired or cancelled, token is transferable
-        if (status == BookingStatus.Bought || status == BookingStatus.Expired) {
+        // If token is BOUGHT or EXPIRED, token is transferable
+        if (status == BookingStatus.BOUGHT || status == BookingStatus.RESERVATION_EXPIRED) {
             return;
         }
 
-        // Revert if booking status is Cancelled
-        if (status == BookingStatus.Cancelled) {
+        // Revert if booking status is CANCELLED
+        if (status == BookingStatus.CANCELLED) {
             revert InvalidTokenStatus(tokenId, status);
         }
 
-        // If token is reserved, check if it is expired
-        // If expiration time is in the past, token is transferable. Because it can
-        // not be bought after expired.
+        // If token is RESERVED, check if it is expired. If expiration time is in
+        // the past, token is transferable. Because it can not be bought after
+        // expired.
         TokenReservation storage reservation = $._reservations[tokenId];
 
         if (block.timestamp > reservation.expirationTimestamp) {
             // Token is expired, set status to expired
-            $._bookingStatus[tokenId] = BookingStatus.Expired;
+            $._bookingStatus[tokenId] = BookingStatus.RESERVATION_EXPIRED;
 
             // Emit event
-            emit TokenExpired(tokenId);
+            emit TokenReservationExpired(tokenId);
             return;
         } else {
             // Token is not expired, revert transfer
@@ -314,16 +568,20 @@ contract BookingToken is
         BookingStatus status = $._bookingStatus[tokenId];
 
         // If token is already set as expired, bought or cancelled, revert.
-        if (status == BookingStatus.Expired || status == BookingStatus.Bought || status == BookingStatus.Cancelled) {
+        if (
+            status == BookingStatus.RESERVATION_EXPIRED ||
+            status == BookingStatus.BOUGHT ||
+            status == BookingStatus.CANCELLED
+        ) {
             revert InvalidTokenStatus(tokenId, status);
         }
 
         // If expiration time is in the past, set status to expired
         if (block.timestamp > reservation.expirationTimestamp) {
-            $._bookingStatus[tokenId] = BookingStatus.Expired;
+            $._bookingStatus[tokenId] = BookingStatus.RESERVATION_EXPIRED;
 
             // Emit event
-            emit TokenExpired(tokenId);
+            emit TokenReservationExpired(tokenId);
         } else {
             // Token is not expired, revert setting status
             revert TokenIsReserved(tokenId, reservation.reservedFor);
@@ -336,7 +594,7 @@ contract BookingToken is
      * @param account The address to check
      * @return true if the address is a CM Account
      */
-    function isCMAccount(address account) public view returns (bool) {
+    function isCMAccount(address account) public view virtual returns (bool) {
         return ICMAccountManager(getManagerAddress()).isCMAccount(account);
     }
 
@@ -345,7 +603,7 @@ contract BookingToken is
      *
      * @param account The address to check
      */
-    function requireCMAccount(address account) internal view {
+    function requireCMAccount(address account) internal view virtual {
         if (!isCMAccount(account)) {
             revert NotCMAccount(account);
         }
@@ -356,7 +614,7 @@ contract BookingToken is
      *
      * @param manager The address of the manager
      */
-    function setManagerAddress(address manager) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setManagerAddress(address manager) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         $._manager = manager;
     }
@@ -364,7 +622,7 @@ contract BookingToken is
     /**
      * @notice Returns for the manager address.
      */
-    function getManagerAddress() public view returns (address) {
+    function getManagerAddress() public view virtual returns (address) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         return $._manager;
     }
@@ -376,7 +634,7 @@ contract BookingToken is
      */
     function setMinExpirationTimestampDiff(
         uint256 minExpirationTimestampDiff
-    ) public onlyRole(MIN_EXPIRATION_ADMIN_ROLE) {
+    ) public virtual onlyRole(MIN_EXPIRATION_ADMIN_ROLE) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         $._minExpirationTimestampDiff = minExpirationTimestampDiff;
     }
@@ -384,7 +642,7 @@ contract BookingToken is
     /**
      * @notice Returns minimum expiration timestamp difference in seconds.
      */
-    function getMinExpirationTimestampDiff() public view returns (uint256) {
+    function getMinExpirationTimestampDiff() public view virtual returns (uint256) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         return $._minExpirationTimestampDiff;
     }
@@ -394,9 +652,165 @@ contract BookingToken is
      *
      * @param tokenId The token id
      */
-    function getReservationPrice(uint256 tokenId) public view returns (uint256 price, IERC20 paymentToken) {
+    function getReservationPrice(uint256 tokenId) public view virtual returns (uint256 price, IERC20 paymentToken) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         return ($._reservations[tokenId].price, $._reservations[tokenId].paymentToken);
+    }
+
+    /***************************************************
+     *              CANCELLATION LOGIC                 *
+     ***************************************************/
+
+    function initiateCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _initiateCancellation(owner, supplier, tokenId, refundAmount, cancellationReason, cancellationReasonVersion);
+    }
+
+    function acceptCancellation(uint256 tokenId, uint256 refundAmount) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _acceptCancellation(owner, supplier, tokenId, refundAmount);
+    }
+
+    function counterCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 counterReason,
+        uint16 counterReasonVersion
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _counterCancellation(owner, supplier, tokenId, refundAmount, counterReason, counterReasonVersion);
+    }
+
+    function withdrawCancellation(
+        uint256 tokenId,
+        uint16 withdrawalReason,
+        uint16 withdrawalReasonVersion
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _withdrawCancellation(owner, supplier, tokenId, withdrawalReason, withdrawalReasonVersion);
+    }
+
+    function rejectCancellation(
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _rejectCancellation(owner, supplier, tokenId, rejectionReason, rejectionReasonVersion);
+    }
+
+    function finalizeCancellation(
+        uint256 tokenId,
+        uint256 refundAmount
+    ) public payable virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _finalizeCancellation(supplier, tokenId, refundAmount);
+    }
+
+    function reinitializeCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) public virtual onlyCMAccount(msg.sender) {
+        // Revert if token does not exist
+        address owner = _requireOwned(tokenId);
+
+        // Get storage
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        // Revert if token is not BOUGHT
+        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
+            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
+        }
+
+        address supplier = $._reservations[tokenId].supplier;
+
+        _reinitializeCancellation(
+            owner,
+            supplier,
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 
     /***************************************************
@@ -407,7 +821,11 @@ contract BookingToken is
      * @notice Override transferFrom to check if token is reserved. It reverts if
      * the token is reserved.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public override(ERC721Upgradeable, IERC721) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Upgradeable, IERC721) {
         // Verify that the token is transferable (i.e. not reserved)
         checkTransferable(tokenId);
         super.transferFrom(from, to, tokenId);
@@ -422,7 +840,7 @@ contract BookingToken is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public override(ERC721Upgradeable, IERC721) {
+    ) public virtual override(ERC721Upgradeable, IERC721) {
         // Verify that the token is transferable (i.e. not reserved)
         checkTransferable(tokenId);
         super.safeTransferFrom(from, to, tokenId, data);

@@ -1,0 +1,522 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.24;
+
+import { CancellationProposalStatus } from "./IBookingToken.sol";
+
+contract BookingTokenCancellable {
+    struct Proposal {
+        uint256 refundAmount; // Slot n
+        address initialProposer; // Slot n+1, 20 bytes
+        uint32 timesCountered; // Packed above 8 bytes
+        bool ownerAccepted; // Packed above, 1 byte
+        bool supplierAccepted; // Packed above, 1 byte, 30 bytes consumed
+        address currentProposer; // Slot n+2, 20 bytes
+        uint32 timesRejected; // Packed above, 8 bytes
+        CancellationProposalStatus status; // Packed above, 1 byte, 29 bytes consumed
+        uint16 cancellationReason; // Slot n+3, 2 bytes
+        uint16 cancellationVersion; // Packed above, 2 bytes
+        uint16 rejectionReason; // Packed above, 2 bytes
+        uint16 rejectionVersion; // Packed above, 2 bytes
+        uint16 counterReason; // Packed above, 2 bytes
+        uint16 counterVersion; // Packed above, 2 bytes
+        uint16 withdrawalReason; // Packed above, 2 bytes
+        uint16 withdrawalVersion; // Packed above, 2 bytes, 16 bytes consumed
+    }
+
+    /***************************************************
+     *                   STORAGE                       *
+     ***************************************************/
+
+    /// @custom:storage-location erc7201:camino.messenger.storage.BookingTokenCancellable
+    struct BookingTokenCancellableStorage {
+        // Mapping to store the ongoing cancellation proposals for each token
+        mapping(uint256 tokenId => Proposal proposal) _proposals;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.BookingTokenCancellableV2")) - 1)) & ~bytes32(uint256(0xff));
+    bytes32 private constant BookingTokenCancellableStorageLocation =
+        0x0b8fb32ffc7043fda9e0ee2bcb4236acf95ab448752c73eff6cc7f2640ff8500;
+
+    /**
+     * @notice Retrieves the BookingTokenCancellable storage struct from the designated storage slot.
+     *
+     * @return $ The storage struct reference
+     */
+    function _getBookingTokenCancellableStorage() private pure returns (BookingTokenCancellableStorage storage $) {
+        assembly {
+            $.slot := BookingTokenCancellableStorageLocation
+        }
+    }
+
+    /***************************************************
+     *                   EVENTS                        *
+     ***************************************************/
+
+    event CancellationPending(
+        uint256 indexed tokenId,
+        address indexed initialProposer,
+        address indexed currentProposer,
+        uint256 refundAmount,
+        bool ownerAccepted,
+        bool supplierAccepted,
+        uint32 timesCountered,
+        uint32 timesRejected
+    );
+
+    event CancellationReasons(
+        uint256 indexed tokenId,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion,
+        uint16 rejectionReason,
+        uint16 rejectionVersion,
+        uint16 counterReason,
+        uint16 counterVersion,
+        uint16 withdrawalReason,
+        uint16 withdrawalVersion
+    );
+
+    event CancellationWithdrawn(uint256 indexed tokenId, uint16 withdrawalReason, uint16 withdrawalVersion);
+
+    event CancellationRejected(uint256 indexed tokenId, uint16 rejectionReason, uint16 rejectionVersion);
+
+    event CancellationFinalized(uint256 indexed tokenId);
+
+    /***************************************************
+     *                   ERRORS                        *
+     ***************************************************/
+
+    error NotOwnerOrSupplier();
+
+    error CancellationProposalExists(uint256 tokenId);
+
+    error CancellationProposalNotFound(uint256 tokenId); // FIXME: Do we need this?
+
+    error IncorrectRefundAmount(uint256 existing, uint256 checked);
+
+    error InvalidCancellationProposalStatus(uint256 tokenId, CancellationProposalStatus status);
+
+    error OnlySupplierCanFinalizeCancellation(uint256 tokenId);
+
+    error OwnerNotAcceptedCancellation(uint256 tokenId);
+
+    error ProposerCanNotRejectCancellation(uint256 tokenId);
+
+    error OnlyCurrentProposerCanWithdrawCancellation(uint256 tokenId);
+
+    /***************************************************
+     *             CANCELLATION LOGIC                  *
+     ***************************************************/
+
+    function requireOwnerOrSupplier(address owner, address supplier) internal view {
+        if (msg.sender != owner || msg.sender != supplier) {
+            revert NotOwnerOrSupplier();
+        }
+    }
+
+    modifier onlyOwnerOrSupplier(address owner, address supplier) {
+        requireOwnerOrSupplier(owner, supplier);
+        _;
+    }
+
+    function getCancellationProposalStatus(uint256 tokenId) public view returns (CancellationProposalStatus) {
+        return _getBookingTokenCancellableStorage()._proposals[tokenId].status;
+    }
+
+    function isCancellationInProgress(uint256 tokenId) public view returns (bool) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+        return proposal.status == CancellationProposalStatus.PENDING;
+    }
+
+    // function getCancellationProposal(
+    //     uint256 tokenId
+    // )
+    //     public
+    //     view
+    //     returns (
+    //         CancellationProposalStatus,
+    //         uint256 refundAmount,
+    //         address initialProposer,
+    //         address currentProposer,
+    //         bool ownerAccepted,
+    //         bool supplierAccepted,
+    //         uint32 timesCountered,
+    //         uint32 timesRejected,
+    //         uint16 cancellationReason,
+    //         uint16 cancellationVersion,
+    //         uint16 rejectionReason,
+    //         uint16 rejectionVersion,
+    //         uint16 counterReason,
+    //         uint16 counterVersion,
+    //         uint16 withdrawalReason,
+    //         uint16 withdrawalVersion
+    //     )
+    // {
+    //     Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+    //     return (
+    //         proposal.status,
+    //         proposal.refundAmount,
+    //         proposal.initialProposer,
+    //         proposal.currentProposer,
+    //         proposal.ownerAccepted,
+    //         proposal.supplierAccepted,
+    //         proposal.timesCountered,
+    //         proposal.timesRejected
+    //         proposal.cancellationReason,
+    //         proposal.cancellationVersion,
+    //         proposal.rejectionReason,
+    //         proposal.rejectionVersion,
+    //         proposal.counterReason,
+    //         proposal.counterVersion,
+    //         proposal.withdrawalReason,
+    //         proposal.withdrawalVersion
+    //     );
+    // }
+
+    function _initiateCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        // Revert if proposal already exists
+        if (_getBookingTokenCancellableStorage()._proposals[tokenId].status != CancellationProposalStatus.NO_PROPOSAL) {
+            revert CancellationProposalExists(tokenId);
+        }
+
+        bool ownerAccepted = (msg.sender == owner);
+        bool supplierAccepted = (msg.sender == supplier);
+
+        Proposal memory proposal = Proposal({
+            refundAmount: refundAmount,
+            initialProposer: msg.sender,
+            currentProposer: msg.sender,
+            ownerAccepted: ownerAccepted,
+            supplierAccepted: supplierAccepted,
+            timesCountered: 0,
+            timesRejected: 0,
+            status: CancellationProposalStatus.PENDING,
+            cancellationReason: cancellationReason,
+            cancellationVersion: cancellationReasonVersion,
+            rejectionReason: 0,
+            rejectionVersion: 0,
+            counterReason: 0,
+            counterVersion: 0,
+            withdrawalReason: 0,
+            withdrawalVersion: 0
+        });
+
+        // Store the cancellation proposal
+        _getBookingTokenCancellableStorage()._proposals[tokenId] = proposal;
+
+        // Emit event
+        emit CancellationPending(
+            tokenId,
+            proposal.initialProposer,
+            proposal.currentProposer,
+            proposal.refundAmount,
+            proposal.ownerAccepted,
+            proposal.supplierAccepted,
+            proposal.timesCountered,
+            proposal.timesRejected
+        );
+
+        // Emit reasons event
+        emit CancellationReasons(
+            tokenId,
+            proposal.cancellationReason,
+            proposal.cancellationVersion,
+            proposal.rejectionReason,
+            proposal.rejectionVersion,
+            proposal.counterReason,
+            proposal.counterVersion,
+            proposal.withdrawalReason,
+            proposal.withdrawalVersion
+        );
+    }
+
+    /**
+     * @notice Used by the owner or supplier to accept a cancellation proposal that
+     * is initiated or countered by the other party
+     *
+     * @param owner Owner of the token
+     * @param supplier Supplier of the token
+     * @param tokenId Token ID
+     * @param checkRefundAmount Refund amount to check against, to prevent front-running
+     */
+    function _acceptCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if not in PENDING state
+        if (proposal.status != CancellationProposalStatus.PENDING) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Revert if refund amount does not match
+        if (proposal.refundAmount != checkRefundAmount) {
+            revert IncorrectRefundAmount(proposal.refundAmount, checkRefundAmount);
+        }
+
+        // Accept the cancellation
+        if (msg.sender == owner) {
+            proposal.ownerAccepted = true;
+        } else {
+            proposal.supplierAccepted = true;
+        }
+
+        // Emit event
+        emit CancellationPending(
+            tokenId,
+            proposal.initialProposer,
+            proposal.currentProposer,
+            proposal.refundAmount,
+            proposal.ownerAccepted,
+            proposal.supplierAccepted,
+            proposal.timesCountered,
+            proposal.timesRejected
+        );
+
+        // Emit reasons event
+        emit CancellationReasons(
+            tokenId,
+            proposal.cancellationReason,
+            proposal.cancellationVersion,
+            proposal.rejectionReason,
+            proposal.rejectionVersion,
+            proposal.counterReason,
+            proposal.counterVersion,
+            proposal.withdrawalReason,
+            proposal.withdrawalVersion
+        );
+    }
+
+    function _counterCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 counterReason,
+        uint16 counterVersion
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if not in PENDING state
+        if (proposal.status != CancellationProposalStatus.PENDING) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Set new refund amount
+        proposal.refundAmount = refundAmount;
+
+        // Set the current proposer to the counter proposer
+        proposal.currentProposer = msg.sender;
+
+        // Set accepted flags
+        proposal.ownerAccepted = (msg.sender == owner);
+        proposal.supplierAccepted = (msg.sender == supplier);
+
+        // Set the counter reason
+        proposal.counterReason = counterReason;
+        proposal.counterVersion = counterVersion;
+
+        // Increment times countered
+        proposal.timesCountered++;
+
+        // Emit event
+        emit CancellationPending(
+            tokenId,
+            proposal.initialProposer,
+            proposal.currentProposer,
+            proposal.refundAmount,
+            proposal.ownerAccepted,
+            proposal.supplierAccepted,
+            proposal.timesCountered,
+            proposal.timesRejected
+        );
+
+        // Emit reasons event
+        emit CancellationReasons(
+            tokenId,
+            proposal.cancellationReason,
+            proposal.cancellationVersion,
+            proposal.rejectionReason,
+            proposal.rejectionVersion,
+            proposal.counterReason,
+            proposal.counterVersion,
+            proposal.withdrawalReason,
+            proposal.withdrawalVersion
+        );
+    }
+
+    function _withdrawCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint16 withdrawalReason,
+        uint16 withdrawalVersion
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if not in PENDING state
+        if (proposal.status != CancellationProposalStatus.PENDING) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Only current proposer can withdraw
+        if (msg.sender != proposal.currentProposer) {
+            revert OnlyCurrentProposerCanWithdrawCancellation(tokenId);
+        }
+
+        // Set withdrawal reason
+        proposal.withdrawalReason = withdrawalReason;
+        proposal.withdrawalVersion = withdrawalVersion;
+
+        // Set status to WITHDRAWN
+        proposal.status = CancellationProposalStatus.WITHDRAWN;
+
+        // Emit event
+        emit CancellationWithdrawn(tokenId, withdrawalReason, withdrawalVersion);
+    }
+
+    function _rejectCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if not in PENDING state
+        if (proposal.status != CancellationProposalStatus.PENDING) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Proposer can not reject the cancellation
+        if (msg.sender == proposal.currentProposer) {
+            revert ProposerCanNotRejectCancellation(tokenId);
+        }
+
+        // Set reason
+        proposal.rejectionReason = rejectionReason;
+        proposal.rejectionVersion = rejectionReasonVersion;
+
+        // Set status to REJECTED
+        proposal.status = CancellationProposalStatus.REJECTED;
+
+        // Increment times rejected
+        proposal.timesRejected++;
+
+        // Emit event
+        emit CancellationRejected(tokenId, rejectionReason, rejectionReasonVersion);
+    }
+
+    function _finalizeCancellation(address supplier, uint256 tokenId, uint256 checkRefundAmount) internal virtual {
+        // Only supplier can finalize the cancellation
+        if (msg.sender != supplier) {
+            revert OnlySupplierCanFinalizeCancellation(tokenId);
+        }
+
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if not in PENDING state
+        if (proposal.status != CancellationProposalStatus.PENDING) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Revert if refund amount does not match
+        if (proposal.refundAmount != checkRefundAmount) {
+            revert IncorrectRefundAmount(proposal.refundAmount, checkRefundAmount);
+        }
+
+        // Revert if owner has not accepted the cancellation
+        if (!proposal.ownerAccepted) {
+            revert OwnerNotAcceptedCancellation(tokenId);
+        }
+
+        // Set supplier accepted
+        if (!proposal.supplierAccepted) {
+            proposal.supplierAccepted = true;
+        }
+
+        // Set status to FINALIZED
+        proposal.status = CancellationProposalStatus.FINALIZED;
+
+        // Emit event. Payment should be handled by the inheriting contract.
+        emit CancellationFinalized(tokenId);
+    }
+
+    function _reinitializeCancellation(
+        address owner,
+        address supplier,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if in not WITHDRAWN or REJECTED state. The only states that can be
+        // reintiliazed are WITHDRAWN and REJECTED
+        if (
+            proposal.status != CancellationProposalStatus.WITHDRAWN ||
+            proposal.status != CancellationProposalStatus.REJECTED
+        ) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
+        }
+
+        // Set new refund amount
+        proposal.refundAmount = refundAmount;
+
+        // Set accepted flags
+        proposal.ownerAccepted = (msg.sender == owner);
+        proposal.supplierAccepted = (msg.sender == supplier);
+
+        // Set new cancellation reason
+        proposal.cancellationReason = cancellationReason;
+        proposal.cancellationVersion = cancellationReasonVersion;
+
+        // Reset other reasons
+        proposal.rejectionReason = 0;
+        proposal.rejectionVersion = 0;
+        proposal.counterReason = 0;
+        proposal.counterVersion = 0;
+        proposal.withdrawalReason = 0;
+        proposal.withdrawalVersion = 0;
+
+        // Set status to PENDING
+        proposal.status = CancellationProposalStatus.PENDING;
+
+        // Emit event
+        emit CancellationPending(
+            tokenId,
+            proposal.initialProposer,
+            proposal.currentProposer,
+            proposal.refundAmount,
+            proposal.ownerAccepted,
+            proposal.supplierAccepted,
+            proposal.timesCountered,
+            proposal.timesRejected
+        );
+
+        // Emit reasons event
+        emit CancellationReasons(
+            tokenId,
+            proposal.cancellationReason,
+            proposal.cancellationVersion,
+            proposal.rejectionReason,
+            proposal.rejectionVersion,
+            proposal.counterReason,
+            proposal.counterVersion,
+            proposal.withdrawalReason,
+            proposal.withdrawalVersion
+        );
+    }
+}

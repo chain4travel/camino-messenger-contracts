@@ -67,18 +67,42 @@ library BookingTokenOperator {
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
+        IERC20 paymentToken
+    ) public {
+        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
+    }
+
+    /**
+     * @dev Mints a booking token with offchain payment currency and cancellable support.
+     *
+     * @param bookingToken booking token contract address
+     * @param reservedFor address of the CM Account that can buy the token
+     * (generally the distributor)
+     * @param uri URI of the token
+     * @param expirationTimestamp expiration timestamp of the token in seconds
+     * @param price price of the token
+     * @param paymentToken payment token address
+     * @param offchainPaymentCurrency payment token address
+     * @param cancellable cancellable flag
+     */
+    function mintBookingTokenV2(
+        address bookingToken,
+        address reservedFor,
+        string memory uri,
+        uint256 expirationTimestamp,
+        uint256 price,
         IERC20 paymentToken,
         uint256 offchainPaymentCurrency,
-        bool _isCancellable
+        bool cancellable
     ) public {
-        IBookingToken(bookingToken).safeMintWithReservation(
+        IBookingToken(bookingToken).safeMintWithReservationV2(
             reservedFor,
             uri,
             expirationTimestamp,
             price,
             paymentToken,
             offchainPaymentCurrency,
-            _isCancellable
+            cancellable
         );
     }
 
@@ -134,6 +158,10 @@ library BookingTokenOperator {
     function recordExpiration(address bookingToken, uint256 tokenId) public {
         IBookingToken(bookingToken).recordExpiration(tokenId);
     }
+
+    /***************************************************
+     *              CANCELLATION LOGIC                 *
+     ***************************************************/
 
     /**
      * @notice Initiates a cancellation proposal for a bought token.
