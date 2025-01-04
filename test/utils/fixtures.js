@@ -268,7 +268,7 @@ async function deployCancellationSupportFixture() {
         .connect(signers.cmAccountAdmin)
         .grantRole(BOOKING_OPERATOR_ROLE, distributorBookingOperator.address);
 
-    // Mint BOOKING TOKEN with NATIVE PAYMENT
+    // Mint BOOKING TOKEN with NATIVE PAYMENT -----------------------------------------------------------------------
 
     const tokenURI = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
     const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
@@ -290,7 +290,8 @@ async function deployCancellationSupportFixture() {
     // Buy the token
     await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNativePayment);
 
-    // Mint BOOKING TOKEN with NULLUSD PAYMENT
+    // Mint BOOKING TOKEN with NULLUSD PAYMENT------------------------------------------------------------------------
+
     const tokenURI2 = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
     const expirationTimestamp2 = Math.floor(Date.now() / 1000) + 120;
     const price2 = ethers.parseEther("99.95");
@@ -311,7 +312,54 @@ async function deployCancellationSupportFixture() {
     // Buy the token
     await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNullUSDPayment);
 
+    // Mint BOOKING TOKEN without buying -----------------------------------------------------------------------------
+
+    const tokenURI3 = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+    const expirationTimestamp3 = Math.floor(Date.now() / 1000) + 600;
+    const price3 = ethers.parseEther("0.95");
+
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+        distributorCMAccount.getAddress(), // Reserved for
+        tokenURI3, // URI
+        expirationTimestamp3, // Expiration of the reservation
+        price3, // Price of token in wei
+        ethers.ZeroAddress, // paymentToken
+        0, // offchain payment currency, zero means unset
+        true, // cancellable
+    );
+
+    // Token with ID 2 minted without buying
+    const tokenWithoutBuying = 2n;
+
+    // Mint BOOKING TOKEN with passed expiration ---------------------------------------------------------------------
+
+    const tokenURI4 = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+    // get block time from the chain
+    const block = await ethers.provider.getBlock("latest");
+
+    const expirationTimestamp4 = block.timestamp + 70; // min expiration time diff is 60
+    const price4 = ethers.parseEther("0.95");
+
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+        distributorCMAccount.getAddress(), // Reserved for
+        tokenURI4, // URI
+        expirationTimestamp4, // Expiration of the reservation
+        price4, // Price of token in wei
+        ethers.ZeroAddress, // paymentToken
+        0, // offchain payment currency, zero means unset
+        true, // cancellable
+    );
+
+    // Advance time to after the expiration
+    await network.provider.send("evm_increaseTime", [expirationTimestamp4 - block.timestamp + 10]);
+    await network.provider.send("evm_mine");
+
+    // Token with ID 3 minted with passed expiration
+    const tokenWithPassedExpiration = 3n;
+
     /// OTHER CM ACCOUNT ///
+
     // We also need another CM Account to test for fail cases
     // Create other CMAccount
     const tx = await cmAccountManager.createCMAccount(
@@ -360,6 +408,8 @@ async function deployCancellationSupportFixture() {
         distributorBookingOperator,
         otherCMAccount,
         otherBookingOperator,
+        tokenWithoutBuying,
+        tokenWithPassedExpiration,
     };
 }
 
