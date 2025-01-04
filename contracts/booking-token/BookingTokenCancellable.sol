@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import { CancellationProposalStatus } from "./IBookingToken.sol";
+enum CancellationProposalStatus {
+    NO_PROPOSAL, // 0, default
+    PENDING, // 1
+    REJECTED, // 2
+    WITHDRAWN, // 3
+    FINALIZED // 4
+}
 
 contract BookingTokenCancellable {
     struct Proposal {
@@ -108,7 +114,7 @@ contract BookingTokenCancellable {
      ***************************************************/
 
     function requireOwnerOrSupplier(address owner, address supplier) internal view {
-        if (msg.sender != owner || msg.sender != supplier) {
+        if (msg.sender != owner && msg.sender != supplier) {
             revert NotOwnerOrSupplier();
         }
     }
@@ -127,51 +133,65 @@ contract BookingTokenCancellable {
         return proposal.status == CancellationProposalStatus.PENDING;
     }
 
-    // function getCancellationProposal(
-    //     uint256 tokenId
-    // )
-    //     public
-    //     view
-    //     returns (
-    //         CancellationProposalStatus,
-    //         uint256 refundAmount,
-    //         address initialProposer,
-    //         address currentProposer,
-    //         bool ownerAccepted,
-    //         bool supplierAccepted,
-    //         uint32 timesCountered,
-    //         uint32 timesRejected,
-    //         uint16 cancellationReason,
-    //         uint16 cancellationVersion,
-    //         uint16 rejectionReason,
-    //         uint16 rejectionVersion,
-    //         uint16 counterReason,
-    //         uint16 counterVersion,
-    //         uint16 withdrawalReason,
-    //         uint16 withdrawalVersion
-    //     )
-    // {
-    //     Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+    function getCancellationProposal(
+        uint256 tokenId
+    )
+        external
+        view
+        returns (
+            CancellationProposalStatus,
+            uint256 refundAmount,
+            address initialProposer,
+            address currentProposer,
+            bool ownerAccepted,
+            bool supplierAccepted,
+            uint32 timesCountered,
+            uint32 timesRejected
+        )
+    {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
 
-    //     return (
-    //         proposal.status,
-    //         proposal.refundAmount,
-    //         proposal.initialProposer,
-    //         proposal.currentProposer,
-    //         proposal.ownerAccepted,
-    //         proposal.supplierAccepted,
-    //         proposal.timesCountered,
-    //         proposal.timesRejected
-    //         proposal.cancellationReason,
-    //         proposal.cancellationVersion,
-    //         proposal.rejectionReason,
-    //         proposal.rejectionVersion,
-    //         proposal.counterReason,
-    //         proposal.counterVersion,
-    //         proposal.withdrawalReason,
-    //         proposal.withdrawalVersion
-    //     );
-    // }
+        return (
+            proposal.status,
+            proposal.refundAmount,
+            proposal.initialProposer,
+            proposal.currentProposer,
+            proposal.ownerAccepted,
+            proposal.supplierAccepted,
+            proposal.timesCountered,
+            proposal.timesRejected
+        );
+    }
+
+    function getCancellationReasons(
+        uint256 tokenId
+    )
+        external
+        view
+        returns (
+            uint16 cancellationReason,
+            uint16 cancellationVersion,
+            uint16 rejectionReason,
+            uint16 rejectionVersion,
+            uint16 counterReason,
+            uint16 counterVersion,
+            uint16 withdrawalReason,
+            uint16 withdrawalVersion
+        )
+    {
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        return (
+            proposal.cancellationReason,
+            proposal.cancellationVersion,
+            proposal.rejectionReason,
+            proposal.rejectionVersion,
+            proposal.counterReason,
+            proposal.counterVersion,
+            proposal.withdrawalReason,
+            proposal.withdrawalVersion
+        );
+    }
 
     function _initiateCancellation(
         address owner,

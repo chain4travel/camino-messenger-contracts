@@ -244,6 +244,125 @@ async function deployBookingTokenWithNullUSDFixture() {
     return { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount, nullUSD };
 }
 
+async function deployCancellationSupportFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken, prefundAmount, nullUSD } =
+        await loadFixture(deployBookingTokenWithNullUSDFixture);
+
+    // Set accounts
+    const otherBookingOperator = signers.otherAccount1;
+    const supplierBookingOperator = signers.otherAccount2;
+    const distributorBookingOperator = signers.otherAccount3;
+
+    // Set BOOKING_OPERATOR_ROLE
+    // Supplier
+    const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+    await supplierCMAccount
+        .connect(signers.cmAccountAdmin)
+        .grantRole(BOOKING_OPERATOR_ROLE, supplierBookingOperator.address);
+
+    // Distributor
+    await distributorCMAccount
+        .connect(signers.cmAccountAdmin)
+        .grantRole(BOOKING_OPERATOR_ROLE, distributorBookingOperator.address);
+
+    // Mint BOOKING TOKEN with NATIVE PAYMENT
+
+    const tokenURI = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+    const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+    const price = ethers.parseEther("0.05");
+
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+        distributorCMAccount.getAddress(), // Reserved for
+        tokenURI, // URI
+        expirationTimestamp, // Expiration of the reservation
+        price, // Price of token in wei
+        ethers.ZeroAddress, // paymentToken: zero address, means native coin
+        0, // offchain payment currency, zero means unset
+        true, // cancellable
+    );
+
+    // Token with ID 0 minted with native payment
+    const tokenWithNativePayment = 0n;
+
+    // Buy the token
+    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNativePayment);
+
+    // Mint BOOKING TOKEN with NULLUSD PAYMENT
+    const tokenURI2 = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+    const expirationTimestamp2 = Math.floor(Date.now() / 1000) + 120;
+    const price2 = ethers.parseEther("99.95");
+
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+        distributorCMAccount.getAddress(), // Reserved for
+        tokenURI2, // URI
+        expirationTimestamp2, // Expiration of the reservation
+        price2, // Price of token in wei
+        nullUSD.getAddress(), // paymentToken
+        0, // offchain payment currency, zero means unset
+        true, // cancellable
+    );
+
+    // Token with ID 1 minted with NullUSD payment
+    const tokenWithNullUSDPayment = 1n;
+
+    // Buy the token
+    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNullUSDPayment);
+
+    /// OTHER CM ACCOUNT ///
+    // We also need another CM Account to test for fail cases
+    // Create other CMAccount
+    const tx = await cmAccountManager.createCMAccount(
+        signers.cmAccountAdmin.address,
+        signers.cmAccountUpgrader.address,
+        { value: prefundAmount },
+    );
+
+    const receipt = await tx.wait();
+
+    // Parse event to get the CMAccount address (this is the UUPS proxy address)
+    const event = receipt.logs.find((log) => {
+        try {
+            return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+        } catch (e) {
+            return false;
+        }
+    });
+
+    const parsedEvent = cmAccountManager.interface.parseLog(event);
+    const otherCMAccountAddress = parsedEvent.args.account;
+
+    // Get the CMAccount instance at the address
+    const otherCMAccount = await ethers.getContractAt("CMAccount", otherCMAccountAddress);
+
+    // Deposit funds to the CMAccount
+    const depositAmount = ethers.parseEther("5");
+    const depositTx = {
+        to: otherCMAccount.getAddress(),
+        value: depositAmount,
+    };
+    const txResponse = await signers.depositor.sendTransaction(depositTx);
+    await txResponse.wait();
+
+    // Distributor
+    await otherCMAccount.connect(signers.cmAccountAdmin).grantRole(BOOKING_OPERATOR_ROLE, otherBookingOperator.address);
+
+    return {
+        supplierCMAccount,
+        distributorCMAccount,
+        bookingToken,
+        nullUSD,
+        tokenWithNativePayment,
+        tokenWithNullUSDPayment,
+        supplierBookingOperator,
+        distributorBookingOperator,
+        otherCMAccount,
+        otherBookingOperator,
+    };
+}
+
 async function deployAndConfigureAllWithRegisteredServicesFixture() {
     // Set up signers
     await setupSigners();
@@ -318,4 +437,5 @@ module.exports = {
     deployBookingTokenFixture,
     deployAndConfigureAllWithRegisteredServicesFixture,
     deployBookingTokenWithNullUSDFixture,
+    deployCancellationSupportFixture,
 };

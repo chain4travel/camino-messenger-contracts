@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import { IBookingToken, IERC20, CancellationProposalStatus } from "./IBookingToken.sol";
+import { IBookingToken, IERC20 } from "./IBookingToken.sol";
+import { CancellationProposalStatus } from "./BookingTokenCancellable.sol";
 
 // ERC-20 Utils
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -169,15 +170,17 @@ library BookingTokenOperator {
      * @param bookingToken booking token contract address
      * @param tokenId token id
      * @param refundAmount proposed refund amount
+     * @param cancellationReason cancellation reason
+     * @param cancellationReasonVersion cancellation reason version
      */
-    function initiateCancellationProposal(
+    function initiateCancellation(
         address bookingToken,
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
-    ) public {
-        IBookingToken(bookingToken).initiateCancellationProposal(
+    ) external {
+        IBookingToken(bookingToken).initiateCancellation(
             tokenId,
             refundAmount,
             cancellationReason,
@@ -186,24 +189,85 @@ library BookingTokenOperator {
     }
 
     /**
-     * @notice Accepts a cancellation proposal.
+     * @notice Sets accepted by the owner or supplier flag for a cancellation proposal for a bought token.
+     *
+     * @param tokenId The token id to accept the cancellation for
+     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
+     */
+    function acceptCancellation(address bookingToken, uint256 tokenId, uint256 refundAmount) external {
+        IBookingToken(bookingToken).acceptCancellation(tokenId, refundAmount);
+    }
+
+    /**
+     * @notice Counters a cancellation proposal.
      *
      * @param bookingToken booking token contract address
      * @param tokenId token id
+     * @param refundAmount proposed refund amount
      */
-    function acceptCancellationProposal(address bookingToken, uint256 tokenId, uint256 checkRefundAmount) public {
-        // Get paymentToken and refundAmount
-        IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
-        uint256 refundAmount = IBookingToken(bookingToken).getCancellationProposalRefundAmount(tokenId);
+    function counterCancellation(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 counterReason,
+        uint16 counterReasonVersion
+    ) public {
+        IBookingToken(bookingToken).counterCancellation(tokenId, refundAmount, counterReason, counterReasonVersion);
+    }
 
+    /**
+     * @notice Withdraws a cancellation proposal.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId token id for which to withdraw the proposal
+     * @param reason The reason for withdrawing the proposal
+     * @param reasonVersion The version of the withdrawal reason from the CMP
+     */
+    function withdrawCancellation(address bookingToken, uint256 tokenId, uint16 reason, uint16 reasonVersion) public {
+        IBookingToken(bookingToken).withdrawCancellation(tokenId, reason, reasonVersion);
+    }
+
+    /**
+     * @notice Reject a cancellation proposal for a bought token.
+     *
+     * @param bookingToken booking token contract address
+     * @param tokenId The token id to reject the cancellation for
+     * @param rejectionReason The reason for rejecting the cancellation
+     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
+     */
+    function rejectCancellation(
+        address bookingToken,
+        uint256 tokenId,
+        uint16 rejectionReason,
+        uint16 rejectionReasonVersion
+    ) external {
+        IBookingToken(bookingToken).rejectCancellation(tokenId, rejectionReason, rejectionReasonVersion);
+    }
+
+    // FIXME: Check & verify payment logic below!
+
+    /**
+     * @notice Finalizes a cancellation proposal by transferring the refund amount
+     * to the Booking Token contract.
+     *
+     * @param bookingToken BookingToken contract address
+     * @param tokenId The token id for which to finalize the proposal
+     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
+     */
+    function finalizeCancellation(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 refundAmount,
+        IERC20 paymentToken
+    ) public {
         // Check if payment is in native currency or in ERC20
         if (address(paymentToken) == NATIVE_PAYMENT) {
             // Payment is in native currency. Accept the cancellation by sending the
             // payment in native currency to the BookingToken contract.
-            IBookingToken(bookingToken).acceptCancellationProposal{ value: refundAmount }(tokenId, checkRefundAmount);
+            IBookingToken(bookingToken).finalizeCancellation{ value: refundAmount }(tokenId, refundAmount);
         } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
             // Off-chain payment - no on-chain transfer needed
-            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
+            IBookingToken(bookingToken).finalizeCancellation(tokenId, refundAmount);
         } else {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // refund amount. BookingToken should do the transfer to the
@@ -215,66 +279,30 @@ library BookingTokenOperator {
             }
 
             // Accept the cancellation
-            IBookingToken(bookingToken).acceptCancellationProposal(tokenId, checkRefundAmount);
+            IBookingToken(bookingToken).finalizeCancellation(tokenId, refundAmount);
         }
     }
 
     /**
-     * @notice Reject a cancellation proposal for a bought token.
+     * @notice Reinitializes a cancellation proposal after it has been withdrawn or rejected.
      *
-     * @param bookingToken booking token contract address
-     * @param tokenId The token id to reject the cancellation for
-     * @param rejectionReason The reason for rejecting the cancellation
-     * @param rejectionReasonVersion Version of the rejection reason enum from the CMP
+     * @param tokenId The token id for which to reinitialize the proposal
+     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
+     * @param cancellationReason The reason for reinitializing the proposal
+     * @param cancellationReasonVersion The version of the reinitialization reason
      */
-    function rejectCancellationProposal(
+    function reinitializeCancellation(
         address bookingToken,
         uint256 tokenId,
-        uint16 rejectionReason,
-        uint16 rejectionReasonVersion
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
     ) external {
-        IBookingToken(bookingToken).rejectCancellationProposal(tokenId, rejectionReason, rejectionReasonVersion);
-    }
-
-    /**
-     * @notice Counters a cancellation proposal.
-     *
-     * @param bookingToken booking token contract address
-     * @param tokenId token id
-     * @param refundAmount proposed refund amount
-     */
-    function counterCancellationProposal(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
-        IBookingToken(bookingToken).counterCancellationProposal(tokenId, refundAmount);
-    }
-
-    /**
-     * @notice Accepts a countered cancellation proposal.
-     *
-     * @param bookingToken booking token contract address
-     * @param tokenId token id
-     */
-    function acceptCounteredCancellationProposal(
-        address bookingToken,
-        uint256 tokenId,
-        uint256 checkRefundAmount
-    ) external {
-        IBookingToken(bookingToken).acceptCounteredCancellationProposal(tokenId, checkRefundAmount);
-    }
-
-    /**
-     * @notice Withdraws a cancellation proposal.
-     *
-     * @param bookingToken booking token contract address
-     * @param tokenId token id for which to withdraw the proposal
-     * @param reason The reason for withdrawing the proposal
-     * @param reasonVersion The version of the withdrawal reason from the CMP
-     */
-    function withdrawCancellationProposal(
-        address bookingToken,
-        uint256 tokenId,
-        uint16 reason,
-        uint16 reasonVersion
-    ) public {
-        IBookingToken(bookingToken).withdrawCancellationProposal(tokenId, reason, reasonVersion);
+        IBookingToken(bookingToken).reinitializeCancellation(
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 }

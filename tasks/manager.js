@@ -86,6 +86,7 @@ function handleTransactionError(error, contract) {
         console.error("Reason: CMAccount does not have this role.");
     } else if (error.message) {
         console.error("Message:", error.message);
+        console.error("Error:", error);
     } else {
         // General error logging
         console.error("An unexpected error occurred.");

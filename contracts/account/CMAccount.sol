@@ -793,13 +793,13 @@ contract CMAccount is
      *                 CANCELLATION                    *
      ***************************************************/
 
-    function initiateCancellationProposal(
+    function initiateCancellation(
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
-    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.initiateCancellationProposal(
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.initiateCancellation(
             getBookingTokenAddress(),
             tokenId,
             refundAmount,
@@ -808,19 +808,16 @@ contract CMAccount is
         );
     }
 
-    function acceptCancellationProposal(
-        uint256 tokenId,
-        uint256 checkRefundAmount
-    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.acceptCancellationProposal(getBookingTokenAddress(), tokenId, checkRefundAmount);
+    function acceptCancellation(uint256 tokenId, uint256 refundAmount) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.acceptCancellation(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
-    function rejectCancellationProposal(
+    function rejectCancellation(
         uint256 tokenId,
         uint16 rejectionReason,
         uint16 rejectionReasonVersion
-    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.rejectCancellationProposal(
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.rejectCancellation(
             getBookingTokenAddress(),
             tokenId,
             rejectionReason,
@@ -828,15 +825,19 @@ contract CMAccount is
         );
     }
 
-    function counterCancellationProposal(uint256 tokenId, uint256 refundAmount) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.counterCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
-    }
-
-    function acceptCounteredCancellationProposal(
+    function counterCancellation(
         uint256 tokenId,
-        uint256 refundAmount
-    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.acceptCounteredCancellationProposal(getBookingTokenAddress(), tokenId, refundAmount);
+        uint256 refundAmount,
+        uint16 counterReason,
+        uint16 counterReasonVersion
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.counterCancellation(
+            getBookingTokenAddress(),
+            tokenId,
+            refundAmount,
+            counterReason,
+            counterReasonVersion
+        );
     }
 
     /**
@@ -846,11 +847,48 @@ contract CMAccount is
      * @param reason The reason for withdrawing the proposal
      * @param reasonVersion The version of the withdrawal reason from the CMP
      */
-    function withdrawCancellationProposal(
+    function withdrawCancellation(
         uint256 tokenId,
         uint16 reason,
         uint16 reasonVersion
-    ) public onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.withdrawCancellationProposal(getBookingTokenAddress(), tokenId, reason, reasonVersion);
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.withdrawCancellation(getBookingTokenAddress(), tokenId, reason, reasonVersion);
+    }
+
+    /**
+     * @notice Finalizes a cancellation proposal. Only the supplier of the token can finalize.
+     *
+     * @param tokenId The token id for which to finalize the proposal
+     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
+     */
+    function finalizeCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        IERC20 paymentToken
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.finalizeCancellation(getBookingTokenAddress(), tokenId, refundAmount, paymentToken);
+    }
+
+    /**
+     * @notice Reinitializes a cancellation proposal after it has been withdrawn or rejected.
+     *
+     * @param tokenId The token id for which to reinitialize the proposal
+     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
+     * @param cancellationReason The reason for reinitializing the proposal
+     * @param cancellationReasonVersion The version of the reinitialization reason
+     */
+    function reinitializeCancellation(
+        uint256 tokenId,
+        uint256 refundAmount,
+        uint16 cancellationReason,
+        uint16 cancellationReasonVersion
+    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.reinitializeCancellation(
+            getBookingTokenAddress(),
+            tokenId,
+            refundAmount,
+            cancellationReason,
+            cancellationReasonVersion
+        );
     }
 }

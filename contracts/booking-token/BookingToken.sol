@@ -315,7 +315,7 @@ contract BookingToken is
      * - no version() func: Legacy version without Cancellation support
      * - v0.1.0: Version with Cancellation support
      */
-    function version() public pure virtual returns (uint16 major, uint16 minor, uint16 patch) {
+    function version() external pure virtual returns (uint16 major, uint16 minor, uint16 patch) {
         return (0, 1, 0);
     }
 
@@ -409,6 +409,32 @@ contract BookingToken is
     }
 
     /**
+     * @notice Reserve a token for a specific address with an expiration timestamp
+     */
+    function _reserve(
+        uint256 tokenId,
+        address reservedFor,
+        address supplier,
+        uint256 expirationTimestamp,
+        uint256 price,
+        IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
+        bool cancellable
+    ) internal virtual {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+
+        $._reservations[tokenId] = TokenReservation(
+            reservedFor,
+            supplier,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
+    }
+
+    /**
      * @notice Buys a reserved token. The reservation must be for the message sender.
      *
      * Also the message sender should set allowance for the payment token to this
@@ -485,6 +511,10 @@ contract BookingToken is
         }
     }
 
+    /***************************************************
+     *                 TOKEN GETTERS                   *
+     ***************************************************/
+
     /**
      * @notice Return booking status
      *
@@ -497,30 +527,28 @@ contract BookingToken is
     }
 
     /**
-     * @notice Reserve a token for a specific address with an expiration timestamp
+     * @notice Returns the token reservation price for a specific token.
+     *
+     * @param tokenId The token id
      */
-    function _reserve(
-        uint256 tokenId,
-        address reservedFor,
-        address supplier,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken,
-        uint256 offchainPaymentCurrency,
-        bool cancellable
-    ) internal virtual {
+    function getReservationPrice(uint256 tokenId) public view virtual returns (uint256 price, IERC20 paymentToken) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
-
-        $._reservations[tokenId] = TokenReservation(
-            reservedFor,
-            supplier,
-            expirationTimestamp,
-            price,
-            paymentToken,
-            offchainPaymentCurrency,
-            cancellable
-        );
+        return ($._reservations[tokenId].price, $._reservations[tokenId].paymentToken);
     }
+
+    /**
+     * @notice Returns if the token is cancellable
+     *
+     * @param tokenId The token id
+     */
+    function isCancellable(uint256 tokenId) public view virtual returns (bool) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._reservations[tokenId].cancellable;
+    }
+
+    /***************************************************
+     *                CONTRACT LOGIC                   *
+     ***************************************************/
 
     /**
      * @notice Check if the token is transferable
@@ -647,16 +675,6 @@ contract BookingToken is
         return $._minExpirationTimestampDiff;
     }
 
-    /**
-     * @notice Returns the token reservation price for a specific token.
-     *
-     * @param tokenId The token id
-     */
-    function getReservationPrice(uint256 tokenId) public view virtual returns (uint256 price, IERC20 paymentToken) {
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-        return ($._reservations[tokenId].price, $._reservations[tokenId].paymentToken);
-    }
-
     /***************************************************
      *              CANCELLATION LOGIC                 *
      ***************************************************/
@@ -666,7 +684,7 @@ contract BookingToken is
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
-    ) public virtual onlyCMAccount(msg.sender) {
+    ) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
@@ -683,7 +701,7 @@ contract BookingToken is
         _initiateCancellation(owner, supplier, tokenId, refundAmount, cancellationReason, cancellationReasonVersion);
     }
 
-    function acceptCancellation(uint256 tokenId, uint256 refundAmount) public virtual onlyCMAccount(msg.sender) {
+    function acceptCancellation(uint256 tokenId, uint256 refundAmount) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
@@ -705,7 +723,7 @@ contract BookingToken is
         uint256 refundAmount,
         uint16 counterReason,
         uint16 counterReasonVersion
-    ) public virtual onlyCMAccount(msg.sender) {
+    ) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
@@ -726,7 +744,7 @@ contract BookingToken is
         uint256 tokenId,
         uint16 withdrawalReason,
         uint16 withdrawalReasonVersion
-    ) public virtual onlyCMAccount(msg.sender) {
+    ) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
@@ -747,7 +765,7 @@ contract BookingToken is
         uint256 tokenId,
         uint16 rejectionReason,
         uint16 rejectionReasonVersion
-    ) public virtual onlyCMAccount(msg.sender) {
+    ) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
@@ -767,7 +785,7 @@ contract BookingToken is
     function finalizeCancellation(
         uint256 tokenId,
         uint256 refundAmount
-    ) public payable virtual onlyCMAccount(msg.sender) {
+    ) external payable virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         _requireOwned(tokenId);
 
@@ -782,6 +800,8 @@ contract BookingToken is
         address supplier = $._reservations[tokenId].supplier;
 
         _finalizeCancellation(supplier, tokenId, refundAmount);
+
+        // FIXME: HANDLE PAYMENT!!!
     }
 
     function reinitializeCancellation(
@@ -789,7 +809,7 @@ contract BookingToken is
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
-    ) public virtual onlyCMAccount(msg.sender) {
+    ) external virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
         address owner = _requireOwned(tokenId);
 
