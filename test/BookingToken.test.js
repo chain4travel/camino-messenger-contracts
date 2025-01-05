@@ -1446,6 +1446,10 @@ describe("BookingToken", function () {
                 tokenWithNullUSDPayment,
                 supplierBookingOperator,
                 distributorBookingOperator,
+                otherCMAccount,
+                otherBookingOperator,
+                tokenWithoutBuying,
+                tokenWithPassedExpiration,
             } = await loadFixture(deployCancellationSupportFixture);
 
             // INIT CANCELLATION PROPOSAL
@@ -1480,6 +1484,16 @@ describe("BookingToken", function () {
                     0, /// timesRejected
                 );
 
+            // REVERTS: TRY ACCEPT WITH DIFFERENT REFUND AMOUNT
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .acceptCancellation(tokenWithNativePayment, refundAmount + 1n),
+            )
+                .to.revertedWithCustomError(bookingToken, "IncorrectRefundAmount")
+                .withArgs(tokenWithNativePayment, refundAmount, refundAmount + 1n);
+
             // ACCEPT
 
             await expect(
@@ -1512,6 +1526,68 @@ describe("BookingToken", function () {
             ]);
 
             // FIXME: Check error states
+
+            // REVERTS: TRY TO ACCEPT WITH NON-BOUGHT TOKEN
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .acceptCancellation(tokenWithoutBuying, refundAmount),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithoutBuying, 1n); // TOKEN: RESERVED: 1
+
+            // REVERTS: TRY TO ACCEPT WITH NON-INITIATED TOKEN
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .acceptCancellation(tokenWithNullUSDPayment, refundAmount),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNullUSDPayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
+
+            // ACCEPT WITH SUPPLIER
+
+            // Initiate with distributor first
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNullUSDPayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNullUSDPayment,
+                    await distributorCMAccount.getAddress(), // initial proposer
+                    await distributorCMAccount.getAddress(), // current proposer
+                    refundAmount,
+                    true, // ownerAccepted
+                    false, // supplierAccepted
+                    0, // timesCountered
+                    0, /// timesRejected
+                );
+
+            // Accept with supplier
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .acceptCancellation(tokenWithNullUSDPayment, refundAmount),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNullUSDPayment,
+                    await distributorCMAccount.getAddress(), // initial proposer
+                    await distributorCMAccount.getAddress(), // current proposer
+                    refundAmount,
+                    true, // ownerAccepted
+                    true, // supplierAccepted
+                    0, // timesCountered
+                    0, /// timesRejected
+                );
         });
 
         // it("should revert initiating a proposal if token state is reserved or expired", async function () {

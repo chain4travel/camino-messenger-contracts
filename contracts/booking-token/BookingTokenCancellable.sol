@@ -97,7 +97,7 @@ contract BookingTokenCancellable {
 
     error CancellationProposalNotFound(uint256 tokenId); // FIXME: Do we need this?
 
-    error IncorrectRefundAmount(uint256 existing, uint256 checked);
+    error IncorrectRefundAmount(uint256 tokenId, uint256 existing, uint256 checked);
 
     error InvalidCancellationProposalStatus(uint256 tokenId, CancellationProposalStatus status);
 
@@ -281,7 +281,7 @@ contract BookingTokenCancellable {
 
         // Revert if refund amount does not match
         if (proposal.refundAmount != checkRefundAmount) {
-            revert IncorrectRefundAmount(proposal.refundAmount, checkRefundAmount);
+            revert IncorrectRefundAmount(tokenId, proposal.refundAmount, checkRefundAmount);
         }
 
         // Accept the cancellation
@@ -453,7 +453,7 @@ contract BookingTokenCancellable {
 
         // Revert if refund amount does not match
         if (proposal.refundAmount != checkRefundAmount) {
-            revert IncorrectRefundAmount(proposal.refundAmount, checkRefundAmount);
+            revert IncorrectRefundAmount(tokenId, proposal.refundAmount, checkRefundAmount);
         }
 
         // Revert if owner has not accepted the cancellation
