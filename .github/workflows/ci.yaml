@@ -40,3 +40,53 @@ jobs:
 
             - name: Run Tests
               run: yarn test
+
+    coverage:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "20"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Run hardhat coverage
+              run: yarn hardhat coverage
+
+            - name: Check coverage threshold
+              run: |
+                  COV_THRESHOLD=85
+                  # Extract total lines and covered lines
+                  TOTAL_LINES=$(cat coverage/lcov.info | grep 'LF:' | awk -F':' '{sum += $2} END {print sum}')
+                  COVERED_LINES=$(cat coverage/lcov.info | grep 'LH:' | awk -F':' '{sum += $2} END {print sum}')
+
+                  # Calculate coverage only if there are lines to test
+                  if [ "$TOTAL_LINES" -gt 0 ]; then
+                    COVERAGE=$(echo "scale=2; $COVERED_LINES * 100 / $TOTAL_LINES" | bc)
+                    echo "Total lines: $TOTAL_LINES"
+                    echo "Covered lines: $COVERED_LINES"
+                    echo "Total coverage: ${COVERAGE}%"
+
+                    # Check if coverage is below threshold
+                    if (( $(echo "$COVERAGE < $COV_THRESHOLD" | bc -l) )); then
+                      echo "Coverage is below threshold: ${COV_THRESHOLD}%"
+                      exit 1
+                    fi
+                  else
+                    echo "No lines to test found in coverage report"
+                    exit 1
+                  fi
+
+            - name: Save coverage report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage/
+                  retention-days: 90
