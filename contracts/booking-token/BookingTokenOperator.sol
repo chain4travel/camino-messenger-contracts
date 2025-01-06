@@ -260,6 +260,10 @@ library BookingTokenOperator {
         uint256 refundAmount,
         IERC20 paymentToken
     ) public {
+        // Get the price from the booking token contract
+        // FIXME: Check why the test was failing with previous logic
+        // (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
+
         // Check if payment is in native currency or in ERC20
         if (address(paymentToken) == NATIVE_PAYMENT) {
             // Payment is in native currency. Accept the cancellation by sending the
