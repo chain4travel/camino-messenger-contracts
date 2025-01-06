@@ -852,12 +852,8 @@ contract CMAccount is
      * @param tokenId The token id for which to finalize the proposal
      * @param refundAmount The refund amount to check, this is to prevent front-running attacks
      */
-    function finalizeCancellation(
-        uint256 tokenId,
-        uint256 refundAmount,
-        IERC20 paymentToken
-    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.finalizeCancellation(getBookingTokenAddress(), tokenId, refundAmount, paymentToken);
+    function finalizeCancellation(uint256 tokenId, uint256 refundAmount) external onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.finalizeCancellation(getBookingTokenAddress(), tokenId, refundAmount);
     }
 
     /**
@@ -868,13 +864,13 @@ contract CMAccount is
      * @param cancellationReason The reason for reinitializing the proposal
      * @param cancellationReasonVersion The version of the reinitialization reason
      */
-    function reinitializeCancellation(
+    function reinitiateCancellation(
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.reinitializeCancellation(
+        BookingTokenOperator.reinitiateCancellation(
             getBookingTokenAddress(),
             tokenId,
             refundAmount,

@@ -537,6 +537,17 @@ contract BookingToken is
     }
 
     /**
+     * @notice Retrieves the payment token for a given token.
+     *
+     * @param tokenId The token id to retrieve the payment token for
+     * @return paymentToken The payment token
+     */
+    function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken) {
+        BookingTokenStorage storage $ = _getBookingTokenStorage();
+        return $._reservations[tokenId].paymentToken;
+    }
+
+    /**
      * @notice Returns if the token is cancellable
      *
      * @param tokenId The token id
@@ -807,7 +818,7 @@ contract BookingToken is
         processPayment(paymentToken, refundAmount, owner);
     }
 
-    function reinitializeCancellation(
+    function reinitiateCancellation(
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,
@@ -826,14 +837,7 @@ contract BookingToken is
 
         address supplier = $._reservations[tokenId].supplier;
 
-        _reinitializeCancellation(
-            owner,
-            supplier,
-            tokenId,
-            refundAmount,
-            cancellationReason,
-            cancellationReasonVersion
-        );
+        _reinitiateCancellation(owner, supplier, tokenId, refundAmount, cancellationReason, cancellationReasonVersion);
     }
 
     /***************************************************

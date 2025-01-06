@@ -95,8 +95,6 @@ contract BookingTokenCancellable {
 
     error CancellationProposalExists(uint256 tokenId);
 
-    error CancellationProposalNotFound(uint256 tokenId); // FIXME: Do we need this?
-
     error IncorrectRefundAmount(uint256 tokenId, uint256 existing, uint256 checked);
 
     error InvalidCancellationProposalStatus(uint256 tokenId, CancellationProposalStatus status);
@@ -470,7 +468,7 @@ contract BookingTokenCancellable {
         return proposal.refundAmount;
     }
 
-    function _reinitializeCancellation(
+    function _reinitiateCancellation(
         address owner,
         address supplier,
         uint256 tokenId,

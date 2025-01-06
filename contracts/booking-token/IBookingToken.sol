@@ -26,8 +26,6 @@ interface IBookingToken {
 
     function getReservationPrice(uint256 tokenId) external view returns (uint256 price, IERC20 paymentToken);
 
-    function getCancellationProposalRefundAmount(uint256 tokenId) external view returns (uint256 refundAmount);
-
     function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken);
 
     /**
@@ -120,7 +118,7 @@ interface IBookingToken {
      * @param cancellationReason The reason for reinitializing the proposal
      * @param cancellationReasonVersion The version of the reinitialization reason
      */
-    function reinitializeCancellation(
+    function reinitiateCancellation(
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,

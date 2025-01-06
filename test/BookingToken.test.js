@@ -138,8 +138,8 @@ describe("BookingToken", function () {
             // Check token booking status
             expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
 
-            // Check cancellable flag FIXME: We'll test this in V2
-            // expect(await bookingToken.isCancellable(0n)).to.equal(true);
+            // Check cancellable flag
+            expect(await bookingToken.isCancellable(0n)).to.equal(false);
 
             // Mint again to make sure the token id is incremented
             await expect(
@@ -1242,14 +1242,12 @@ describe("BookingToken", function () {
             await expect(
                 otherCMAccount
                     .connect(otherBookingOperator)
-                    .reinitializeCancellation(token_id, refundAmount, reason, reasonVersion),
+                    .reinitiateCancellation(token_id, refundAmount, reason, reasonVersion),
             ).to.revertedWithCustomError(bookingToken, "NotOwnerOrSupplier");
 
             // Special case for finalize
             await expect(
-                otherCMAccount
-                    .connect(otherBookingOperator)
-                    .finalizeCancellation(token_id, refundAmount, ethers.ZeroAddress),
+                otherCMAccount.connect(otherBookingOperator).finalizeCancellation(token_id, refundAmount),
             ).to.revertedWithCustomError(bookingToken, "OnlySupplierCanFinalizeCancellation");
         });
 
@@ -1531,8 +1529,6 @@ describe("BookingToken", function () {
                 0n, // timesCountered
                 0n, // timesRejected
             ]);
-
-            // FIXME: Check error states
 
             // REVERTS: TRY TO ACCEPT WITH NON-BOUGHT TOKEN
             await expect(
@@ -1936,7 +1932,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount
                     .connect(distributorBookingOperator)
-                    .reinitializeCancellation(
+                    .reinitiateCancellation(
                         tokenWithNativePayment,
                         refundAmount,
                         cancellationReason,
@@ -1975,7 +1971,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .reinitializeCancellation(
+                    .reinitiateCancellation(
                         tokenWithNativePayment,
                         refundAmount,
                         cancellationReason,
@@ -2029,7 +2025,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount
                     .connect(distributorBookingOperator)
-                    .reinitializeCancellation(
+                    .reinitiateCancellation(
                         tokenWithNativePayment,
                         newRefundAmount,
                         newCancellationReason,
@@ -2090,7 +2086,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .reinitializeCancellation(
+                    .reinitiateCancellation(
                         tokenWithNativePayment,
                         newRefundAmount + 10n,
                         newCancellationReason + 10,
@@ -2165,7 +2161,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount),
             )
                 .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
                 .withArgs(tokenWithNativePayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
@@ -2175,7 +2171,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount
                     .connect(distributorBookingOperator)
-                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount),
             )
                 .to.revertedWithCustomError(bookingToken, "OnlySupplierCanFinalizeCancellation")
                 .withArgs(tokenWithNativePayment);
@@ -2209,7 +2205,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount),
             )
                 .to.revertedWithCustomError(bookingToken, "OwnerNotAcceptedCancellation")
                 .withArgs(tokenWithNativePayment);
@@ -2229,7 +2225,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .finalizeCancellation(tokenWithNativePayment, incorrectRefundAmount, paymentToken),
+                    .finalizeCancellation(tokenWithNativePayment, incorrectRefundAmount),
             )
                 .to.revertedWithCustomError(bookingToken, "IncorrectRefundAmount")
                 .withArgs(tokenWithNativePayment, refundAmount, incorrectRefundAmount);
@@ -2239,7 +2235,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount
                     .connect(distributorBookingOperator)
-                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount),
             )
                 .to.revertedWithCustomError(bookingToken, "OnlySupplierCanFinalizeCancellation")
                 .withArgs(tokenWithNativePayment);
@@ -2248,7 +2244,7 @@ describe("BookingToken", function () {
 
             const finalizeTx = supplierCMAccount
                 .connect(supplierBookingOperator)
-                .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken);
+                .finalizeCancellation(tokenWithNativePayment, refundAmount);
 
             await expect(finalizeTx).to.emit(bookingToken, "CancellationFinalized").withArgs(tokenWithNativePayment);
 
@@ -2287,7 +2283,7 @@ describe("BookingToken", function () {
 
             const nullUSDFinalizeTx = supplierCMAccount
                 .connect(supplierBookingOperator)
-                .finalizeCancellation(tokenWithNullUSDPayment, refundAmount, nullUSDPaymentToken);
+                .finalizeCancellation(tokenWithNullUSDPayment, refundAmount);
 
             await expect(nullUSDFinalizeTx)
                 .to.emit(bookingToken, "CancellationFinalized")
@@ -2327,7 +2323,7 @@ describe("BookingToken", function () {
 
             const offChainFinalizeTx = supplierCMAccount
                 .connect(supplierBookingOperator)
-                .finalizeCancellation(tokenWithOffChainPayment, refundAmount, offChainPaymentToken);
+                .finalizeCancellation(tokenWithOffChainPayment, refundAmount);
 
             await expect(offChainFinalizeTx)
                 .to.emit(bookingToken, "CancellationFinalized")

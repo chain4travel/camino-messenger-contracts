@@ -217,8 +217,6 @@ library BookingTokenOperator {
         IBookingToken(bookingToken).rejectCancellation(tokenId, rejectionReason, rejectionReasonVersion);
     }
 
-    // FIXME: Check & verify payment logic below!
-
     /**
      * @notice Finalizes a cancellation proposal by transferring the refund amount
      * to the Booking Token contract.
@@ -227,20 +225,13 @@ library BookingTokenOperator {
      * @param tokenId The token id for which to finalize the proposal
      * @param refundAmount The refund amount to check, this is to prevent front-running attacks
      */
-    function finalizeCancellation(
-        address bookingToken,
-        uint256 tokenId,
-        uint256 refundAmount,
-        IERC20 paymentToken
-    ) public {
-        // Get the price from the booking token contract
-        // FIXME: Check why the test was failing with previous logic
-        // (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
+    function finalizeCancellation(address bookingToken, uint256 tokenId, uint256 refundAmount) public {
+        IERC20 paymentToken = IBookingToken(bookingToken).getReservationPaymentToken(tokenId);
 
         // Check if payment is in native currency or in ERC20
         if (address(paymentToken) == NATIVE_PAYMENT) {
-            // Payment is in native currency. Accept the cancellation by sending the
-            // payment in native currency to the BookingToken contract.
+            // Payment is in native currency. Finalize the cancellation by sending
+            // the payment in native currency to the BookingToken contract.
             IBookingToken(bookingToken).finalizeCancellation{ value: refundAmount }(tokenId, refundAmount);
         } else if (address(paymentToken) == OFFCHAIN_PAYMENT) {
             // Off-chain payment - no on-chain transfer needed
@@ -264,14 +255,14 @@ library BookingTokenOperator {
      * @param cancellationReason The reason for reinitializing the proposal
      * @param cancellationReasonVersion The version of the reinitialization reason
      */
-    function reinitializeCancellation(
+    function reinitiateCancellation(
         address bookingToken,
         uint256 tokenId,
         uint256 refundAmount,
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
     ) external {
-        IBookingToken(bookingToken).reinitializeCancellation(
+        IBookingToken(bookingToken).reinitiateCancellation(
             tokenId,
             refundAmount,
             cancellationReason,
