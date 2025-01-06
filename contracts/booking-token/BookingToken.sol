@@ -784,10 +784,10 @@ contract BookingToken is
 
     function finalizeCancellation(
         uint256 tokenId,
-        uint256 refundAmount
+        uint256 checkRefundAmount
     ) external payable virtual onlyCMAccount(msg.sender) {
         // Revert if token does not exist
-        _requireOwned(tokenId);
+        address owner = _requireOwned(tokenId);
 
         // Get storage
         BookingTokenStorage storage $ = _getBookingTokenStorage();
@@ -799,9 +799,12 @@ contract BookingToken is
 
         address supplier = $._reservations[tokenId].supplier;
 
-        _finalizeCancellation(supplier, tokenId, refundAmount);
+        uint256 refundAmount = _finalizeCancellation(supplier, tokenId, checkRefundAmount);
 
-        // FIXME: HANDLE PAYMENT!!!
+        IERC20 paymentToken = $._reservations[tokenId].paymentToken;
+
+        // Process payment
+        processPayment(paymentToken, refundAmount, owner);
     }
 
     function reinitializeCancellation(

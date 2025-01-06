@@ -28,6 +28,13 @@ describe("BookingToken", function () {
                 .true;
             expect(await bookingToken.isCMAccount(supplierCMAccount.getAddress())).to.be.true;
         });
+
+        it("should return version correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            expect(await bookingToken.version()).to.deep.equal([0, 1, 0]);
+        });
     });
 
     describe("Mint", function () {
@@ -1289,7 +1296,7 @@ describe("BookingToken", function () {
                     true, // ownerAccepted
                     false, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 )
                 .to.emit(bookingToken, "CancellationReasons")
                 .withArgs(
@@ -1313,7 +1320,7 @@ describe("BookingToken", function () {
                 true, // ownerAccepted
                 false, // supplierAccepted
                 0n, // timesCountered
-                0n, /// timesRejected
+                0n, // timesRejected
             ]);
 
             // Check cancellation proposal reasons
@@ -1351,7 +1358,7 @@ describe("BookingToken", function () {
                     false, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 )
                 .to.emit(bookingToken, "CancellationReasons")
                 .withArgs(
@@ -1375,7 +1382,7 @@ describe("BookingToken", function () {
                 false, // ownerAccepted
                 true, // supplierAccepted
                 0n, // timesCountered
-                0n, /// timesRejected
+                0n, // timesRejected
             ]);
 
             // Check cancellation proposal reasons
@@ -1481,7 +1488,7 @@ describe("BookingToken", function () {
                     false, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
 
             // REVERTS: TRY ACCEPT WITH DIFFERENT REFUND AMOUNT
@@ -1510,7 +1517,7 @@ describe("BookingToken", function () {
                     true, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
 
             // Check cancellation proposal state
@@ -1522,7 +1529,7 @@ describe("BookingToken", function () {
                 true, // ownerAccepted
                 true, // supplierAccepted
                 0n, // timesCountered
-                0n, /// timesRejected
+                0n, // timesRejected
             ]);
 
             // FIXME: Check error states
@@ -1568,7 +1575,7 @@ describe("BookingToken", function () {
                     true, // ownerAccepted
                     false, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
 
             // Accept with supplier
@@ -1586,7 +1593,7 @@ describe("BookingToken", function () {
                     true, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
         });
 
@@ -1654,7 +1661,7 @@ describe("BookingToken", function () {
                     false, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
 
             // COUNTER
@@ -1678,7 +1685,7 @@ describe("BookingToken", function () {
                     true, // ownerAccepted
                     false, // supplierAccepted
                     1, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 )
                 .to.emit(bookingToken, "CancellationReasons")
                 .withArgs(
@@ -1749,7 +1756,7 @@ describe("BookingToken", function () {
                     false, // ownerAccepted
                     true, // supplierAccepted
                     0, // timesCountered
-                    0, /// timesRejected
+                    0, // timesRejected
                 );
 
             // REVERTS: TRY TO WITHDRAW WITH NON-CURRENT PROPOSER
@@ -1781,7 +1788,7 @@ describe("BookingToken", function () {
                 false, // ownerAccepted
                 true, // supplierAccepted
                 0n, // timesCountered
-                0n, /// timesRejected
+                0n, // timesRejected
             ]);
 
             // Check cancellation proposal reasons
@@ -1795,6 +1802,541 @@ describe("BookingToken", function () {
                 withdrawalReason, // proposal.withdrawalReason,
                 withdrawalReasonVersion, // proposal.withdrawalVersion
             ]);
+        });
+
+        it("should reject a cancellation proposal correctly", async function () {
+            const {
+                supplierCMAccount,
+                distributorCMAccount,
+                bookingToken,
+                nullUSD,
+                tokenWithNativePayment,
+                tokenWithNullUSDPayment,
+                supplierBookingOperator,
+                distributorBookingOperator,
+                otherCMAccount,
+                otherBookingOperator,
+                tokenWithoutBuying,
+                tokenWithPassedExpiration,
+            } = await loadFixture(deployCancellationSupportFixture);
+
+            const proposer = await supplierCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+            const cancellationReason = 42;
+            const cancellationReasonVersion = 1;
+
+            const rejectionReason = 44;
+            const rejectionReasonVersion = 3;
+
+            // REVERTS: TRY TO REJECT NON-INITIATED PROPOSAL
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .rejectCancellation(tokenWithNativePayment, rejectionReason, rejectionReasonVersion),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNativePayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
+
+            // INITIATE
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    proposer, // initial proposer
+                    proposer, // current proposer
+                    refundAmount,
+                    false, // ownerAccepted
+                    true, // supplierAccepted
+                    0, // timesCountered
+                    0, // timesRejected
+                );
+
+            // REVERTS: TRY TO REJECT WITH PROPOSER
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .rejectCancellation(tokenWithNativePayment, rejectionReason, rejectionReasonVersion),
+            )
+                .to.revertedWithCustomError(bookingToken, "ProposerCanNotRejectCancellation")
+                .withArgs(tokenWithNativePayment);
+
+            // REJECT
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .rejectCancellation(tokenWithNativePayment, rejectionReason, rejectionReasonVersion),
+            )
+                .to.emit(bookingToken, "CancellationRejected")
+                .withArgs(tokenWithNativePayment, rejectionReason, rejectionReasonVersion);
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                2n, // Rejected == 2
+                refundAmount,
+                proposer, // initial proposer
+                proposer, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                0n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                cancellationReason,
+                cancellationReasonVersion,
+                rejectionReason, // proposal.rejectionReason,
+                rejectionReasonVersion, // proposal.rejectionVersion,
+                0n, // proposal.counterReason,
+                0n, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
+        });
+
+        it("should reinitialize a cancellation proposal correctly", async function () {
+            const {
+                supplierCMAccount,
+                distributorCMAccount,
+                bookingToken,
+                nullUSD,
+                tokenWithNativePayment,
+                tokenWithNullUSDPayment,
+                supplierBookingOperator,
+                distributorBookingOperator,
+                otherCMAccount,
+                otherBookingOperator,
+                tokenWithoutBuying,
+                tokenWithPassedExpiration,
+            } = await loadFixture(deployCancellationSupportFixture);
+
+            const supplier = await supplierCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+            const cancellationReason = 42;
+            const cancellationReasonVersion = 1;
+
+            const rejectionReason = 44;
+            const rejectionReasonVersion = 3;
+
+            // REVERTS: TRY TO RE-INIT NON-INITIATED PROPOSAL
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .reinitializeCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNativePayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
+
+            // INITIATE
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    supplier, // initial proposer
+                    supplier, // current proposer
+                    refundAmount,
+                    false, // ownerAccepted
+                    true, // supplierAccepted
+                    0, // timesCountered
+                    0, // timesRejected
+                );
+
+            // REVERTS: TRY TO RE-INIT NON WITHDRAWN/REJECTED PROPOSAL
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .reinitializeCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNativePayment, 1n); // PROPOSAL: PENDING: 1
+
+            // REJECT (So we can re-init later)
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .rejectCancellation(tokenWithNativePayment, rejectionReason, rejectionReasonVersion),
+            )
+                .to.emit(bookingToken, "CancellationRejected")
+                .withArgs(tokenWithNativePayment, rejectionReason, rejectionReasonVersion);
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                2n, // Rejected == 2
+                refundAmount,
+                supplier, // initial proposer
+                supplier, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                0n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                cancellationReason,
+                cancellationReasonVersion,
+                rejectionReason, // proposal.rejectionReason,
+                rejectionReasonVersion, // proposal.rejectionVersion,
+                0n, // proposal.counterReason,
+                0n, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
+
+            // RE-INIT with DISTRIBUTOR
+
+            const newRefundAmount = ethers.parseEther("0.05");
+            const newCancellationReason = cancellationReason + 1;
+            const newCancellationReasonVersion = cancellationReasonVersion + 1;
+            const distributor = await distributorCMAccount.getAddress();
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .reinitializeCancellation(
+                        tokenWithNativePayment,
+                        newRefundAmount,
+                        newCancellationReason,
+                        newCancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    supplier, // initial proposer
+                    distributor, // current proposer
+                    newRefundAmount,
+                    true, // ownerAccepted
+                    false, // supplierAccepted
+                    0, // timesCountered
+                    1n, // timesRejected
+                );
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                1n, // Pending == 1
+                newRefundAmount,
+                supplier, // initial proposer
+                distributor, // current proposer
+                true, // ownerAccepted
+                false, // supplierAccepted
+                0n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                newCancellationReason,
+                newCancellationReasonVersion,
+                0n, // proposal.rejectionReason,
+                0n, // proposal.rejectionVersion,
+                0n, // proposal.counterReason,
+                0n, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
+
+            // WITHDRAW (So we can re-init later)
+
+            const withdrawalReason = 43;
+            const withdrawalReasonVersion = 2;
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .withdrawCancellation(tokenWithNativePayment, withdrawalReason, withdrawalReasonVersion),
+            )
+                .to.emit(bookingToken, "CancellationWithdrawn")
+                .withArgs(tokenWithNativePayment, withdrawalReason, withdrawalReasonVersion);
+
+            // RE-INIT with SUPPLIER from a WITHDRAWN PROPOSAL
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .reinitializeCancellation(
+                        tokenWithNativePayment,
+                        newRefundAmount + 10n,
+                        newCancellationReason + 10,
+                        newCancellationReasonVersion + 10,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    supplier, // initial proposer
+                    supplier, // current proposer
+                    newRefundAmount + 10n,
+                    false, // ownerAccepted
+                    true, // supplierAccepted
+                    0, // timesCountered
+                    1n, // timesRejected
+                );
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                1n, // Pending == 1
+                newRefundAmount + 10n,
+                supplier, // initial proposer
+                supplier, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                0n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                newCancellationReason + 10,
+                newCancellationReasonVersion + 10,
+                0n, // proposal.rejectionReason,
+                0n, // proposal.rejectionVersion,
+                0n, // proposal.counterReason,
+                0n, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
+        });
+
+        it("should finalize a cancellation proposal correctly", async function () {
+            const {
+                supplierCMAccount,
+                distributorCMAccount,
+                bookingToken,
+                nullUSD,
+                tokenWithNativePayment,
+                tokenWithNullUSDPayment,
+                supplierBookingOperator,
+                distributorBookingOperator,
+                otherCMAccount,
+                otherBookingOperator,
+                tokenWithoutBuying,
+                tokenWithPassedExpiration,
+                offChainPaymentToken,
+                offChainPaymentCurrency,
+                tokenWithOffChainPayment,
+            } = await loadFixture(deployCancellationSupportFixture);
+
+            const supplier = await supplierCMAccount.getAddress();
+            const distributor = await distributorCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+            const paymentToken = ethers.ZeroAddress;
+            const cancellationReason = 42;
+            const cancellationReasonVersion = 1;
+
+            // REVERTS: TRY TO FINALIZE NON-INITIATED PROPOSAL
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNativePayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
+
+            // REVERTS: TRY TO FINALIZE with NON-SUPPLIER
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+            )
+                .to.revertedWithCustomError(bookingToken, "OnlySupplierCanFinalizeCancellation")
+                .withArgs(tokenWithNativePayment);
+
+            // INITIATE
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    supplier, // initial proposer
+                    supplier, // current proposer
+                    refundAmount,
+                    false, // ownerAccepted
+                    true, // supplierAccepted
+                    0, // timesCountered
+                    0, // timesRejected
+                );
+
+            // REVERTS: TRY TO FINALIZE without OWNER ACCEPTED
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+            )
+                .to.revertedWithCustomError(bookingToken, "OwnerNotAcceptedCancellation")
+                .withArgs(tokenWithNativePayment);
+
+            // ACCEPT PROPOSAL
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .acceptCancellation(tokenWithNativePayment, refundAmount),
+            ).to.not.be.reverted;
+
+            // REVERTS: TRY TO FINALIZE with INCORRECT REFUND AMOUNT
+
+            const incorrectRefundAmount = refundAmount + 1n;
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, incorrectRefundAmount, paymentToken),
+            )
+                .to.revertedWithCustomError(bookingToken, "IncorrectRefundAmount")
+                .withArgs(tokenWithNativePayment, refundAmount, incorrectRefundAmount);
+
+            // REVERTS: TRY TO FINALIZE with NON-SUPPLIER (new state PENDING)
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken),
+            )
+                .to.revertedWithCustomError(bookingToken, "OnlySupplierCanFinalizeCancellation")
+                .withArgs(tokenWithNativePayment);
+
+            // FINALIZE
+
+            const finalizeTx = supplierCMAccount
+                .connect(supplierBookingOperator)
+                .finalizeCancellation(tokenWithNativePayment, refundAmount, paymentToken);
+
+            await expect(finalizeTx).to.emit(bookingToken, "CancellationFinalized").withArgs(tokenWithNativePayment);
+
+            await expect(finalizeTx).to.changeEtherBalances(
+                [supplier, distributor, bookingToken, supplierBookingOperator, distributorBookingOperator],
+                [-refundAmount, refundAmount, 0n, 0n, 0n],
+            );
+
+            // INIT with DISTRIBUTOR with ERC20
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNullUSDPayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNullUSDPayment,
+                    distributor, // initial proposer
+                    distributor, // current proposer
+                    refundAmount,
+                    true, // ownerAccepted
+                    false, // supplierAccepted
+                    0, // timesCountered
+                    0, // timesRejected
+                );
+
+            // FINALIZE with SUPPLIER
+
+            const nullUSDPaymentToken = await nullUSD.getAddress();
+
+            const nullUSDFinalizeTx = supplierCMAccount
+                .connect(supplierBookingOperator)
+                .finalizeCancellation(tokenWithNullUSDPayment, refundAmount, nullUSDPaymentToken);
+
+            await expect(nullUSDFinalizeTx)
+                .to.emit(bookingToken, "CancellationFinalized")
+                .withArgs(tokenWithNullUSDPayment);
+
+            await expect(nullUSDFinalizeTx).to.changeTokenBalances(
+                nullUSD,
+                [supplier, distributor, bookingToken, supplierBookingOperator, distributorBookingOperator],
+                [-refundAmount, refundAmount, 0n, 0n, 0n],
+            );
+
+            // INIT with DISTRIBUTOR with OFFCHAIN PAYMENT
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .initiateCancellation(
+                        tokenWithOffChainPayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithOffChainPayment,
+                    distributor, // initial proposer
+                    distributor, // current proposer
+                    refundAmount,
+                    true, // ownerAccepted
+                    false, // supplierAccepted
+                    0, // timesCountered
+                    0, // timesRejected
+                );
+
+            // FINALIZE with SUPPLIER
+
+            const offChainFinalizeTx = supplierCMAccount
+                .connect(supplierBookingOperator)
+                .finalizeCancellation(tokenWithOffChainPayment, refundAmount, offChainPaymentToken);
+
+            await expect(offChainFinalizeTx)
+                .to.emit(bookingToken, "CancellationFinalized")
+                .withArgs(tokenWithOffChainPayment);
+
+            await expect(offChainFinalizeTx).to.changeEtherBalances(
+                [supplier, distributor, bookingToken, supplierBookingOperator, distributorBookingOperator],
+                [0n, 0n, 0n, 0n, 0n], // Off chain payment, should not change any balances
+            );
         });
 
         // it("should revert initiating a proposal if token state is reserved or expired", async function () {
@@ -2002,7 +2544,7 @@ describe("BookingToken", function () {
         //         .withArgs(token_id, await supplierCMAccount.getAddress(), refundAmount);
 
         //     // Check balances
-        //     await expect(acceptTx).to.changeEtherBalances(
+        //     await expect(acceptTx).to.ss(
         //         [distributorCMAccount, supplierCMAccount, bookingToken],
         //         [refundAmount, -refundAmount, 0n],
         //     );

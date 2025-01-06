@@ -124,15 +124,6 @@ contract BookingTokenCancellable {
         _;
     }
 
-    function getCancellationProposalStatus(uint256 tokenId) public view returns (CancellationProposalStatus) {
-        return _getBookingTokenCancellableStorage()._proposals[tokenId].status;
-    }
-
-    function isCancellationInProgress(uint256 tokenId) public view returns (bool) {
-        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
-        return proposal.status == CancellationProposalStatus.PENDING;
-    }
-
     function getCancellationProposal(
         uint256 tokenId
     )
@@ -438,7 +429,11 @@ contract BookingTokenCancellable {
         emit CancellationRejected(tokenId, rejectionReason, rejectionReasonVersion);
     }
 
-    function _finalizeCancellation(address supplier, uint256 tokenId, uint256 checkRefundAmount) internal virtual {
+    function _finalizeCancellation(
+        address supplier,
+        uint256 tokenId,
+        uint256 checkRefundAmount
+    ) internal virtual returns (uint256 refundAmount) {
         // Only supplier can finalize the cancellation
         if (msg.sender != supplier) {
             revert OnlySupplierCanFinalizeCancellation(tokenId);
@@ -471,6 +466,8 @@ contract BookingTokenCancellable {
 
         // Emit event. Payment should be handled by the inheriting contract.
         emit CancellationFinalized(tokenId);
+
+        return proposal.refundAmount;
     }
 
     function _reinitializeCancellation(
@@ -486,7 +483,7 @@ contract BookingTokenCancellable {
         // Revert if in not WITHDRAWN or REJECTED state. The only states that can be
         // reintiliazed are WITHDRAWN and REJECTED
         if (
-            proposal.status != CancellationProposalStatus.WITHDRAWN ||
+            proposal.status != CancellationProposalStatus.WITHDRAWN &&
             proposal.status != CancellationProposalStatus.REJECTED
         ) {
             revert InvalidCancellationProposalStatus(tokenId, proposal.status);
@@ -494,6 +491,9 @@ contract BookingTokenCancellable {
 
         // Set new refund amount
         proposal.refundAmount = refundAmount;
+
+        // Set the current proposer
+        proposal.currentProposer = msg.sender;
 
         // Set accepted flags
         proposal.ownerAccepted = (msg.sender == owner);

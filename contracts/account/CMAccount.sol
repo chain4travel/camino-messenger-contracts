@@ -427,15 +427,6 @@ contract CMAccount is
     }
 
     /**
-     * @notice Set cancellable flag for booking token
-     * @param tokenId The token id
-     * @param cancellable The cancellable flag
-     */
-    function setCancellable(uint256 tokenId, bool cancellable) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.setCancellable(getBookingTokenAddress(), tokenId, cancellable);
-    }
-
-    /**
      * @notice Always returns `IERC721Receiver.onERC721Received.selector`.
      *
      * @dev See {IERC721Receiver-onERC721Received}.

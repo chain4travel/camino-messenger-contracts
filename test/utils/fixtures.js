@@ -358,6 +358,30 @@ async function deployCancellationSupportFixture() {
     // Token with ID 3 minted with passed expiration
     const tokenWithPassedExpiration = 3n;
 
+    // Mint BOOKING TOKEN with off chain payment ---------------------------------------------------------------------
+
+    const tokenURI5 = "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+    const expirationTimestamp5 = (await ethers.provider.getBlock("latest")).timestamp + 120;
+    const price5 = ethers.parseEther("0.95");
+    const offChainPaymentToken = ethers.getAddress("0x0000000000000000000000000000000000000001");
+    const offChainPaymentCurrency = 123;
+
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+        distributorCMAccount.getAddress(), // Reserved for
+        tokenURI5, // URI
+        expirationTimestamp5, // Expiration of the reservation
+        price5, // Price of token in wei
+        offChainPaymentToken, // paymentToken
+        offChainPaymentCurrency, // offchain payment currency
+        true, // cancellable
+    );
+
+    // Token with ID 4 minted with off chain payment
+    const tokenWithOffChainPayment = 4n;
+
+    // Buy the token
+    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithOffChainPayment);
+
     /// OTHER CM ACCOUNT ///
 
     // We also need another CM Account to test for fail cases
@@ -410,6 +434,9 @@ async function deployCancellationSupportFixture() {
         otherBookingOperator,
         tokenWithoutBuying,
         tokenWithPassedExpiration,
+        offChainPaymentToken,
+        offChainPaymentCurrency,
+        tokenWithOffChainPayment,
     };
 }
 

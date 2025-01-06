@@ -35,19 +35,6 @@ library BookingTokenOperator {
     address public constant OFFCHAIN_PAYMENT = address(1);
 
     /***************************************************
-     *                   ERRORS                        *
-     ***************************************************/
-
-    /**
-     * @dev Token approval for the BookingToken address failed.
-     *
-     * @param token token address
-     * @param spender spender address (the BookingToken contract address)
-     * @param amount amount of tokens to approve
-     */
-    error TokenApprovalFailed(address token, address spender, uint256 amount);
-
-    /***************************************************
      *                   FUNCS                         *
      ***************************************************/
 
@@ -129,25 +116,11 @@ library BookingTokenOperator {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
-            bool approval = paymentToken.approve(bookingToken, price);
-
-            if (!approval) {
-                revert TokenApprovalFailed(bookingToken, address(paymentToken), price);
-            }
+            paymentToken.approve(bookingToken, price);
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
         }
-    }
-
-    /**
-     * @notice Sets the cancellable flag for a token. This can only be called by the
-     * supplier of the token.
-     * @param tokenId The token id
-     * @param _isCancellable The new cancellable flag
-     */
-    function setCancellable(address bookingToken, uint256 tokenId, bool _isCancellable) external {
-        IBookingToken(bookingToken).setCancellable(tokenId, _isCancellable);
     }
 
     /**
@@ -276,11 +249,7 @@ library BookingTokenOperator {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // refund amount. BookingToken should do the transfer to the
             // supplier.
-            bool approval = paymentToken.approve(bookingToken, refundAmount);
-
-            if (!approval) {
-                revert TokenApprovalFailed(bookingToken, address(paymentToken), refundAmount);
-            }
+            paymentToken.approve(bookingToken, refundAmount);
 
             // Accept the cancellation
             IBookingToken(bookingToken).finalizeCancellation(tokenId, refundAmount);
