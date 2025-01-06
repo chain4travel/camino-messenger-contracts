@@ -2128,6 +2128,134 @@ describe("BookingToken", function () {
                 0n, // proposal.withdrawalReason,
                 0n, // proposal.withdrawalVersion
             ]);
+
+            // COUNTER Proposal so we test timesCountered
+
+            const counterReason = 43;
+            const counterReasonVersion = 2;
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .counterCancellation(tokenWithNativePayment, refundAmount, counterReason, counterReasonVersion),
+            ).to.not.be.reverted;
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                1n, // Pending == 1
+                refundAmount,
+                supplier, // initial proposer
+                distributor, // current proposer
+                true, // ownerAccepted
+                false, // supplierAccepted
+                1n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // COUNTER again with the supplier
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .counterCancellation(
+                        tokenWithNativePayment,
+                        refundAmount + 11n,
+                        counterReason,
+                        counterReasonVersion,
+                    ),
+            ).to.not.be.reverted;
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                1n, // Pending == 1
+                refundAmount + 11n,
+                supplier, // initial proposer
+                supplier, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                2n, // timesCountered
+                1n, // timesRejected
+            ]);
+
+            // REJECT Proposal so we test timesRejected
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .rejectCancellation(tokenWithNativePayment, rejectionReason, rejectionReasonVersion),
+            ).to.not.be.reverted;
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                2n, // Rejected == 2
+                refundAmount + 11n,
+                supplier, // initial proposer
+                supplier, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                2n, // timesCountered
+                2n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                newCancellationReason + 10,
+                newCancellationReasonVersion + 10,
+                rejectionReason, // proposal.rejectionReason,
+                rejectionReasonVersion, // proposal.rejectionVersion,
+                counterReason, // proposal.counterReason,
+                counterReasonVersion, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
+
+            // RE-INIT to check timesCountered and timesRejected
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .reinitiateCancellation(
+                        tokenWithNativePayment,
+                        newRefundAmount,
+                        newCancellationReason,
+                        newCancellationReasonVersion,
+                    ),
+            )
+                .to.emit(bookingToken, "CancellationPending")
+                .withArgs(
+                    tokenWithNativePayment,
+                    supplier, // initial proposer
+                    supplier, // current proposer
+                    newRefundAmount,
+                    false, // ownerAccepted
+                    true, // supplierAccepted
+                    2n, // timesCountered
+                    2n, // timesRejected
+                );
+
+            // Check cancellation proposal state
+            expect(await bookingToken.getCancellationProposal(tokenWithNativePayment)).to.deep.equal([
+                1n, // Pending == 1
+                newRefundAmount,
+                supplier, // initial proposer
+                supplier, // current proposer
+                false, // ownerAccepted
+                true, // supplierAccepted
+                2n, // timesCountered
+                2n, // timesRejected
+            ]);
+
+            // Check cancellation proposal reasons
+            expect(await bookingToken.getCancellationReasons(tokenWithNativePayment)).to.deep.equal([
+                newCancellationReason,
+                newCancellationReasonVersion,
+                0n, // proposal.rejectionReason,
+                0n, // proposal.rejectionVersion,
+                0n, // proposal.counterReason,
+                0n, // proposal.counterVersion,
+                0n, // proposal.withdrawalReason,
+                0n, // proposal.withdrawalVersion
+            ]);
         });
 
         it("should finalize a cancellation proposal correctly", async function () {
