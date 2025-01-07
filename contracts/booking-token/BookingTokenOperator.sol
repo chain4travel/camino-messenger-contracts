@@ -117,7 +117,7 @@ library BookingTokenOperator {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // reservation price. BookingToken should do the transfer to the
             // supplier.
-            paymentToken.approve(bookingToken, price);
+            paymentToken.forceApprove(bookingToken, price);
 
             // Buy the token
             IBookingToken(bookingToken).buyReservedToken(tokenId);
