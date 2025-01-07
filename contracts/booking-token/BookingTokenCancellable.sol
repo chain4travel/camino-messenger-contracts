@@ -199,35 +199,47 @@ contract BookingTokenCancellable {
         uint16 cancellationReason,
         uint16 cancellationReasonVersion
     ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
-        // Revert if proposal already exists
-        if (_getBookingTokenCancellableStorage()._proposals[tokenId].status != CancellationProposalStatus.NO_PROPOSAL) {
-            revert CancellationProposalExists(tokenId);
+        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
+
+        // Revert if proposal is finalized or pending
+        if (
+            proposal.status == CancellationProposalStatus.FINALIZED ||
+            proposal.status == CancellationProposalStatus.PENDING
+        ) {
+            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
         }
 
-        bool ownerAccepted = (msg.sender == owner);
-        bool supplierAccepted = (msg.sender == supplier);
+        // Set initial owner if this is the first proposal
+        if (proposal.status == CancellationProposalStatus.NO_PROPOSAL) {
+            proposal.initialProposer = msg.sender;
+        }
 
-        Proposal memory proposal = Proposal({
-            refundAmount: refundAmount,
-            initialProposer: msg.sender,
-            currentProposer: msg.sender,
-            ownerAccepted: ownerAccepted,
-            supplierAccepted: supplierAccepted,
-            timesCountered: 0,
-            timesRejected: 0,
-            status: CancellationProposalStatus.PENDING,
-            cancellationReason: cancellationReason,
-            cancellationVersion: cancellationReasonVersion,
-            rejectionReason: 0,
-            rejectionVersion: 0,
-            counterReason: 0,
-            counterVersion: 0,
-            withdrawalReason: 0,
-            withdrawalVersion: 0
-        });
+        // REST IS WITHDRAW/REJECTED LOGIC
 
-        // Store the cancellation proposal
-        _getBookingTokenCancellableStorage()._proposals[tokenId] = proposal;
+        // Set the current proposer
+        proposal.currentProposer = msg.sender;
+
+        // Set refund amount
+        proposal.refundAmount = refundAmount;
+
+        // Set accepted flags
+        proposal.ownerAccepted = (msg.sender == owner);
+        proposal.supplierAccepted = (msg.sender == supplier);
+
+        // Set new cancellation reason
+        proposal.cancellationReason = cancellationReason;
+        proposal.cancellationVersion = cancellationReasonVersion;
+
+        // Reset other reasons
+        proposal.rejectionReason = 0;
+        proposal.rejectionVersion = 0;
+        proposal.counterReason = 0;
+        proposal.counterVersion = 0;
+        proposal.withdrawalReason = 0;
+        proposal.withdrawalVersion = 0;
+
+        // Set status to PENDING
+        proposal.status = CancellationProposalStatus.PENDING;
 
         // Emit event
         emit CancellationPending(
@@ -475,76 +487,5 @@ contract BookingTokenCancellable {
         emit CancellationFinalized(tokenId);
 
         return proposal.refundAmount;
-    }
-
-    // FIXME: merge with init
-    function _reinitiateCancellation(
-        address owner,
-        address supplier,
-        uint256 tokenId,
-        uint256 refundAmount,
-        uint16 cancellationReason,
-        uint16 cancellationReasonVersion
-    ) internal virtual onlyOwnerOrSupplier(owner, supplier) {
-        Proposal storage proposal = _getBookingTokenCancellableStorage()._proposals[tokenId];
-
-        // Revert if in not WITHDRAWN or REJECTED state. The only states that can be
-        // reintiliazed are WITHDRAWN and REJECTED
-        if (
-            proposal.status != CancellationProposalStatus.WITHDRAWN &&
-            proposal.status != CancellationProposalStatus.REJECTED
-        ) {
-            revert InvalidCancellationProposalStatus(tokenId, proposal.status);
-        }
-
-        // Set new refund amount
-        proposal.refundAmount = refundAmount;
-
-        // Set the current proposer
-        proposal.currentProposer = msg.sender;
-
-        // Set accepted flags
-        proposal.ownerAccepted = (msg.sender == owner);
-        proposal.supplierAccepted = (msg.sender == supplier);
-
-        // Set new cancellation reason
-        proposal.cancellationReason = cancellationReason;
-        proposal.cancellationVersion = cancellationReasonVersion;
-
-        // Reset other reasons
-        proposal.rejectionReason = 0;
-        proposal.rejectionVersion = 0;
-        proposal.counterReason = 0;
-        proposal.counterVersion = 0;
-        proposal.withdrawalReason = 0;
-        proposal.withdrawalVersion = 0;
-
-        // Set status to PENDING
-        proposal.status = CancellationProposalStatus.PENDING;
-
-        // Emit event
-        emit CancellationPending(
-            tokenId,
-            proposal.initialProposer,
-            proposal.currentProposer,
-            proposal.refundAmount,
-            proposal.ownerAccepted,
-            proposal.supplierAccepted,
-            proposal.timesCountered,
-            proposal.timesRejected
-        );
-
-        // Emit reasons event
-        emit CancellationReasons(
-            tokenId,
-            proposal.cancellationReason,
-            proposal.cancellationVersion,
-            proposal.rejectionReason,
-            proposal.rejectionVersion,
-            proposal.counterReason,
-            proposal.counterVersion,
-            proposal.withdrawalReason,
-            proposal.withdrawalVersion
-        );
     }
 }

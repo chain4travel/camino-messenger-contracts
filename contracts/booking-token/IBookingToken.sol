@@ -9,14 +9,6 @@ interface IBookingToken {
         string memory uri,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
-    ) external;
-
-    function safeMintWithReservationV2(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
         IERC20 paymentToken,
         uint256 offchainPaymentCurrency,
         bool isCancellable
@@ -109,19 +101,4 @@ interface IBookingToken {
      * @param refundAmount The refund amount to check, this is to prevent front-running attacks
      */
     function finalizeCancellation(uint256 tokenId, uint256 refundAmount) external payable;
-
-    /**
-     * @notice Reinitializes a cancellation proposal after it has been withdrawn or rejected.
-     *
-     * @param tokenId The token id for which to reinitialize the proposal
-     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
-     * @param cancellationReason The reason for reinitializing the proposal
-     * @param cancellationReasonVersion The version of the reinitialization reason
-     */
-    function reinitiateCancellation(
-        uint256 tokenId,
-        uint256 refundAmount,
-        uint16 cancellationReason,
-        uint16 cancellationReasonVersion
-    ) external;
 }

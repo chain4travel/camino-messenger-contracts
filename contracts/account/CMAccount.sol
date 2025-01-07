@@ -370,26 +370,10 @@ contract CMAccount is
      * @param expirationTimestamp The expiration timestamp
      * @param price The price of the token
      * @param paymentToken The payment token, if address(0) then native
+     * @param offchainPaymentCurrency The offchain payment currency
+     * @param cancellable If the token is cancellable
      */
     function mintBookingToken(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        // Mint the token
-        BookingTokenOperator.mintBookingToken(
-            getBookingTokenAddress(),
-            reservedFor,
-            uri,
-            expirationTimestamp,
-            price,
-            paymentToken
-        );
-    }
-
-    function mintBookingTokenV2(
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
@@ -398,7 +382,7 @@ contract CMAccount is
         uint256 offchainPaymentCurrency,
         bool cancellable
     ) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.mintBookingTokenV2(
+        BookingTokenOperator.mintBookingToken(
             getBookingTokenAddress(),
             reservedFor,
             uri,
@@ -415,8 +399,12 @@ contract CMAccount is
      *
      * @param tokenId The token id
      */
-    function buyBookingToken(uint256 tokenId) external nonReentrant onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId);
+    function buyBookingToken(
+        uint256 tokenId,
+        uint256 expectedPrice,
+        IERC20 expectedPaymentToken
+    ) external nonReentrant onlyRole(BOOKING_OPERATOR_ROLE) {
+        BookingTokenOperator.buyBookingToken(getBookingTokenAddress(), tokenId, expectedPrice, expectedPaymentToken);
     }
 
     /**
@@ -854,28 +842,5 @@ contract CMAccount is
      */
     function finalizeCancellation(uint256 tokenId, uint256 refundAmount) external onlyRole(BOOKING_OPERATOR_ROLE) {
         BookingTokenOperator.finalizeCancellation(getBookingTokenAddress(), tokenId, refundAmount);
-    }
-
-    /**
-     * @notice Reinitializes a cancellation proposal after it has been withdrawn or rejected.
-     *
-     * @param tokenId The token id for which to reinitialize the proposal
-     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
-     * @param cancellationReason The reason for reinitializing the proposal
-     * @param cancellationReasonVersion The version of the reinitialization reason
-     */
-    function reinitiateCancellation(
-        uint256 tokenId,
-        uint256 refundAmount,
-        uint16 cancellationReason,
-        uint16 cancellationReasonVersion
-    ) external onlyRole(BOOKING_OPERATOR_ROLE) {
-        BookingTokenOperator.reinitiateCancellation(
-            getBookingTokenAddress(),
-            tokenId,
-            refundAmount,
-            cancellationReason,
-            cancellationReasonVersion
-        );
     }
 }

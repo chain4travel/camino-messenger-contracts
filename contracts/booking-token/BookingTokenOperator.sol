@@ -38,27 +38,13 @@ library BookingTokenOperator {
      *                   FUNCS                         *
      ***************************************************/
 
-    /**
-     * @dev Mints a booking token.
-     *
-     * @param bookingToken booking token contract address
-     * @param reservedFor address of the CM Account that can buy the token
-     * (generally the distributor)
-     * @param uri URI of the token
-     * @param expirationTimestamp expiration timestamp of the token in seconds
-     * @param price price of the token
-     * @param paymentToken payment token address
-     */
-    function mintBookingToken(
-        address bookingToken,
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) public {
-        IBookingToken(bookingToken).safeMintWithReservation(reservedFor, uri, expirationTimestamp, price, paymentToken);
-    }
+    error UnexpectedPrice(uint256 actualPrice, uint256 expectedPrice);
+
+    error UnexpectedPaymentToken(IERC20 actualPaymentToken, IERC20 expectedPaymentToken);
+
+    /***************************************************
+     *                   FUNCS                         *
+     ***************************************************/
 
     /**
      * @dev Mints a booking token with offchain payment currency and cancellable support.
@@ -73,7 +59,7 @@ library BookingTokenOperator {
      * @param offchainPaymentCurrency payment token address
      * @param cancellable cancellable flag
      */
-    function mintBookingTokenV2(
+    function mintBookingToken(
         address bookingToken,
         address reservedFor,
         string memory uri,
@@ -83,7 +69,7 @@ library BookingTokenOperator {
         uint256 offchainPaymentCurrency,
         bool cancellable
     ) public {
-        IBookingToken(bookingToken).safeMintWithReservationV2(
+        IBookingToken(bookingToken).safeMintWithReservation(
             reservedFor,
             uri,
             expirationTimestamp,
@@ -101,11 +87,24 @@ library BookingTokenOperator {
      * @param bookingToken booking token contract address
      * @param tokenId token id
      */
-    function buyBookingToken(address bookingToken, uint256 tokenId) public {
+    function buyBookingToken(
+        address bookingToken,
+        uint256 tokenId,
+        uint256 expectedPrice,
+        IERC20 expectedPaymentToken
+    ) public {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
-        // FIXME: Add expected price and expected payment token and exit early
+        // Check if the price is correct
+        if (price != expectedPrice) {
+            revert UnexpectedPrice(price, expectedPrice);
+        }
+
+        // Check if the payment token is correct
+        if (address(paymentToken) != address(expectedPaymentToken)) {
+            revert UnexpectedPaymentToken(paymentToken, expectedPaymentToken);
+        }
 
         if (address(paymentToken) == NATIVE_PAYMENT) {
             // Payment is in native currency. Buy the token by sending the payment
@@ -247,28 +246,5 @@ library BookingTokenOperator {
             // Accept the cancellation
             IBookingToken(bookingToken).finalizeCancellation(tokenId, refundAmount);
         }
-    }
-
-    /**
-     * @notice Reinitializes a cancellation proposal after it has been withdrawn or rejected.
-     *
-     * @param tokenId The token id for which to reinitialize the proposal
-     * @param refundAmount The refund amount to check, this is to prevent front-running attacks
-     * @param cancellationReason The reason for reinitializing the proposal
-     * @param cancellationReasonVersion The version of the reinitialization reason
-     */
-    function reinitiateCancellation(
-        address bookingToken,
-        uint256 tokenId,
-        uint256 refundAmount,
-        uint16 cancellationReason,
-        uint16 cancellationReasonVersion
-    ) external {
-        IBookingToken(bookingToken).reinitiateCancellation(
-            tokenId,
-            refundAmount,
-            cancellationReason,
-            cancellationReasonVersion
-        );
     }
 }

@@ -168,11 +168,10 @@ contract BookingToken is
         address indexed supplier,
         uint256 expirationTimestamp,
         uint256 price,
-        IERC20 paymentToken
+        IERC20 paymentToken,
+        uint256 offchainPaymentCurrency,
+        bool cancellable
     );
-
-    // FIXME: Merge in to TokenReserved
-    event TokenReservedV2(uint256 indexed tokenId, uint256 offchainPaymentCurrency, bool cancellable);
 
     /**
      * @notice Event emitted when a token is bought.
@@ -348,7 +347,7 @@ contract BookingToken is
      * @param offchainPaymentCurrency The offchain payment currency
      * @param cancellable The flag that represents whether the booking is cancellable
      */
-    function safeMintWithReservationV2(
+    function safeMintWithReservation(
         address reservedFor,
         string memory uri,
         uint256 expirationTimestamp,
@@ -396,29 +395,16 @@ contract BookingToken is
         // Set the status
         $._bookingStatus[tokenId] = BookingStatus.RESERVED;
 
-        emit TokenReserved(tokenId, reservedFor, msg.sender, expirationTimestamp, price, paymentToken);
-        emit TokenReservedV2(tokenId, offchainPaymentCurrency, cancellable);
-    }
-
-    /**
-     * @notice Mints a new token with a reservation for a specific address. Setting
-     * off chain currency to 0 and cancellable flag to false. Original function signature.
-     *
-     * @param reservedFor The CM Account address that can buy the token
-     * @param uri The URI of the token
-     * @param expirationTimestamp The expiration timestamp
-     * @param price The price of the token
-     * @param paymentToken The token used to pay for the reservation. If address(0)
-       then native.
-     */
-    function safeMintWithReservation(
-        address reservedFor,
-        string memory uri,
-        uint256 expirationTimestamp,
-        uint256 price,
-        IERC20 paymentToken
-    ) public virtual {
-        safeMintWithReservationV2(reservedFor, uri, expirationTimestamp, price, paymentToken, 0, false);
+        emit TokenReserved(
+            tokenId,
+            reservedFor,
+            msg.sender,
+            expirationTimestamp,
+            price,
+            paymentToken,
+            offchainPaymentCurrency,
+            cancellable
+        );
     }
 
     /**
@@ -862,28 +848,6 @@ contract BookingToken is
         processPayment(paymentToken, refundAmount, owner);
     }
 
-    function reinitiateCancellation(
-        uint256 tokenId,
-        uint256 refundAmount,
-        uint16 cancellationReason,
-        uint16 cancellationReasonVersion
-    ) external virtual onlyCMAccount(msg.sender) {
-        // Revert if token does not exist
-        address owner = _requireOwned(tokenId);
-
-        // Get storage
-        BookingTokenStorage storage $ = _getBookingTokenStorage();
-
-        // Revert if token is not BOUGHT
-        if ($._bookingStatus[tokenId] != BookingStatus.BOUGHT) {
-            revert InvalidTokenStatus(tokenId, $._bookingStatus[tokenId]);
-        }
-
-        address supplier = $._reservations[tokenId].supplier;
-
-        _reinitiateCancellation(owner, supplier, tokenId, refundAmount, cancellationReason, cancellationReasonVersion);
-    }
-
     /***************************************************
      *              TRANSFER OVERRIDES                 *
      ***************************************************/
@@ -902,7 +866,8 @@ contract BookingToken is
         super.transferFrom(from, to, tokenId);
     }
 
-    // FIXME: Do we need to override the safeTransferFrom function? It's already calling transferFrom, no?
+    // FIXME: Do we need to override the safeTransferFrom function? It's already
+    // calling transferFrom, no?
 
     /**
      * @notice Override safeTransferFrom to check if token is reserved. It reverts if

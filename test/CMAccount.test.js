@@ -349,7 +349,7 @@ describe("CMAccount", function () {
             ).to.not.reverted;
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -367,10 +367,6 @@ describe("CMAccount", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // zero address
-                )
-                .to.emit(bookingToken, "TokenReservedV2")
-                .withArgs(
-                    0n,
                     0n, // off chain payment currency
                     true, // cancellable
                 );

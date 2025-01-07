@@ -56,6 +56,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
@@ -88,6 +90,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
@@ -120,6 +124,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -130,6 +136,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -149,6 +157,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -159,6 +169,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -194,6 +206,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -204,6 +218,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 );
 
             // Sanity check
@@ -242,6 +258,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -252,6 +270,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -272,7 +292,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -317,6 +337,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -327,6 +349,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -344,7 +368,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -388,7 +412,7 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -406,10 +430,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
-                )
-                .to.emit(bookingToken, "TokenReservedV2")
-                .withArgs(
-                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
                     true, // cancellable
                 );
@@ -429,7 +449,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, OneAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -473,7 +493,7 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -491,10 +511,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
-                )
-                .to.emit(bookingToken, "TokenReservedV2")
-                .withArgs(
-                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
                     true, // cancellable
                 );
@@ -514,7 +530,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, OneAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -558,7 +574,7 @@ describe("BookingToken", function () {
             expect(offChainPaymentMarker).to.equal(OneAddress);
 
             await expect(
-                await supplierCMAccount.connect(signers.btAdmin).mintBookingTokenV2(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
                     distributorCMAccount.getAddress(), // set reservedFor address to distributor CMAccount
                     tokenURI, // tokenURI
                     expirationTimestamp, // expiration
@@ -576,10 +592,6 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     offChainPaymentMarker, // off-chain payment marker, address(1)
-                )
-                .to.emit(bookingToken, "TokenReservedV2")
-                .withArgs(
-                    0n, // tokenID
                     6, // off chain payment currency, 6 == Euro
                     true, // cancellable
                 );
@@ -641,6 +653,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -651,6 +665,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -668,7 +684,9 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount
+                .connect(signers.btAdmin)
+                .buyBookingToken(0n, price, await nullUSD.getAddress());
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -717,6 +735,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -727,6 +747,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -787,6 +809,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -797,6 +821,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     nullUSD.getAddress(), // nullUSD address
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -814,7 +840,9 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount
+                .connect(signers.btAdmin)
+                .buyBookingToken(0n, price, await nullUSD.getAddress());
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -863,6 +891,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -873,6 +903,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             /***************************************************
@@ -887,7 +919,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
             // Check emitted events
             await expect(buyTx)
@@ -923,6 +955,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -933,6 +967,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -977,6 +1013,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -987,6 +1025,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -1007,7 +1047,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -1213,6 +1253,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1223,6 +1265,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -1278,6 +1322,8 @@ describe("BookingToken", function () {
                     expirationTimestamp, // expiration
                     price, // price
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 ),
             )
                 .to.be.emit(bookingToken, "TokenReserved")
@@ -1288,6 +1334,8 @@ describe("BookingToken", function () {
                     expirationTimestamp,
                     price,
                     ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
                 );
 
             // Check token ownership
@@ -1308,7 +1356,7 @@ describe("BookingToken", function () {
             ).to.not.reverted;
 
             // Try to buy the token
-            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n);
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
             // Check emitted events
             await expect(buyTx).to.be.emit(bookingToken, "TokenBought").withArgs(0n, distributorCMAccount.getAddress());
@@ -1384,12 +1432,6 @@ describe("BookingToken", function () {
 
             await expect(
                 otherCMAccount.connect(otherBookingOperator).rejectCancellation(token_id, reason, reasonVersion),
-            ).to.revertedWithCustomError(bookingToken, "NotOwnerOrSupplier");
-
-            await expect(
-                otherCMAccount
-                    .connect(otherBookingOperator)
-                    .reinitiateCancellation(token_id, refundAmount, reason, reasonVersion),
             ).to.revertedWithCustomError(bookingToken, "NotOwnerOrSupplier");
 
             // Special case for finalize
@@ -1554,8 +1596,8 @@ describe("BookingToken", function () {
                         cancellationReasonVersion,
                     ),
             )
-                .to.revertedWithCustomError(bookingToken, "CancellationProposalExists")
-                .withArgs(tokenWithNativePayment);
+                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
+                .withArgs(tokenWithNativePayment, 1n); // PROPOSAL: PENDING: 1
 
             // REVERTS: TRY TO INIT WITH NON-BOUGHT TOKEN
 
@@ -2074,21 +2116,6 @@ describe("BookingToken", function () {
             const rejectionReason = 44;
             const rejectionReasonVersion = 3;
 
-            // REVERTS: TRY TO RE-INIT NON-INITIATED PROPOSAL
-
-            await expect(
-                distributorCMAccount
-                    .connect(distributorBookingOperator)
-                    .reinitiateCancellation(
-                        tokenWithNativePayment,
-                        refundAmount,
-                        cancellationReason,
-                        cancellationReasonVersion,
-                    ),
-            )
-                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
-                .withArgs(tokenWithNativePayment, 0n); // PROPOSAL: NO_PROPOSAL: 0
-
             // INITIATE
 
             await expect(
@@ -2112,21 +2139,6 @@ describe("BookingToken", function () {
                     0, // timesCountered
                     0, // timesRejected
                 );
-
-            // REVERTS: TRY TO RE-INIT NON WITHDRAWN/REJECTED PROPOSAL
-
-            await expect(
-                supplierCMAccount
-                    .connect(supplierBookingOperator)
-                    .reinitiateCancellation(
-                        tokenWithNativePayment,
-                        refundAmount,
-                        cancellationReason,
-                        cancellationReasonVersion,
-                    ),
-            )
-                .to.revertedWithCustomError(bookingToken, "InvalidCancellationProposalStatus")
-                .withArgs(tokenWithNativePayment, 1n); // PROPOSAL: PENDING: 1
 
             // REJECT (So we can re-init later)
 
@@ -2172,7 +2184,7 @@ describe("BookingToken", function () {
             await expect(
                 distributorCMAccount
                     .connect(distributorBookingOperator)
-                    .reinitiateCancellation(
+                    .initiateCancellation(
                         tokenWithNativePayment,
                         newRefundAmount,
                         newCancellationReason,
@@ -2233,7 +2245,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .reinitiateCancellation(
+                    .initiateCancellation(
                         tokenWithNativePayment,
                         newRefundAmount + 10n,
                         newCancellationReason + 10,
@@ -2361,7 +2373,7 @@ describe("BookingToken", function () {
             await expect(
                 supplierCMAccount
                     .connect(supplierBookingOperator)
-                    .reinitiateCancellation(
+                    .initiateCancellation(
                         tokenWithNativePayment,
                         newRefundAmount,
                         newCancellationReason,
@@ -2527,6 +2539,21 @@ describe("BookingToken", function () {
                 [supplier, distributor, bookingToken, supplierBookingOperator, distributorBookingOperator],
                 [-refundAmount, refundAmount, 0n, 0n, 0n],
             );
+
+            // TRY TO INIT A FINALIZED PROPOSAL
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithNativePayment, 4n); // PROPOSAL: FINALIZED: 4
 
             // INIT with DISTRIBUTOR with ERC20
 

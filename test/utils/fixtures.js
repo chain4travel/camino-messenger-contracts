@@ -274,7 +274,7 @@ async function deployCancellationSupportFixture() {
     const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
     const price = ethers.parseEther("0.05");
 
-    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingToken(
         distributorCMAccount.getAddress(), // Reserved for
         tokenURI, // URI
         expirationTimestamp, // Expiration of the reservation
@@ -288,7 +288,9 @@ async function deployCancellationSupportFixture() {
     const tokenWithNativePayment = 0n;
 
     // Buy the token
-    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNativePayment);
+    await distributorCMAccount
+        .connect(distributorBookingOperator)
+        .buyBookingToken(tokenWithNativePayment, price, ethers.ZeroAddress);
 
     // Mint BOOKING TOKEN with NULLUSD PAYMENT------------------------------------------------------------------------
 
@@ -296,7 +298,7 @@ async function deployCancellationSupportFixture() {
     const expirationTimestamp2 = Math.floor(Date.now() / 1000) + 120;
     const price2 = ethers.parseEther("99.95");
 
-    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingToken(
         distributorCMAccount.getAddress(), // Reserved for
         tokenURI2, // URI
         expirationTimestamp2, // Expiration of the reservation
@@ -310,7 +312,9 @@ async function deployCancellationSupportFixture() {
     const tokenWithNullUSDPayment = 1n;
 
     // Buy the token
-    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithNullUSDPayment);
+    await distributorCMAccount
+        .connect(distributorBookingOperator)
+        .buyBookingToken(tokenWithNullUSDPayment, price2, await nullUSD.getAddress());
 
     // Mint BOOKING TOKEN without buying -----------------------------------------------------------------------------
 
@@ -318,7 +322,7 @@ async function deployCancellationSupportFixture() {
     const expirationTimestamp3 = Math.floor(Date.now() / 1000) + 600;
     const price3 = ethers.parseEther("0.95");
 
-    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingToken(
         distributorCMAccount.getAddress(), // Reserved for
         tokenURI3, // URI
         expirationTimestamp3, // Expiration of the reservation
@@ -341,7 +345,7 @@ async function deployCancellationSupportFixture() {
     const expirationTimestamp4 = block.timestamp + 70; // min expiration time diff is 60
     const price4 = ethers.parseEther("0.95");
 
-    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingToken(
         distributorCMAccount.getAddress(), // Reserved for
         tokenURI4, // URI
         expirationTimestamp4, // Expiration of the reservation
@@ -366,7 +370,7 @@ async function deployCancellationSupportFixture() {
     const offChainPaymentToken = ethers.getAddress("0x0000000000000000000000000000000000000001");
     const offChainPaymentCurrency = 123;
 
-    await supplierCMAccount.connect(supplierBookingOperator).mintBookingTokenV2(
+    await supplierCMAccount.connect(supplierBookingOperator).mintBookingToken(
         distributorCMAccount.getAddress(), // Reserved for
         tokenURI5, // URI
         expirationTimestamp5, // Expiration of the reservation
@@ -380,7 +384,9 @@ async function deployCancellationSupportFixture() {
     const tokenWithOffChainPayment = 4n;
 
     // Buy the token
-    await distributorCMAccount.connect(distributorBookingOperator).buyBookingToken(tokenWithOffChainPayment);
+    await distributorCMAccount
+        .connect(distributorBookingOperator)
+        .buyBookingToken(tokenWithOffChainPayment, price5, offChainPaymentToken);
 
     /// OTHER CM ACCOUNT ///
 
