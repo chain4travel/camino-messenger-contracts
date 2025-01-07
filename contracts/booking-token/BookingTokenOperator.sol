@@ -38,9 +38,9 @@ library BookingTokenOperator {
      *                   FUNCS                         *
      ***************************************************/
 
-    error UnexpectedPrice(uint256 actualPrice, uint256 expectedPrice);
+    error UnexpectedPrice(uint256 tokenId, uint256 actualPrice, uint256 expectedPrice);
 
-    error UnexpectedPaymentToken(IERC20 actualPaymentToken, IERC20 expectedPaymentToken);
+    error UnexpectedPaymentToken(uint256 tokenId, IERC20 actualPaymentToken, IERC20 expectedPaymentToken);
 
     /***************************************************
      *                   FUNCS                         *
@@ -98,12 +98,12 @@ library BookingTokenOperator {
 
         // Check if the price is correct
         if (price != expectedPrice) {
-            revert UnexpectedPrice(price, expectedPrice);
+            revert UnexpectedPrice(tokenId, price, expectedPrice);
         }
 
         // Check if the payment token is correct
         if (address(paymentToken) != address(expectedPaymentToken)) {
-            revert UnexpectedPaymentToken(paymentToken, expectedPaymentToken);
+            revert UnexpectedPaymentToken(tokenId, paymentToken, expectedPaymentToken);
         }
 
         if (address(paymentToken) == NATIVE_PAYMENT) {

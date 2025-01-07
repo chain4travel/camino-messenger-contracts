@@ -291,6 +291,21 @@ describe("BookingToken", function () {
                     .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
             ).to.not.reverted;
 
+            // Reverts: try to buy with invalid price
+            const BookingTokenOperator = await ethers.getContractFactory("BookingTokenOperator");
+            const invalidPrice = price + 1n;
+            await expect(
+                distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, invalidPrice, ethers.ZeroAddress),
+            )
+                .to.revertedWithCustomError(BookingTokenOperator, "UnexpectedPrice")
+                .withArgs(0n, price, invalidPrice);
+
+            // Reverts: try to buy with invalid payment token
+            const invalidPaymentToken = ethers.getAddress("0x1230000000000000000000000000000000000001");
+            await expect(distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, invalidPaymentToken))
+                .to.revertedWithCustomError(BookingTokenOperator, "UnexpectedPaymentToken")
+                .withArgs(0n, ethers.ZeroAddress, invalidPaymentToken);
+
             // Try to buy the token
             const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
 
