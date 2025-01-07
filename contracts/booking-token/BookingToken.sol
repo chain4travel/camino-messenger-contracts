@@ -52,6 +52,28 @@ contract BookingToken is
     using SafeERC20 for IERC20;
 
     /***************************************************
+     *                    VERSION                      *
+     ***************************************************/
+
+    uint16 constant VERSION_MAJOR = 0;
+    uint16 constant VERSION_MINOR = 1;
+    uint16 constant VERSION_PATCH = 0;
+
+    /**
+     * @notice Returns the semantic version of the contract.
+     *
+     * - no version() func: Legacy version without Cancellation support
+     * - v0.1.0: Version with Cancellation support
+     *
+     * @return major Major version (breaking changes)
+     * @return minor Minor version (backwards-compatible features)
+     * @return patch Patch version (backwards-compatible fixes)
+     */
+    function version() external pure virtual returns (uint16 major, uint16 minor, uint16 patch) {
+        return (VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+    }
+
+    /***************************************************
      *                   CONSTANTS                     *
      ***************************************************/
 
@@ -308,16 +330,6 @@ contract BookingToken is
     /***************************************************
      *             BOOKING-TOKEN LOGIC                 *
      ***************************************************/
-
-    /**
-     * @notice Returns the version of the contract.
-     *
-     * - no version() func: Legacy version without Cancellation support
-     * - v0.1.0: Version with Cancellation support
-     */
-    function version() external pure virtual returns (uint16 major, uint16 minor, uint16 patch) {
-        return (0, 1, 0);
-    }
 
     /**
      * @notice Function to authorize an upgrade for UUPS proxy.
