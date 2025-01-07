@@ -105,6 +105,8 @@ library BookingTokenOperator {
         // Get the price from the booking token contract
         (uint256 price, IERC20 paymentToken) = IBookingToken(bookingToken).getReservationPrice(tokenId);
 
+        // FIXME: Add expected price and expected payment token and exit early
+
         if (address(paymentToken) == NATIVE_PAYMENT) {
             // Payment is in native currency. Buy the token by sending the payment
             // in native currency to the BookingToken contract.

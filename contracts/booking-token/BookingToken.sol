@@ -23,7 +23,7 @@ import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 // Cancellable
-import { BookingTokenCancellable } from "./BookingTokenCancellable.sol";
+import { BookingTokenCancellable, CancellationProposalStatus } from "./BookingTokenCancellable.sol";
 
 /**
  * @title BookingToken
@@ -55,15 +55,15 @@ contract BookingToken is
      *                    VERSION                      *
      ***************************************************/
 
-    uint16 constant VERSION_MAJOR = 0;
-    uint16 constant VERSION_MINOR = 1;
+    uint16 constant VERSION_MAJOR = 1;
+    uint16 constant VERSION_MINOR = 0;
     uint16 constant VERSION_PATCH = 0;
 
     /**
      * @notice Returns the semantic version of the contract.
      *
      * - no version() func: Legacy version without Cancellation support
-     * - v0.1.0: Version with Cancellation support
+     * - v1.0.0: Version with Cancellation support
      *
      * @return major Major version (breaking changes)
      * @return minor Minor version (backwards-compatible features)
@@ -171,6 +171,7 @@ contract BookingToken is
         IERC20 paymentToken
     );
 
+    // FIXME: Merge in to TokenReserved
     event TokenReservedV2(uint256 indexed tokenId, uint256 offchainPaymentCurrency, bool cancellable);
 
     /**
@@ -458,7 +459,7 @@ contract BookingToken is
      *
      * @param tokenId The token id
      */
-    function buyReservedToken(uint256 tokenId) external payable virtual nonReentrant onlyCMAccount(msg.sender) {
+    function buyReservedToken(uint256 tokenId) public payable virtual nonReentrant onlyCMAccount(msg.sender) {
         BookingTokenStorage storage $ = _getBookingTokenStorage();
 
         // Get the reservation for the token
@@ -580,8 +581,36 @@ contract BookingToken is
         BookingTokenStorage storage $ = _getBookingTokenStorage();
         BookingStatus status = $._bookingStatus[tokenId];
 
-        // If token is BOUGHT or EXPIRED, token is transferable
-        if (status == BookingStatus.BOUGHT || status == BookingStatus.RESERVATION_EXPIRED) {
+        // Check Cancellation Proposal status
+
+        // Get the current proposer and status
+        (
+            CancellationProposalStatus cancellationStatus,
+            address currentProposer
+        ) = _getCancellationProposalStatusAndCurrentProposer(tokenId);
+
+        // If there is a pending cancellation proposal, withdraw or reject it
+        // automatically before the transfer.
+        if (cancellationStatus == CancellationProposalStatus.PENDING) {
+            address owner = _requireOwned(tokenId);
+            address supplier = $._reservations[tokenId].supplier;
+
+            // Check if the current proposer is the owner
+            if (msg.sender != currentProposer) {
+                // FIXME: Define a reason in the  CMP and update this
+                _rejectCancellation(owner, supplier, tokenId, 99, 1);
+            } else {
+                // FIXME: Define a reason in the  CMP and update this
+                _withdrawCancellation(owner, supplier, tokenId, 99, 1);
+            }
+        }
+
+        // If token is UNSPECIFIED, BOUGHT, or EXPIRED, token is transferable, return early.
+        if (
+            status == BookingStatus.BOUGHT ||
+            status == BookingStatus.RESERVATION_EXPIRED ||
+            status == BookingStatus.UNSPECIFIED
+        ) {
             return;
         }
 
@@ -590,8 +619,8 @@ contract BookingToken is
             revert InvalidTokenStatus(tokenId, status);
         }
 
-        // If token is RESERVED, check if it is expired. If expiration time is in
-        // the past, token is transferable. Because it can not be bought after
+        // Only RESERVED state is left. If expiration time is in the past, token is
+        // transferable even if it is reserved. Because it can not be bought after
         // expired.
         TokenReservation storage reservation = $._reservations[tokenId];
 
@@ -826,6 +855,9 @@ contract BookingToken is
 
         IERC20 paymentToken = $._reservations[tokenId].paymentToken;
 
+        // Update BookingToken status
+        $._bookingStatus[tokenId] = BookingStatus.CANCELLED;
+
         // Process payment
         processPayment(paymentToken, refundAmount, owner);
     }
@@ -869,6 +901,8 @@ contract BookingToken is
         checkTransferable(tokenId);
         super.transferFrom(from, to, tokenId);
     }
+
+    // FIXME: Do we need to override the safeTransferFrom function? It's already calling transferFrom, no?
 
     /**
      * @notice Override safeTransferFrom to check if token is reserved. It reverts if

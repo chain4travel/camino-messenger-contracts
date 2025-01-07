@@ -122,6 +122,15 @@ contract BookingTokenCancellable {
         _;
     }
 
+    function _getCancellationProposalStatusAndCurrentProposer(
+        uint256 tokenId
+    ) internal view returns (CancellationProposalStatus status, address currentProposer) {
+        return (
+            _getBookingTokenCancellableStorage()._proposals[tokenId].status,
+            _getBookingTokenCancellableStorage()._proposals[tokenId].currentProposer
+        );
+    }
+
     function getCancellationProposal(
         uint256 tokenId
     )
@@ -468,6 +477,7 @@ contract BookingTokenCancellable {
         return proposal.refundAmount;
     }
 
+    // FIXME: merge with init
     function _reinitiateCancellation(
         address owner,
         address supplier,
