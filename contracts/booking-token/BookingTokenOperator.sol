@@ -241,7 +241,7 @@ library BookingTokenOperator {
             // Payment is in ERC20. Approve the BookingToken contract for the
             // refund amount. BookingToken should do the transfer to the
             // supplier.
-            paymentToken.approve(bookingToken, refundAmount);
+            paymentToken.forceApprove(bookingToken, refundAmount);
 
             // Accept the cancellation
             IBookingToken(bookingToken).finalizeCancellation(tokenId, refundAmount);
