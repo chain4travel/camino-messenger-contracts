@@ -1089,6 +1089,96 @@ describe("BookingToken", function () {
             )
                 .to.emit(bookingToken, "Transfer")
                 .withArgs(distributorCMAccount.getAddress(), signers.otherAccount1.address, 0n);
+
+            // BookingToken transferFrom and safeTransferFrom funcs
+
+            // Use booking token to transfer with the new owner
+            await expect(
+                bookingToken
+                    .connect(signers.otherAccount1)
+                    .transferFrom(signers.otherAccount1.address, signers.otherAccount2.address, 0n),
+            )
+                .to.emit(bookingToken, "Transfer")
+                .withArgs(signers.otherAccount1.address, signers.otherAccount2.address, 0n);
+
+            await expect(
+                bookingToken
+                    .connect(signers.otherAccount2)
+                    .safeTransferFrom(signers.otherAccount2.address, signers.otherAccount3.address, 0n),
+            )
+                .to.emit(bookingToken, "Transfer")
+                .withArgs(signers.otherAccount2.address, signers.otherAccount3.address, 0n);
+        });
+
+        it("should revert transfer if the token is cancelled", async function () {
+            const {
+                supplierCMAccount,
+                distributorCMAccount,
+                bookingToken,
+                nullUSD,
+                tokenWithNativePayment,
+                tokenWithNullUSDPayment,
+                supplierBookingOperator,
+                distributorBookingOperator,
+                otherCMAccount,
+                otherBookingOperator,
+                tokenWithoutBuying,
+                tokenWithPassedExpiration,
+                offChainPaymentToken,
+                offChainPaymentCurrency,
+                tokenWithOffChainPayment,
+            } = await loadFixture(deployCancellationSupportFixture);
+
+            const supplier = await supplierCMAccount.getAddress();
+            const distributor = await distributorCMAccount.getAddress();
+            const refundAmount = ethers.parseEther("0.045");
+            const paymentToken = ethers.ZeroAddress;
+            const cancellationReason = 42;
+            const cancellationReasonVersion = 1;
+
+            // INITIATE CANCELLATION PROPOSAL
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .initiateCancellation(
+                        tokenWithNativePayment,
+                        refundAmount,
+                        cancellationReason,
+                        cancellationReasonVersion,
+                    ),
+            ).to.be.not.reverted;
+
+            // Accept and finalize cancellation proposal
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .finalizeCancellation(tokenWithNativePayment, refundAmount),
+            ).to.be.not.reverted;
+
+            // Check booking token status
+            expect(await bookingToken.getBookingStatus(0n)).to.equal(4); // Cancelled == 4
+
+            // Grant WITHDRAWER_ROLE
+            const WITHDRAWER_ROLE = await distributorCMAccount.WITHDRAWER_ROLE();
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(WITHDRAWER_ROLE, signers.withdrawer.address),
+            ).to.not.reverted;
+
+            // Try to transfer the token, should revert
+            await expect(
+                distributorCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC721(
+                        await bookingToken.getAddress(),
+                        signers.otherAccount1.address,
+                        tokenWithNativePayment,
+                    ),
+            )
+                .to.be.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithNativePayment, 4); // Cancelled == 4
         });
 
         it("should withdraw/reject cancellation proposals during transfer", async function () {

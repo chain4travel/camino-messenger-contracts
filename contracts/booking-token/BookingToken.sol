@@ -866,24 +866,6 @@ contract BookingToken is
         super.transferFrom(from, to, tokenId);
     }
 
-    // FIXME: Do we need to override the safeTransferFrom function? It's already
-    // calling transferFrom, no?
-
-    /**
-     * @notice Override safeTransferFrom to check if token is reserved. It reverts if
-     * the token is reserved.
-     */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public virtual override(ERC721Upgradeable, IERC721) {
-        // Verify that the token is transferable (i.e. not reserved)
-        checkTransferable(tokenId);
-        super.safeTransferFrom(from, to, tokenId, data);
-    }
-
     /***************************************************
      *            END BOOKING-TOKEN LOGIC              *
      ***************************************************/
