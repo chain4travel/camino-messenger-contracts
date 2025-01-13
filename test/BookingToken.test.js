@@ -1,6 +1,7 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 // Fixtures
 const {
@@ -165,6 +166,45 @@ describe("BookingToken", function () {
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount")
                 .withArgs(signers.otherAccount1.address); // reservedFor address
+        });
+
+        it("Native: should revert off chain payment currency mismatch", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Off chain payment mismatch: Use paymentToken address of address(0) with non-zero off chain payment currency
+
+            // Dummy off chain payment currency
+            const dummyOffChainPaymentCurrency = 99n;
+
+            await expect(
+                supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // reservedFor
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    dummyOffChainPaymentCurrency, // Provide a dummy off chain payment currency, should revert
+                    false,
+                ),
+            )
+                .to.be.revertedWithCustomError(bookingToken, "UnexpectedOffchainPaymentCurrency")
+                .withArgs(dummyOffChainPaymentCurrency);
         });
 
         it("Native: should mint a booking token correctly", async function () {
@@ -1009,6 +1049,75 @@ describe("BookingToken", function () {
             await expect(buyTx)
                 .to.be.revertedWithCustomError(bookingToken, "ReservationMismatch")
                 .withArgs(supplierCMAccount.getAddress(), distributorCMAccount.getAddress());
+        });
+
+        it("Native: should revert if token reservation is expired", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + 120;
+
+            const price = ethers.parseEther("0.05");
+
+            /***************************************************
+             *                   SUPPLIER                      *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            await expect(
+                await supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(),
+                    tokenURI, // tokenURI
+                    expirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
+                ),
+            )
+                .to.be.emit(bookingToken, "TokenReserved")
+                .withArgs(
+                    0n,
+                    distributorCMAccount.getAddress(),
+                    supplierCMAccount.getAddress(),
+                    expirationTimestamp,
+                    price,
+                    ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
+                );
+
+            // Move time forward and mine a block
+            await helpers.time.increaseTo(expirationTimestamp + 1);
+
+            /***************************************************
+             *                  DISTRIBUTOR                    *
+             ***************************************************/
+
+            // Grant BOOKING_OPERATOR_ROLE
+            await expect(
+                distributorCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Try to buy the token
+            const buyTx = distributorCMAccount.connect(signers.btAdmin).buyBookingToken(0n, price, ethers.ZeroAddress);
+
+            // Check emitted events
+            await expect(buyTx)
+                .to.be.revertedWithCustomError(bookingToken, "ReservationExpired")
+                .withArgs(0n, expirationTimestamp);
         });
     });
 
