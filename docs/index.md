@@ -2600,7 +2600,7 @@ the service anymore.
 | ----------- | ------ | ------------------- |
 | serviceName | string | Name of the service |
 
-## CMAccountManagerV2
+## CMAccountManagerTest
 
 ### getVersion
 

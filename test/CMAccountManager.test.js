@@ -164,10 +164,13 @@ describe("CMAccountManager", function () {
 
             const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
 
-            const CMAccountManagerV2 = await ethers.getContractFactory("CMAccountManagerV2", signers.managerUpgrader);
-            const cmAccountManagerV2 = await upgrades.upgradeProxy(cmAccountManager, CMAccountManagerV2);
+            const CMAccountManagerTest = await ethers.getContractFactory(
+                "CMAccountManagerTest",
+                signers.managerUpgrader,
+            );
+            const cmAccountManagerTest = await upgrades.upgradeProxy(cmAccountManager, CMAccountManagerTest);
 
-            await expect(await cmAccountManagerV2.getVersion()).to.be.equal("V2");
+            await expect(await cmAccountManagerTest.getVersion()).to.be.equal("TESTING");
         });
 
         it("should not upgrade if the caller does not have the upgrader role", async function () {
@@ -176,10 +179,10 @@ describe("CMAccountManager", function () {
 
             const { cmAccountManager } = await loadFixture(deployCMAccountManagerFixture);
 
-            const CMAccountManagerV2 = await ethers.getContractFactory("CMAccountManagerV2", signers.managerPauser);
+            const CMAccountManagerTest = await ethers.getContractFactory("CMAccountManagerTest", signers.managerPauser);
 
-            await expect(upgrades.upgradeProxy(cmAccountManager, CMAccountManagerV2)).to.be.revertedWithCustomError(
-                CMAccountManagerV2,
+            await expect(upgrades.upgradeProxy(cmAccountManager, CMAccountManagerTest)).to.be.revertedWithCustomError(
+                CMAccountManagerTest,
                 "AccessControlUnauthorizedAccount",
             );
         });

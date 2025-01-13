@@ -10,8 +10,12 @@ pragma solidity 0.8.24;
 
 import { CMAccountManager } from "../CMAccountManager.sol";
 
-contract CMAccountManagerV2 is CMAccountManager {
+contract CMAccountManagerTest is CMAccountManager {
     function getVersion() public pure returns (string memory) {
-        return "V2";
+        return "TESTING";
+    }
+
+    function setCMAccountInfo(address account, CMAccountInfo memory info) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setCMAccountInfo(account, info);
     }
 }

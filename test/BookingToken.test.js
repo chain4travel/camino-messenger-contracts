@@ -1,6 +1,8 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect } = require("chai");
+
 const { ethers } = require("hardhat");
+
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 // Fixtures
@@ -63,6 +65,94 @@ describe("BookingToken", function () {
             await expect(
                 bookingToken.connect(signers.btAdmin).reinitializeV2("New Name 2", "NEW2"),
             ).to.be.revertedWithCustomError(bookingToken, "InvalidInitialization");
+        });
+
+        it("should set/get manager address correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            // Try to set manager address with unauthorized caller
+            await expect(
+                bookingToken.connect(signers.otherAccount1).setManagerAddress(signers.otherAccount1.address),
+            ).to.be.revertedWithCustomError(bookingToken, "AccessControlUnauthorizedAccount");
+
+            // Set manager address
+            expect(await bookingToken.connect(signers.btAdmin).setManagerAddress(signers.otherAccount1.address)).to.be
+                .not.reverted;
+
+            // Check manager address
+            expect(await bookingToken.getManagerAddress()).to.be.equal(signers.otherAccount1.address);
+        });
+
+        it("should set/get min expiration timestamp diff correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const newMinExpirationTimestampDiff = 120;
+
+            // Try to set min expiration timestamp diff with unauthorized caller
+            await expect(
+                bookingToken
+                    .connect(signers.otherAccount1)
+                    .setMinExpirationTimestampDiff(newMinExpirationTimestampDiff),
+            ).to.be.revertedWithCustomError(bookingToken, "AccessControlUnauthorizedAccount");
+
+            // Grant MIN_EXPIRATION_ADMIN_ROLE
+            const MIN_EXPIRATION_ADMIN_ROLE = await bookingToken.MIN_EXPIRATION_ADMIN_ROLE();
+            await bookingToken.connect(signers.btAdmin).grantRole(MIN_EXPIRATION_ADMIN_ROLE, signers.btAdmin.address);
+
+            // Set min expiration timestamp diff
+            expect(
+                await bookingToken
+                    .connect(signers.btAdmin)
+                    .setMinExpirationTimestampDiff(newMinExpirationTimestampDiff),
+            ).to.be.not.reverted;
+
+            // Check min expiration timestamp diff
+            expect(await bookingToken.getMinExpirationTimestampDiff()).to.be.equal(newMinExpirationTimestampDiff);
+        });
+
+        it("should support ERC165", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const _INTERFACE_ID_IERC165 = "0x01ffc9a7";
+            const _INTERFACE_ID_IERC721 = "0x80ac58cd";
+            const _INTERFACE_ID_IERC721METADATA = "0x5b5e139f";
+            const _INTERFACE_ID_IERC721ENUMERABLE = "0x780e9d63";
+
+            expect(await bookingToken.supportsInterface(_INTERFACE_ID_IERC165)).to.be.true;
+            expect(await bookingToken.supportsInterface(_INTERFACE_ID_IERC721)).to.be.true;
+            expect(await bookingToken.supportsInterface(_INTERFACE_ID_IERC721METADATA)).to.be.true;
+            expect(await bookingToken.supportsInterface(_INTERFACE_ID_IERC721ENUMERABLE)).to.be.true;
+
+            expect(await bookingToken.supportsInterface("0xaaaaaaaa")).to.be.false;
+        });
+
+        it("should upgrade correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const BookingTokenTest = await ethers.getContractFactory("BookingToken");
+            const bookingTokenTest = await BookingTokenTest.deploy();
+
+            // Try to upgrade with unauthorized caller
+            await expect(
+                bookingToken.connect(signers.otherAccount1).upgradeToAndCall(await bookingTokenTest.getAddress(), "0x"),
+            ).to.be.revertedWithCustomError(bookingToken, "AccessControlUnauthorizedAccount");
+
+            // Try to upgrade to unsupported implementation
+            const DummyContract = await ethers.getContractFactory("Dummy");
+            const dummyContract = await DummyContract.deploy();
+
+            await expect(
+                bookingToken.connect(signers.btUpgrader).upgradeToAndCall(await dummyContract.getAddress(), "0x"),
+            ).to.be.revertedWithCustomError(bookingToken, "ERC1967InvalidImplementation");
+
+            // Upgrade to new implementation
+            await expect(
+                bookingToken.connect(signers.btUpgrader).upgradeToAndCall(await bookingTokenTest.getAddress(), "0x"),
+            ).to.be.not.reverted;
         });
     });
 
@@ -251,6 +341,9 @@ describe("BookingToken", function () {
 
             // Check token ownership
             expect(await bookingToken.ownerOf(0n)).to.equal(await supplierCMAccount.getAddress());
+
+            // Check token URI
+            expect(await bookingToken.tokenURI(0n)).to.equal(tokenURI);
 
             // Check token booking status
             expect(await bookingToken.getBookingStatus(0n)).to.equal(1); // Reserved == 1
