@@ -35,6 +35,34 @@ describe("BookingToken", function () {
 
             expect(await bookingToken.version()).to.deep.equal([1, 0, 0]);
         });
+
+        it("should reinitialize correctly", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const currentName = expect(await bookingToken.name()).to.be.equal("BookingToken");
+            const currentSymbol = expect(await bookingToken.symbol()).to.be.equal("TRIP");
+
+            const newName = "New Name";
+            const newSymbol = "NEW";
+
+            // Try to re-init with unauthorized caller
+            await expect(
+                bookingToken.connect(signers.otherAccount1).reinitializeV2(newName, newSymbol),
+            ).to.be.revertedWithCustomError(bookingToken, "AccessControlUnauthorizedAccount");
+
+            // Reinitialize
+            await expect(bookingToken.connect(signers.btAdmin).reinitializeV2(newName, newSymbol)).to.not.reverted;
+
+            // Check new name and symbol
+            expect(await bookingToken.name()).to.be.equal(newName);
+            expect(await bookingToken.symbol()).to.be.equal(newSymbol);
+
+            // Try to re-init again, should revert
+            await expect(
+                bookingToken.connect(signers.btAdmin).reinitializeV2("New Name 2", "NEW2"),
+            ).to.be.revertedWithCustomError(bookingToken, "InvalidInitialization");
+        });
     });
 
     describe("Mint", function () {
@@ -62,6 +90,47 @@ describe("BookingToken", function () {
             )
                 .to.be.revertedWithCustomError(bookingToken, "NotCMAccount") // Caller is not a CMAccount
                 .withArgs(signers.btAdmin.address);
+        });
+
+        it("Native: should revert invalid min expiration", async function () {
+            const { cmAccountManager, supplierCMAccount, distributorCMAccount, bookingToken } =
+                await loadFixture(deployBookingTokenFixture);
+
+            const tokenURI =
+                "data:application/json;base64,eyJuYW1lIjoiQ2FtaW5vIE1lc3NlbmdlciBCb29raW5nVG9rZW4gVGVzdCJ9Cg==";
+
+            const minExpirationTimestamp = await bookingToken.getMinExpirationTimestampDiff();
+
+            // get block time from the chain and mine
+            await network.provider.send("evm_mine");
+            const block = await ethers.provider.getBlock("latest");
+
+            const invalidExpirationTimestamp = BigInt(block.timestamp) + minExpirationTimestamp - 1n;
+
+            const price = ethers.parseEther("0.05");
+
+            // Grant BOOKING_OPERATOR_ROLE
+            const BOOKING_OPERATOR_ROLE = await supplierCMAccount.BOOKING_OPERATOR_ROLE();
+            await expect(
+                supplierCMAccount
+                    .connect(signers.cmAccountAdmin)
+                    .grantRole(BOOKING_OPERATOR_ROLE, signers.btAdmin.address),
+            ).to.not.reverted;
+
+            // Mint the booking token
+            await expect(
+                supplierCMAccount.connect(signers.btAdmin).mintBookingToken(
+                    distributorCMAccount.getAddress(), // reservedFor
+                    tokenURI, // tokenURI
+                    invalidExpirationTimestamp, // expiration
+                    price, // price
+                    ethers.ZeroAddress, // paymentToken: zero address, means native coin
+                    0,
+                    false,
+                ),
+            )
+                .to.be.revertedWithCustomError(bookingToken, "ExpirationTimestampTooSoon") // Caller is not a CMAccount
+                .withArgs(invalidExpirationTimestamp, minExpirationTimestamp);
         });
 
         it("Native: should revert if reservedFor is not a CMAccount", async function () {
