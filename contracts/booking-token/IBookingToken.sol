@@ -21,14 +21,6 @@ interface IBookingToken {
     function getReservationPaymentToken(uint256 tokenId) external view returns (IERC20 paymentToken);
 
     /**
-     * @notice Sets the cancellable flag for a token. This can only be called by the
-     * supplier of the token.
-     * @param tokenId The token id
-     * @param _isCancellable The new cancellable flag
-     */
-    function setCancellable(uint256 tokenId, bool _isCancellable) external;
-
-    /**
      * @notice Record expiration status if the token is expired
      * @param tokenId The token id to record as expired
      */
