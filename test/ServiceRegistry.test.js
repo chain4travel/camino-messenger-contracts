@@ -101,7 +101,13 @@ describe("ServiceRegistry", function () {
 
             const serviceName = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
 
+            // registerService
             await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName))
+                .to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount")
+                .withArgs(signers.otherAccount1.address, SERVICE_REGISTRY_ADMIN_ROLE);
+
+            // unregisterService
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName))
                 .to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount")
                 .withArgs(signers.otherAccount1.address, SERVICE_REGISTRY_ADMIN_ROLE);
         });

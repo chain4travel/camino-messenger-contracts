@@ -15,7 +15,7 @@ contract CMAccountManagerTest is CMAccountManager {
         return "TESTING";
     }
 
-    function setCMAccountInfo(address account, CMAccountInfo memory info) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setCMAccountInfo(account, info);
-    }
+    // function setCMAccountInfo(address account, CMAccountInfo memory info) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    //     _setCMAccountInfo(account, info);
+    // }
 }

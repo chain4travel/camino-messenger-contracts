@@ -5,6 +5,8 @@ const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helper
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
+const { setCode } = require("@nomicfoundation/hardhat-network-helpers");
+
 // Fixtures
 const {
     setupSigners,
@@ -90,6 +92,13 @@ describe("CMAccountManager", function () {
             await expect(cmAccountManager.connect(signers.developerWalletAdmin).setDeveloperWallet(newDeveloperWallet))
                 .to.emit(cmAccountManager, "DeveloperWalletUpdated")
                 .withArgs(oldDeveloperWallet, newDeveloperWallet);
+
+            expect(await cmAccountManager.getDeveloperWallet()).to.be.equal(newDeveloperWallet);
+
+            // Try to set developer wallet with non-auth address
+            await expect(
+                cmAccountManager.connect(signers.otherAccount1).setDeveloperWallet(ethers.ZeroAddress),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
         });
 
         it("should fail to set developer wallet to zero address", async function () {
@@ -132,6 +141,39 @@ describe("CMAccountManager", function () {
                 .withArgs(oldFeeBp, newFeeBp);
 
             await expect(await cmAccountManager.getDeveloperFeeBp()).to.be.equal(newFeeBp);
+
+            // Try to set developer fee with non-auth address
+            await expect(
+                cmAccountManager.connect(signers.otherAccount1).setDeveloperFeeBp(ethers.ZeroAddress),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
+        });
+
+        it("should set and get booking token addr correctly", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Get booking token address
+            expect(await cmAccountManager.getBookingTokenAddress()).to.be.not.reverted;
+
+            // Try to set booking token addr with non-auth address
+            await expect(
+                cmAccountManager.connect(signers.otherAccount3).setBookingTokenAddress(ethers.ZeroAddress),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
+
+            // Try to set booking token to invalid addresses
+            await expect(cmAccountManager.connect(signers.managerVersioner).setBookingTokenAddress(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(cmAccountManager, "InvalidBookingTokenAddress")
+                .withArgs(ethers.ZeroAddress);
+
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerVersioner)
+                    .setBookingTokenAddress(signers.otherAccount1.address),
+            )
+                .to.be.revertedWithCustomError(cmAccountManager, "InvalidBookingTokenAddress")
+                .withArgs(signers.otherAccount1.address);
         });
 
         it("should set and get correct prefund amount", async function () {
@@ -154,6 +196,16 @@ describe("CMAccountManager", function () {
                 .reverted;
 
             expect(await cmAccountManager.getPrefundAmount()).to.be.equal(newPrefundAmount);
+
+            // Revoke the role
+            await cmAccountManager
+                .connect(signers.managerAdmin)
+                .revokeRole(PREFUND_ADMIN_ROLE, signers.otherAccount3.address);
+
+            // Try to set prefund amount
+            await expect(
+                cmAccountManager.connect(signers.otherAccount3).setPrefundAmount(newPrefundAmount),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
         });
     });
 
@@ -269,6 +321,11 @@ describe("CMAccountManager", function () {
                 cmAccountManager,
                 "AccessControlUnauthorizedAccount",
             );
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).unpause()).to.be.revertedWithCustomError(
+                cmAccountManager,
+                "AccessControlUnauthorizedAccount",
+            );
         });
     });
 
@@ -289,6 +346,36 @@ describe("CMAccountManager", function () {
 
             // Check balance for prefund
             expect(await ethers.provider.getBalance(cmAccountAddress)).to.be.equal(prefundAmount);
+        });
+
+        it("should revert creating for zero code btoken and impl addr", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, bookingToken, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Get account impl
+            const CMAccountImplAddr = await cmAccountManager.getAccountImplementation();
+
+            // Set booking token code to zero
+            await network.provider.send("hardhat_setCode", [await bookingToken.getAddress(), "0x"]);
+
+            // Create CMAccount
+            await expect(
+                cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader.address, {
+                    value: prefundAmount,
+                }),
+            ).to.be.revertedWithCustomError(cmAccountManager, "InvalidBookingTokenAddress");
+
+            // Set acct impl code to zero
+            await network.provider.send("hardhat_setCode", [CMAccountImplAddr, "0x"]);
+
+            // Create CMAccount
+            await expect(
+                cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader.address, {
+                    value: prefundAmount,
+                }),
+            ).to.be.revertedWithCustomError(cmAccountManager, "CMAccountInvalidImplementation");
         });
 
         it("should fail if admin is zero address", async function () {

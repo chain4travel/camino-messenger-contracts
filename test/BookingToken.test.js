@@ -145,6 +145,9 @@ describe("BookingToken", function () {
             const DummyContract = await ethers.getContractFactory("Dummy");
             const dummyContract = await DummyContract.deploy();
 
+            // Check dummy contract
+            expect(await dummyContract.getVersion()).to.be.equal("DUMMY");
+
             await expect(
                 bookingToken.connect(signers.btUpgrader).upgradeToAndCall(await dummyContract.getAddress(), "0x"),
             ).to.be.revertedWithCustomError(bookingToken, "ERC1967InvalidImplementation");

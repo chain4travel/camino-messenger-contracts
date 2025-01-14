@@ -60,6 +60,58 @@ describe("PartnerConfiguration", function () {
                 .withArgs(serviceName);
         });
 
+        it("should remove a supported service correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            const serviceName = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
+            const serviceHash = ethers.keccak256(ethers.toUtf8Bytes(serviceName));
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName, serviceHash);
+
+            // get the SERVICE_ADMIN_ROLE
+            const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+            // Grant SERVICE_ADMIN_ROLE
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccount, "RoleGranted")
+                .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
+
+            const fee = 1000n;
+            const restrictedRate = false;
+            const capabilities = [];
+
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName);
+
+            // Remove the service
+            await expect(cmAccount.connect(signers.otherAccount1).removeService(serviceName))
+                .to.emit(cmAccount, "ServiceRemoved")
+                .withArgs(serviceName);
+
+            // Try to remove the service again, should fail
+            await expect(
+                cmAccount.connect(signers.otherAccount1).removeService(serviceName),
+            ).to.be.revertedWithCustomError(cmAccount, "ServiceDoesNotExist");
+        });
+
         it("should revert if the caller does not have the SERVICE_ADMIN_ROLE", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
 
@@ -275,6 +327,29 @@ describe("PartnerConfiguration", function () {
                 .to.emit(cmAccount, "ServiceCapabilitiesUpdated")
                 .withArgs(services.serviceName3);
 
+            // Single Capability add/remove
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .addServiceCapability(services.serviceName3, "newCapabilities4"),
+            )
+                .to.emit(cmAccount, "ServiceCapabilityAdded")
+                .withArgs(services.serviceName3, "newCapabilities4");
+
+            const newCapabilityList = newCapabilities3.concat(["newCapabilities4"]);
+
+            expect(await cmAccount["getServiceCapabilities(string)"](services.serviceName3)).to.be.deep.equal(
+                newCapabilityList,
+            );
+
+            await expect(
+                cmAccount
+                    .connect(signers.cmServiceAdmin)
+                    .removeServiceCapability(services.serviceName3, "newCapabilities4"),
+            )
+                .to.emit(cmAccount, "ServiceCapabilityRemoved")
+                .withArgs(services.serviceName3, "newCapabilities4");
+
             // TEST GETTERS with hashes
 
             // Get specific fee for a service name
@@ -303,6 +378,13 @@ describe("PartnerConfiguration", function () {
             expect(await cmAccount["getServiceCapabilities(bytes32)"](services.serviceHash3)).to.be.deep.equal(
                 newCapabilities3,
             );
+
+            // Test failures
+            const nonExistingHash = ethers.keccak256(ethers.toUtf8Bytes("NON EXISTING HASH"));
+
+            await expect(cmAccount["getServiceCapabilities(bytes32)"](nonExistingHash))
+                .to.be.revertedWithCustomError(cmAccount, "ServiceDoesNotExist")
+                .withArgs(nonExistingHash);
         });
 
         it("should revert if the service is not registered", async function () {
@@ -519,6 +601,11 @@ describe("PartnerConfiguration", function () {
                 .to.emit(cmAccount, "PaymentTokenRemoved")
                 .withArgs(supportedToken1);
 
+            // Remove it again, should revert
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removeSupportedToken(supportedToken1))
+                .to.be.revertedWithCustomError(cmAccount, "PaymentTokenDoesNotExist")
+                .withArgs(supportedToken1);
+
             // Get supported tokens, should only return supportedToken2
             const supportedTokensAfterRemoval = await cmAccount.getSupportedTokens();
             expect(supportedTokensAfterRemoval).to.be.deep.equal([supportedToken2]);
@@ -564,13 +651,18 @@ describe("PartnerConfiguration", function () {
                 .to.emit(cmAccount, "PublicKeyRemoved")
                 .withArgs(addr);
 
+            // Try to remove it again, should revert
+            await expect(cmAccount.connect(signers.cmServiceAdmin).removePublicKey(addr))
+                .to.be.revertedWithCustomError(cmAccount, "PublicKeyDoesNotExist")
+                .withArgs(addr);
+
             // Get public keys, it should be a array of two empty arrays
             await expect(cmAccount.getPublicKey(addr))
                 .to.be.revertedWithCustomError(cmAccount, "PublicKeyDoesNotExist")
                 .withArgs(addr);
         });
 
-        it("should get public keys correctly", async function () {
+        it("should get public keys and addresses correctly", async function () {
             const { cmAccountManager, cmAccount } = await loadFixture(
                 deployAndConfigureAllWithRegisteredServicesFixture,
             );
@@ -600,6 +692,10 @@ describe("PartnerConfiguration", function () {
             expect(publicKeys).to.be.deep.equal(pubkey1);
             const publicKeys2 = await cmAccount.getPublicKey(addr2);
             expect(publicKeys2).to.be.deep.equal(pubkey2);
+
+            // Get all public key addresses
+            const allPublicKeys = await cmAccount.getPublicKeysAddresses();
+            expect(allPublicKeys).to.be.deep.equal([addr1, addr2]);
         });
 
         it("should revert when adding the same public key", async function () {

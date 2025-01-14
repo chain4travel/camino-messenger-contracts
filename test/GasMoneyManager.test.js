@@ -171,6 +171,10 @@ describe("GasMoneyManager", function () {
                 [cmAccount, withdrawer],
                 [-withdrawAmount, withdrawAmount],
             );
+
+            // Get block
+            const block = await ethers.provider.getBlock("latest");
+
             await expect(withdrawTx1)
                 .to.emit(cmAccount, "GasMoneyWithdrawal")
                 .withArgs(withdrawer.address, withdrawAmount);
@@ -191,6 +195,12 @@ describe("GasMoneyManager", function () {
             await expect(cmAccount.connect(withdrawer).withdrawGasMoney(withdrawAmount3))
                 .to.revertedWithCustomError(cmAccount, "WithdrawalLimitExceededForPeriod")
                 .withArgs(expectedLimit, withdrawAmount3);
+
+            // Get withdrawal details for the withdrawer
+            expect(await cmAccount.getGasMoneyWithdrawalForAccount(withdrawer.address)).to.be.deep.equal([
+                block.timestamp, // withdrawal start time (the first block that we withdrew)
+                ethers.parseEther("8"), // We withdrawn 8 CAM
+            ]);
         });
 
         it("should allow withdrawal after period resets", async function () {

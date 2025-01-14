@@ -305,6 +305,92 @@ describe("ChequeManager", function () {
                 .withArgs(signers.chequeOperator.address);
         });
 
+        it("Should not verify a cheque if from/to is not CMAccount", async function () {
+            const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            // Create receiving account (toCMAccount)
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
+            );
+
+            const receipt = await tx.wait();
+
+            // Parse event to get the CMAccount address
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const toCMAccountAddress = parsedEvent.args.account;
+
+            // Define cheques
+
+            const chequeWithInvalidFrom = {
+                fromCMAccount: signers.otherAccount3.address,
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: 1,
+                amount: ethers.parseEther("1"),
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+            };
+
+            const chequeWithInvalidTo = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: signers.otherAccount3.address,
+                toBot: signers.otherAccount2.address,
+                counter: 1,
+                amount: ethers.parseEther("1"),
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+            };
+
+            // Grant CHEQUE_OPERATOR_ROLE
+            await cmAccount
+                .connect(signers.cmAccountAdmin)
+                .grantRole(await cmAccount.CHEQUE_OPERATOR_ROLE(), signers.chequeOperator.address);
+
+            const signatureFrom = await signMessengerCheque(chequeWithInvalidFrom, signers.chequeOperator);
+            const signatureTo = await signMessengerCheque(chequeWithInvalidTo, signers.chequeOperator);
+
+            // Verify cheques, should revert
+            await expect(
+                cmAccount.verifyCheque(
+                    chequeWithInvalidFrom.fromCMAccount,
+                    chequeWithInvalidFrom.toCMAccount,
+                    chequeWithInvalidFrom.toBot,
+                    chequeWithInvalidFrom.counter,
+                    chequeWithInvalidFrom.amount,
+                    chequeWithInvalidFrom.createdAt,
+                    chequeWithInvalidFrom.expiresAt,
+                    signatureFrom,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidFromCMAccount")
+                .withArgs(signers.otherAccount3.address);
+
+            await expect(
+                cmAccount.verifyCheque(
+                    chequeWithInvalidTo.fromCMAccount,
+                    chequeWithInvalidTo.toCMAccount,
+                    chequeWithInvalidTo.toBot,
+                    chequeWithInvalidTo.counter,
+                    chequeWithInvalidTo.amount,
+                    chequeWithInvalidTo.createdAt,
+                    chequeWithInvalidTo.expiresAt,
+                    signatureTo,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidToCMAccount")
+                .withArgs(signers.otherAccount3.address);
+        });
+
         it("Should not verify an expired cheque", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
 
