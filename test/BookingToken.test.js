@@ -2186,6 +2186,21 @@ describe("BookingToken", function () {
             const counterCancellationReasonVersion = 2;
             const counterRefundAmount = ethers.parseEther("0.05");
 
+            // REVERTS: TRY WITH NON-BOUGHT TOKEN
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .counterCancellation(
+                        tokenWithoutBuying,
+                        counterRefundAmount,
+                        counterCancellationReason,
+                        counterCancellationReasonVersion,
+                    ),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithoutBuying, 1n); // TOKEN: RESERVED: 1
+
             // REVERTS: TRY TO COUNTER NON-INITIATED PROPOSAL
 
             await expect(
@@ -2320,6 +2335,16 @@ describe("BookingToken", function () {
                     0, // timesRejected
                 );
 
+            // REVERTS: TRY WITH NON-BOUGHT TOKEN
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .withdrawCancellation(tokenWithoutBuying, withdrawalReason, withdrawalReasonVersion),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithoutBuying, 1n); // TOKEN: RESERVED: 1
+
             // REVERTS: TRY TO WITHDRAW WITH NON-CURRENT PROPOSER
 
             await expect(
@@ -2422,6 +2447,16 @@ describe("BookingToken", function () {
                     0, // timesCountered
                     0, // timesRejected
                 );
+
+            // REVERTS: TRY WITH NON-BOUGHT TOKEN
+
+            await expect(
+                distributorCMAccount
+                    .connect(distributorBookingOperator)
+                    .rejectCancellation(tokenWithoutBuying, rejectionReason, rejectionReasonVersion),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithoutBuying, 1n); // TOKEN: RESERVED: 1
 
             // REVERTS: TRY TO REJECT WITH PROPOSER
 
@@ -2818,6 +2853,16 @@ describe("BookingToken", function () {
             const paymentToken = ethers.ZeroAddress;
             const cancellationReason = 42;
             const cancellationReasonVersion = 1;
+
+            // REVERTS: TRY WITH NON-BOUGHT TOKEN
+
+            await expect(
+                supplierCMAccount
+                    .connect(supplierBookingOperator)
+                    .finalizeCancellation(tokenWithoutBuying, refundAmount),
+            )
+                .to.revertedWithCustomError(bookingToken, "InvalidTokenStatus")
+                .withArgs(tokenWithoutBuying, 1n); // RESERVED: 1
 
             // REVERTS: TRY TO FINALIZE NON-INITIATED PROPOSAL
 
