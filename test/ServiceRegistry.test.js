@@ -40,6 +40,17 @@ describe("ServiceRegistry", function () {
 
             await expect(await cmAccountManager.getRegisteredServiceHashByName(serviceName)).to.be.equal(serviceHash);
             await expect(await cmAccountManager.getRegisteredServiceNameByHash(serviceHash)).to.be.equal(serviceName);
+
+            // Try with non registered service hash
+            const nonRegisteredServiceName = "nonRegisteredServiceHash";
+            const nonRegisteredServiceHash = ethers.keccak256(ethers.toUtf8Bytes(nonRegisteredServiceName));
+
+            await expect(
+                cmAccountManager.getRegisteredServiceHashByName(nonRegisteredServiceName),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+            await expect(
+                cmAccountManager.getRegisteredServiceNameByHash(nonRegisteredServiceHash),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
         });
 
         it("should unregister a service correctly", async function () {
@@ -66,6 +77,12 @@ describe("ServiceRegistry", function () {
             await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName))
                 .to.emit(cmAccountManager, "ServiceUnregistered")
                 .withArgs(serviceName, serviceHash);
+
+            // Try with non registered service name
+            const nonRegisteredServiceName = "nonRegisteredServiceName";
+            await expect(
+                cmAccountManager.connect(signers.otherAccount1).unregisterService(nonRegisteredServiceName),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
         });
 
         it("should revert if the service is already registered", async function () {

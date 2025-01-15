@@ -327,6 +327,20 @@ describe("CMAccount", function () {
 
             // Check balance
             expect(await nullUSD.balanceOf(signers.otherAccount1.address)).to.be.equal(amount);
+
+            // Try to send to zero address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC20(await nullUSD.getAddress(), ethers.ZeroAddress, amount),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "TransferToZeroAddress");
+
+            // Try to send with non-auth address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.otherAccount1)
+                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount2.address, amount),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "AccessControlUnauthorizedAccount");
         });
 
         it("should transfer ERC721 correctly after it expires", async function () {
@@ -386,6 +400,20 @@ describe("CMAccount", function () {
 
             // Check token ownership
             expect(await bookingToken.ownerOf(0n)).to.equal(await signers.otherAccount1.getAddress());
+
+            // Try to transfer the token to zero address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC721(await bookingToken.getAddress(), ethers.ZeroAddress, 0n),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "TransferToZeroAddress");
+
+            // Try to transfer the token with non-auth address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.otherAccount1)
+                    .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "AccessControlUnauthorizedAccount");
         });
     });
 });

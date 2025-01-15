@@ -44,6 +44,11 @@ describe("GasMoneyManager", function () {
                 .to.emit(cmAccount, "GasMoneyWithdrawalUpdated")
                 .withArgs(newLimit, newPeriod);
 
+            // Try with non-auth address
+            await expect(cmAccount.connect(signers.otherAccount1).setGasMoneyWithdrawal(newLimit, newPeriod))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(signers.otherAccount1.address, await cmAccount.BOT_ADMIN_ROLE());
+
             // await expect(cmAccount.connect(signers.cmAccountAdmin).setGasMoneyWithdrawalPeriod(newPeriod))
             //     .to.emit(cmAccount, "GasMoneyWithdrawalPeriodUpdated")
             //     .withArgs(newPeriod);

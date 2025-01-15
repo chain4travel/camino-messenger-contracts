@@ -621,6 +621,113 @@ describe("ChequeManager", function () {
             // Total cheque payments should be equal to the last cheque amount
             // because we use same from/to CM account pairs for cheques above
             expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque2.amount);
+
+            // CHECK INVALID AMOUNT AND COUNTER ----------------------------------------------------
+
+            // Cheque with invalid amount
+            const chequeWithInvalidAmount = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: cheque2.counter + 1,
+                amount: cheque2.amount - 1n,
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+            };
+
+            // Sign Cheque
+            const signatureWithInvalidAmount = await signMessengerCheque(
+                chequeWithInvalidAmount,
+                signers.chequeOperator,
+            );
+
+            // Try to cash-in cheque with invalid amount
+            await expect(
+                cmAccount.cashInCheque(
+                    chequeWithInvalidAmount.fromCMAccount,
+                    chequeWithInvalidAmount.toCMAccount,
+                    chequeWithInvalidAmount.toBot,
+                    chequeWithInvalidAmount.counter,
+                    chequeWithInvalidAmount.amount,
+                    chequeWithInvalidAmount.createdAt,
+                    chequeWithInvalidAmount.expiresAt,
+                    signatureWithInvalidAmount,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidAmount")
+                .withArgs(chequeWithInvalidAmount.amount, cheque2.amount);
+
+            // Cheque with invalid counter
+            const chequeWithInvalidCounter = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: cheque2.counter, // Same counter as cheque2
+                amount: cheque2.amount, // Same amount is OK (for zero value cheque from zero fee services)
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+            };
+
+            // Sign Cheque
+            const signatureWithInvalidCounter = await signMessengerCheque(
+                chequeWithInvalidCounter,
+                signers.chequeOperator,
+            );
+
+            // Try to cash-in cheque with invalid counter
+            await expect(
+                cmAccount.cashInCheque(
+                    chequeWithInvalidCounter.fromCMAccount,
+                    chequeWithInvalidCounter.toCMAccount,
+                    chequeWithInvalidCounter.toBot,
+                    chequeWithInvalidCounter.counter,
+                    chequeWithInvalidCounter.amount,
+                    chequeWithInvalidCounter.createdAt,
+                    chequeWithInvalidCounter.expiresAt,
+                    signatureWithInvalidCounter,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidCounter")
+                .withArgs(chequeWithInvalidCounter.counter, cheque2.counter);
+
+            // CHECK INVALID AMOUNT AND COUNTER ----------------------------------------------------
+
+            // Consume all prefund: create cheque3 with 100 CAM
+            const cheque3 = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: cheque2.counter + 1,
+                amount: ethers.parseEther("100"),
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+            };
+
+            // Sign Cheque
+            const signature3 = await signMessengerCheque(cheque3, signers.chequeOperator);
+
+            // Cash-in cheque
+            const cashInResponse3 = await cmAccount.cashInCheque(
+                cheque3.fromCMAccount,
+                cheque3.toCMAccount,
+                cheque3.toBot,
+                cheque3.counter,
+                cheque3.amount,
+                cheque3.createdAt,
+                cheque3.expiresAt,
+                signature3,
+            );
+
+            await expect(cashInResponse3).to.be.not.reverted;
+
+            // Try withdraw
+            const withdrawAmount = ethers.parseEther("0.1");
+            const withdrawer = signers.withdrawer;
+            const withdrawTx = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount);
+            await expect(withdrawTx).to.be.not.reverted;
+
+            // Check balances
+            await expect(withdrawTx).to.changeEtherBalances([cmAccount, withdrawer], [-withdrawAmount, withdrawAmount]);
         });
 
         it("Should not update total cheque payments for same account", async function () {
