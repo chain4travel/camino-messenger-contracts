@@ -1,6 +1,6 @@
 # Solidity API
 
-## CMAccount
+## CMAccounttt
 
 A CM Account manages funds, minting/buying of booking tokens, provided
 or wanted services, and multiple bots for distributors and suppliers on
