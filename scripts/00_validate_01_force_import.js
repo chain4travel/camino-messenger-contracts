@@ -6,15 +6,11 @@ async function main() {
     // Existing BookingToken proxy address on Columbus
     const existingAddress = "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC";
 
-    // 2. Get the contract factory for your upgradeable version
-    const ContractV1 = await ethers.getContractFactory("BookingTokenV2");
+    // Current version of the BookingToken contract
+    const OldBookingTokenV2 = await ethers.getContractFactory("BookingTokenV2");
 
-    // 3. Force import the existing deployment
-    const result = await upgrades.forceImport(
-        existingAddress,
-        ContractV1,
-        { kind: "uups" }, // or "transparent" if using Transparent Proxy
-    );
+    // Force import the existing deployment from chain using the old BookingTokenV2
+    const result = await upgrades.forceImport(existingAddress, OldBookingTokenV2, { kind: "uups" });
 
     console.log(result);
 

@@ -57,7 +57,8 @@ describe("Upgrade Check", function () {
 // is not deployed to mainnet yet and the production usage of the contract is
 // minimal.
 //
-// ----------8<---------- Upgrade Check Running on columbus
+// ----------8<----------
+// Upgrade Check Running on columbus
 // @openzeppelin:upgrades:core manifest file: .openzeppelin/unknown-501.json
 // fallback file: .openzeppelin/unknown-501.json +0ms @openzeppelin:upgrades:core
 // manifest file: .openzeppelin/unknown-501.json fallback file:
@@ -91,4 +92,4 @@ describe("Upgrade Check", function () {
 //       at Proxy.validateUpgrade
 //       (node_modules/@openzeppelin/hardhat-upgrades/src/validate-upgrade.ts:51:9)
 //       at Context.<anonymous> (scripts/validate_01_BookingTokenRefactor.js:32:9)
-//       ---------->8----------
+// ---------->8----------
