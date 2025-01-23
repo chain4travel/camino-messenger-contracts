@@ -1,0 +1,29 @@
+// Run with --network columbus on SHA a53b8fc03973025f4ed10edb46aa4d2f0c3e76ee
+// Check 00_validate_01_BookingTokenRefactor.js for details
+const { ethers, upgrades } = require("hardhat");
+
+async function main() {
+    // Existing BookingToken proxy address on Columbus
+    const existingAddress = "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC";
+
+    // 2. Get the contract factory for your upgradeable version
+    const ContractV1 = await ethers.getContractFactory("BookingTokenV2");
+
+    // 3. Force import the existing deployment
+    const result = await upgrades.forceImport(
+        existingAddress,
+        ContractV1,
+        { kind: "uups" }, // or "transparent" if using Transparent Proxy
+    );
+
+    console.log(result);
+
+    console.log(`Successfully force-imported contract at ${existingAddress}`);
+}
+
+main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error(error);
+        process.exit(1);
+    });
