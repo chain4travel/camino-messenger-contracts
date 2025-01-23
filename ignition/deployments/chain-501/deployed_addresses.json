@@ -15,5 +15,10 @@
   "CancellationModule#BookingTokenProxy": "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC",
   "CancellationModule#ManagerProxy": "0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F",
   "CancellationModule#BookingTokenV2Impl": "0xBf6b064c6799833C1f8261C3Fb819fFA3C740F8D",
-  "CancellationModule#CMAccount": "0xaA573b3942168bC5222C7aa11c6708D7f64Af374"
+  "CancellationModule#CMAccount": "0xaA573b3942168bC5222C7aa11c6708D7f64Af374",
+  "RefactorCancellationModule#BookingTokenProxy": "0xe55E387F5474a012D1b048155E25ea78C7DBfBBC",
+  "RefactorCancellationModule#ManagerProxy": "0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F",
+  "RefactorCancellationModule#BookingTokenImpl": "0x80c5D0Eb1567649e9827218672cd56a772A8B97B",
+  "RefactorCancellationModule#BookingTokenOperator": "0x9C4c78DbeaC83188Da9236cc3DfB06e86BE5d50c",
+  "RefactorCancellationModule#CMAccount": "0x7E5Aacf1aA5efA994d979D7a68DEa256aD1b5D87"
 }
