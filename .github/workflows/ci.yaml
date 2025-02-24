@@ -2,7 +2,6 @@ name: CI
 
 on:
     pull_request:
-    push:
 
 jobs:
     lint:
@@ -63,8 +62,9 @@ jobs:
               run: |
                   # Check if docgen generated docs that are uncommitted
                   if [ -n "$(git status --porcelain)" ]; then
-                    echo "❌ Generated docs are not up to date. Please run yarn docgen and commit the changes."
+                    echo "::warning file=.github/workflows/ci.yaml,line=60,col=20,endColumn=31::❌ Generated docs are not up to date. Please run yarn docgen and commit the changes."
                     git status --porcelain
+                    git diff --color
                     exit 1
                   else
                     echo "✅ Generated docs are up to date."
@@ -82,6 +82,11 @@ jobs:
               with:
                   node-version: "20"
 
+            - name: Setup Go version
+              uses: actions/setup-go@v4
+              with:
+                  go-version: "1.23.6"
+
             - name: Generate go-bindings
               run: |
                   # Generate go-bindings
@@ -91,8 +96,9 @@ jobs:
               run: |
                   # Check if go-bindings are up to date
                   if [ -n "$(git status --porcelain)" ]; then
-                    echo "❌ Generated go-bindings are not up to date. Please run scripts/generate_go_abi.sh and commit the changes."
+                    echo "::warning file=.github/workflows/ci.yaml,line=89,col=19,endColumn=50::❌ Generated go-bindings are not up to date. Please run scripts/generate_go_abi.sh and commit the changes."
                     git status --porcelain
+                    git diff --color
                     exit 1
                   else
                     echo "✅ Generated go-bindings are up to date."

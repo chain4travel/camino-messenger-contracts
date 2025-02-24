@@ -79,6 +79,24 @@ else
     echo -e "Skipping yarn install and hardhat compile..."
 fi
 
+# Install abigen
+echo -e "Installing abigen..."
+
+# check if GOBIN is set
+if [ -z "$GOBIN" ]; then
+    GOBIN=$(go env GOPATH)/bin
+fi
+
+echo -e -n "Installing abigen to $GOBIN..."
+go install github.com/ethereum/go-ethereum/cmd/abigen@${GO_ETH_VERSION} && echo -e "${WHITE}done!${NC}"
+
+# Add abigen to PATH
+export PATH="$GOBIN:$PATH"
+
+# Show versions
+echo -e "${WHITE}Go version: $(go version)${NC}"
+echo -e "${WHITE}abigen version: $(abigen --version)${NC}"
+
 echo "Generating Go ABI bindings..."
 for CONTRACT in "${ARTIFACTS[@]}"; do
 
@@ -122,7 +140,7 @@ echo -e "Running ${WHITE}go mod init ${GO_MODULE_NAME} ${NC}..."
 go mod init ${GO_MODULE_NAME}
 
 # Get ethereum/go-ethereum
-echo -e "Running ${WHITE}go get github.com/ethereum/go-ethereum${GO_ETH_VERSION} ${NC}..."
+echo -e "Running ${WHITE}go get github.com/ethereum/go-ethereum@${GO_ETH_VERSION} ${NC}..."
 go get github.com/ethereum/go-ethereum@${GO_ETH_VERSION}
 
 # Run go mod tidy
