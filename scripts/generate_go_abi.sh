@@ -79,19 +79,33 @@ else
     echo -e "Skipping yarn install and hardhat compile..."
 fi
 
-# Install abigen
-echo -e "Installing abigen..."
+# Check abigen version
+echo -e "Checking abigen version..."
 
-# check if GOBIN is set
-if [ -z "$GOBIN" ]; then
-    GOBIN=$(go env GOPATH)/bin
+# Extract expected version (remove leading "v" if present and then only keep the numeric part)
+EXPECTED_VERSION=$(echo "$GO_ETH_VERSION" | sed -E 's/^v//; s/([^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*)/\2/')
+
+# Get abigen version and extract only the major.minor.patch portion
+ABIGEN_FULL_VERSION=$(abigen --version)
+ABIGEN_VERSION=$(echo "$ABIGEN_FULL_VERSION" | sed -E 's/([^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*)/\2/')
+
+if [ "$ABIGEN_VERSION" != "$EXPECTED_VERSION" ]; then
+    echo "Abigen version mismatch. Expected: $GO_ETH_VERSION, Found: $ABIGEN_FULL_VERSION"
+
+    # Check if GOBIN is set
+    if [ -z "$GOBIN" ]; then
+        GOBIN="$(go env GOPATH)/bin"
+    fi
+
+    echo -e -n "Installing abigen to $GOBIN..."
+    go install github.com/ethereum/go-ethereum/cmd/abigen@${GO_ETH_VERSION} &&
+        echo -e "${WHITE}done!${NC}"
+
+    # Add abigen to PATH
+    export PATH="$GOBIN:$PATH"
+else
+    echo "Abigen version matches. Expected: $GO_ETH_VERSION, Found: $ABIGEN_FULL_VERSION"
 fi
-
-echo -e -n "Installing abigen to $GOBIN..."
-go install github.com/ethereum/go-ethereum/cmd/abigen@${GO_ETH_VERSION} && echo -e "${WHITE}done!${NC}"
-
-# Add abigen to PATH
-export PATH="$GOBIN:$PATH"
 
 # Show versions
 echo -e "${WHITE}Go version: $(go version)${NC}"

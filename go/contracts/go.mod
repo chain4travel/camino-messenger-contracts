@@ -1,6 +1,6 @@
 module github.com/chain4travel/camino-messenger-contracts/go/contracts
 
-go 1.23.5
+go 1.23.6
 
 require github.com/ethereum/go-ethereum v1.14.12
 
