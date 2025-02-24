@@ -86,8 +86,16 @@ echo -e "Checking abigen version..."
 EXPECTED_VERSION=$(echo "$GO_ETH_VERSION" | sed -E 's/^v//; s/([^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*)/\2/')
 
 # Get abigen version and extract only the major.minor.patch portion
-ABIGEN_FULL_VERSION=$(abigen --version)
-ABIGEN_VERSION=$(echo "$ABIGEN_FULL_VERSION" | sed -E 's/([^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*)/\2/')
+if command -v abigen >/dev/null 2>&1; then
+    ABIGEN_FULL_VERSION=$(abigen --version)
+    ABIGEN_VERSION=$(echo "$ABIGEN_FULL_VERSION" | sed -E 's/([^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*)/\2/')
+else
+    echo "abigen command not found."
+    ABIGEN_VERSION="0.0.0"
+    ABIGEN_FULL_VERSION="None"
+fi
+
+# Compare versions
 
 if [ "$ABIGEN_VERSION" != "$EXPECTED_VERSION" ]; then
     echo "Abigen version mismatch. Expected: $GO_ETH_VERSION, Found: $ABIGEN_FULL_VERSION"
