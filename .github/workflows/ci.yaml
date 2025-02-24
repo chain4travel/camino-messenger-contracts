@@ -41,6 +41,63 @@ jobs:
             - name: Run Tests
               run: yarn test
 
+    docs:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Generate docs
+              run: yarn docgen
+
+            - name: Check if docs are up to date
+              run: |
+                  # Check if docgen generated docs that are uncommitted
+                  if [ -n "$(git status --porcelain)" ]; then
+                    echo "❌ Generated docs are not up to date. Please run yarn docgen and commit the changes."
+                    git status --porcelain
+                    exit 1
+                  else
+                    echo "✅ Generated docs are up to date."
+                  fi
+
+    go-bindings:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "20"
+
+            - name: Generate go-bindings
+              run: |
+                  # Generate go-bindings
+                  bash scripts/generate_go_abi.sh
+
+            - name: Check if go-bindings are up to date
+              run: |
+                  # Check if go-bindings are up to date
+                  if [ -n "$(git status --porcelain)" ]; then
+                    echo "❌ Generated go-bindings are not up to date. Please run scripts/generate_go_abi.sh and commit the changes."
+                    git status --porcelain
+                    exit 1
+                  else
+                    echo "✅ Generated go-bindings are up to date."
+                  fi
+
     coverage:
         runs-on: ubuntu-latest
 
