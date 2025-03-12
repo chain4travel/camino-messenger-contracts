@@ -470,9 +470,9 @@ Ethers.js, check out the [`test/ChequeManager.test.js`](test/ChequeManager.test.
 
 Before you begin, ensure you have completed the following steps:
 
-- **Compile the Contracts:** Make sure all contracts are compiled successfully. (`yarn compile --force`)
-- **KYC Verification:** Complete [the KYC process](https://docs.camino.network/guides/kyc) for your wallet, as deploying a new contract (your CM Account) requires it.
-- **Fund Your Wallet:** Use [the faucet](https://docs.camino.network/developer/guides/how-to-deploy-a-smart-contract/#3-request-funds-from-the-discord-faucet) to fund your wallet. Your new CM Account will be initially credited with 100 CAM tokens, so please ensure that your wallet contains more than 100 CAM tokens.
+- **Compile the Contracts:** Ensure all contracts are successfully compiled. (`yarn compile --force`)
+- **KYC Verification:** Complete [the KYC process](https://docs.camino.network/guides/kyc) for your wallet, as deploying a new contract (your CM Account) requires verification.
+- **Fund Your Wallet:** Use [the faucet](https://docs.camino.network/developer/guides/how-to-deploy-a-smart-contract/#3-request-funds-from-the-discord-faucet) to fund your wallet. Your new CM Account will initially needs to receive 100 CAM tokens, so ensure your wallet contains more than 100 CAM tokens.
 
 ### Creating a CM Account
 
@@ -499,11 +499,11 @@ Done in 2.86s.
 </details>
 
 > [!TIP]
-> You can also export variables, instead of specifying them from the CLI, for
-> private key and CM Account address for the commands used below in this document.
+> Instead of specifying your private key and CM Account address from the CLI,
+> you can export them as variables.
 >
-> You can use these commands below to set the variables and then omit the
-> `--private-key` and `--cm-account` arguments.
+> Use these commands to set the variables, and then you can omit the `--private-key`
+> and `--cm-account` arguments from the `yarn hardhat account` commands below:
 >
 > ```
 > export CMACCOUNT_PK=0x...
@@ -516,14 +516,14 @@ Done in 2.86s.
 #### Command Parameters
 
 - **`--private-key`:** Enter the static private key of your wallet.
-- **`--network`:** Specify the network where you wish to create your account (as configured in the `hardhat.config.json`). For development purposes it should be `columbus`.
+- **`--network`:** Specify the network where you wish to create your account (as configured in the `hardhat.config.json`). For development purposes, use `columbus`.
 
-In the output of the command, you will get a new CM Account address, that you need to save and use in the following steps.
+The command output will provide a new CM Account address that you must save for use in the following steps.
 
 ### Registering Your Bot
 
 After creating your CM Account, you need to register the address of your bot on the
-CM Account so it can sign cheques. Execute the following command:
+CM Account to enable it to sign cheques. Execute the following command:
 
 ```
 yarn hardhat account bot:add --cm-account <CMAccountAddress> --private-key <PrivateKeyValue> --bot <BotAddress> --network columbus
@@ -549,7 +549,7 @@ Done in 2.16s.
 #### Command Parameters
 
 - **`--cm-account`:** The EVM contract address of your newly created CM Account.
-- **`--private-key`:** The static private key of the wallet used for creating the CM Account (without the `0x` prefix).
+- **`--private-key`:** The static private key of the wallet used for creating the CM Account.
 - **`--bot`:** The address of the bot you are registering. Ensure that this address is your C-chain address and not the same as your CM Account wallet.
 - **`--network`:** Specify the network (as configured in the `hardhat.config.json`).
 
@@ -583,7 +583,7 @@ Done in 2.11s.
 #### Command Parameters
 
 - **`--cm-account`:** The EVM contract address of your CM Account.
-- **`--private-key`:** The static private key of the wallet used to create your CM Account (without the `0x` prefix).
+- **`--private-key`:** The static private key of the wallet used to create your CM Account.
 - **`--service-name`:** The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs). (You can also check the service names here in the [services](./services/) folder)
 - **`--fee`:** The service fee associated with your service in `aCAM` (`wei` in EVM terms).
 - **`--network`:** Specify the network (as configured in the `hardhat.config.json`).
