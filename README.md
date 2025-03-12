@@ -594,7 +594,7 @@ Done in 2.11s.
 - **`--private-key`:**  
   The static private key of the wallet used to create your CM Account (without the `0x` prefix).
 - **`--service-name`:**  
-  The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs).
+  The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs). (You can also check the service names here in the [services](./services/) folder)
 - **`--fee`:**  
   The service fee associated with your service in `aCAM` (`wei` in EVM terms).
 - **`--network`:**  
