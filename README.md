@@ -515,11 +515,8 @@ Done in 2.86s.
 
 #### Command Parameters
 
-- **`--private-key`:**  
-  Enter the static private key of your wallet.
-
-- **`--network`:**  
-  Specify the network where you wish to create your account (as configured in the `hardhat.config.json`). For development purposes it should be `columbus`.
+- **`--private-key`:** Enter the static private key of your wallet.
+- **`--network`:** Specify the network where you wish to create your account (as configured in the `hardhat.config.json`). For development purposes it should be `columbus`.
 
 In the output of the command, you will get a new CM Account address, that you need to save and use in the following steps.
 
@@ -551,14 +548,10 @@ Done in 2.16s.
 
 #### Command Parameters
 
-- **`--cm-account`:**  
-  The EVM contract address of your newly created CM Account.
-- **`--private-key`:**  
-  The static private key of the wallet used for creating the CM Account (without the `0x` prefix).
-- **`--bot`:**  
-  The address of the bot you are registering. Ensure that this address is your C-chain address and not the same as your CM Account wallet.
-- **`--network`:**  
-  Specify the network (as configured in the `hardhat.config.json`).
+- **`--cm-account`:** The EVM contract address of your newly created CM Account.
+- **`--private-key`:** The static private key of the wallet used for creating the CM Account (without the `0x` prefix).
+- **`--bot`:** The address of the bot you are registering. Ensure that this address is your C-chain address and not the same as your CM Account wallet.
+- **`--network`:** Specify the network (as configured in the `hardhat.config.json`).
 
 ### Registering Services
 
@@ -589,16 +582,11 @@ Done in 2.11s.
 
 #### Command Parameters
 
-- **`--cm-account`:**  
-  The EVM contract address of your CM Account.
-- **`--private-key`:**  
-  The static private key of the wallet used to create your CM Account (without the `0x` prefix).
-- **`--service-name`:**  
-  The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs). (You can also check the service names here in the [services](./services/) folder)
-- **`--fee`:**  
-  The service fee associated with your service in `aCAM` (`wei` in EVM terms).
-- **`--network`:**  
-  Specify the network (as configured in the `hardhat.config.json`).
+- **`--cm-account`:** The EVM contract address of your CM Account.
+- **`--private-key`:** The static private key of the wallet used to create your CM Account (without the `0x` prefix).
+- **`--service-name`:** The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs). (You can also check the service names here in the [services](./services/) folder)
+- **`--fee`:** The service fee associated with your service in `aCAM` (`wei` in EVM terms).
+- **`--network`:** Specify the network (as configured in the `hardhat.config.json`).
 
 ### Summary
 
