@@ -466,6 +466,14 @@ Ethers.js, check out the [`test/ChequeManager.test.js`](test/ChequeManager.test.
 > Partners](https://suite.camino.network/partners) and select "**Register As A
 > Partner**" from top right.
 
+To set up your Camino Messenger Account (CM Account) for use with the Camino Messenger Bot, you need to:
+
+1. Create a CM Account
+2. Register your bot on your CM Account
+3. Register the services you provide on your CM Account
+
+Follow the steps below to complete this process.
+
 ### Prerequisites
 
 Before you begin, ensure you have completed the following steps:
