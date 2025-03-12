@@ -468,7 +468,7 @@ Before you begin, ensure you have completed the following steps:
 
 -   **Compile the Contracts:** Make sure all contracts are compiled successfully.
 -   **KYC Verification:** Complete KYC for your wallet, as deploying a new contract (your CM Account) requires it.
--   **Fund Your Wallet:** Use the faucet to fund your wallet. Your new CM Account will be initially credited with 100 CAM tokens, so please make sure to have > 100CAM.
+-   **Fund Your Wallet:** Use the faucet to fund your wallet. Your new CM Account will be initially credited with 100 CAM tokens, so please ensure that your wallet contains more than 100 CAM tokens.
 
 ### Creating a CM Account
 
@@ -508,7 +508,7 @@ After creating your CM Account, you need to register the address of your bot. Ex
 
 ### Registering Services
 
-With your CM Account and bot registered, you can now add supported services. For example, to register the Ping Service, use the following command:``
+With your CM Account and bot registered, you can now add supported services. For example, to register the Ping Service, use the following command:
 
 `yarn hardhat account service:add --cm-account  <CMAccountAddress> --private-key <PrivateKeyValue> --service-name cmp.services.ping.v1.PingService --fee 10 --network columbus`
 
@@ -521,7 +521,7 @@ With your CM Account and bot registered, you can now add supported services. For
     The static private key of the wallet used to create your CM Account (without the `0x` prefix).
 
 -   **--service-name:**  
-    The full service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs).
+    The full-service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs).
 
 -   **--fee:**  
     The service fee associated with your service.
