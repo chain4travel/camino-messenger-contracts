@@ -47,9 +47,9 @@ Chain4Travel is running the first and currently only messenger server.
 
 For network fee cheques, the Camino Messenger Bot should use the values above for:
 
-- `fromCMAccount`: Partner's CM Account address.
-- `toCMAccount`: The "**Messenger CM Account**" address from the tables above.
-- `toBot`: The "**Messenger Service Bot**" address from the tables above.
+-   `fromCMAccount`: Partner's CM Account address.
+-   `toCMAccount`: The "**Messenger CM Account**" address from the tables above.
+-   `toBot`: The "**Messenger Service Bot**" address from the tables above.
 
 ## Quickstart
 
@@ -244,7 +244,7 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
 
 #### Cheque Typehash, Domain Typehash, and Domain Separator
 
-- **Cheque Typehash:** This is the `keccak256` hash of the MessengerCheque struct type.
+-   **Cheque Typehash:** This is the `keccak256` hash of the MessengerCheque struct type.
 
     ```js
     function calculateMessengerChequeTypeHash() {
@@ -257,7 +257,7 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
     }
     ```
 
-- **Domain Typehash:** This is the `keccak256` hash of the EIP-712 domain type.
+-   **Domain Typehash:** This is the `keccak256` hash of the EIP-712 domain type.
 
     ```js
     function calculateDomainTypeHash() {
@@ -268,8 +268,8 @@ and verified. For more info see: https://eips.ethereum.org/EIPS/eip-712
     }
     ```
 
-- **Domain Separator:** This is a hash that combines the domain typehash with the
-  name, version, and chain ID of the domain.
+-   **Domain Separator:** This is a hash that combines the domain typehash with the
+    name, version, and chain ID of the domain.
 
     ```js
     function calculateDomainSeparator(domainName, domainVersion, chainId) {
@@ -426,11 +426,11 @@ function verifyCheque(
 This function does not only verify that the signer of the cheque is a registered bot
 on the CM Account, but also other verifications like:
 
-- If the `fromCMAccount` is the contract itself
-- If the address of `toCMAccount` is a registered CM Account on the manager
-- If `expiresAt` timestamp is bigger then `block.timestamp`
-- Last counter and last amount recorded on the contract are lower then the cheque's
-- If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
+-   If the `fromCMAccount` is the contract itself
+-   If the address of `toCMAccount` is a registered CM Account on the manager
+-   If `expiresAt` timestamp is bigger then `block.timestamp`
+-   Last counter and last amount recorded on the contract are lower then the cheque's
+-   If the `toBot` address has the required role (`CHEQUE_OPERATOR_ROLE`)
 
 So, to only verify if cheque's signature is valid, without doing the verifications
 above (which can only be done on-chain), you can use the examples below.
@@ -466,9 +466,9 @@ Ethers.js, check out the [`test/ChequeManager.test.js`](test/ChequeManager.test.
 
 Before you begin, ensure you have completed the following steps:
 
-- **Compile the Contracts:** Make sure all contracts are compiled successfully.
-- **KYC Verification:** Complete KYC for your wallet, as deploying a new contract (your CM Account) requires it.
-- **Fund Your Wallet:** Use the faucet to fund your wallet. Your new CM Account will be initially credited with 100 CAM tokens, so please make sure to have > 100CAM.
+-   **Compile the Contracts:** Make sure all contracts are compiled successfully.
+-   **KYC Verification:** Complete KYC for your wallet, as deploying a new contract (your CM Account) requires it.
+-   **Fund Your Wallet:** Use the faucet to fund your wallet. Your new CM Account will be initially credited with 100 CAM tokens, so please make sure to have > 100CAM.
 
 ### Creating a CM Account
 
@@ -478,11 +478,11 @@ To create your CM Account, run the following command:
 
 #### Command Parameters
 
-- **--private-key:**  
-  Enter the static private key of your wallet (omit the `0x` prefix).
+-   **--private-key:**  
+    Enter the static private key of your wallet (omit the `0x` prefix).
 
-- **--network:**  
-  Specify the network where you wish to create your account (as configured in your `hardhat.config.json`).
+-   **--network:**  
+    Specify the network where you wish to create your account (as configured in your `hardhat.config.json`).
 
 In the output of the command, you will get a new CM Account address, that you need to save and use in the following steps.
 
@@ -494,17 +494,17 @@ After creating your CM Account, you need to register the address of your bot. Ex
 
 #### Command Parameters
 
-- **--cm-account:**  
-  The EVM contract address of your newly created CM Account.
+-   **--cm-account:**  
+    The EVM contract address of your newly created CM Account.
 
-- **--private-key:**  
-  The static private key of the wallet used for creating the CM Account (without the `0x` prefix).
+-   **--private-key:**  
+    The static private key of the wallet used for creating the CM Account (without the `0x` prefix).
 
-- **--bot:**  
-  The address of the bot you are registering. Ensure that this address is your C-chain address and not the same as your CM Account wallet.
+-   **--bot:**  
+    The address of the bot you are registering. Ensure that this address is your C-chain address and not the same as your CM Account wallet.
 
-- **--network:**  
-  Specify the network (as configured in your `hardhat.config.json`).
+-   **--network:**  
+    Specify the network (as configured in your `hardhat.config.json`).
 
 ### Registering Services
 
@@ -514,20 +514,21 @@ With your CM Account and bot registered, you can now add supported services. For
 
 #### Command Parameters
 
-- **--cm-account:**  
-  The EVM contract address of your CM Account.
+-   **--cm-account:**  
+    The EVM contract address of your CM Account.
 
-- **--private-key:**  
-  The static private key of the wallet used to create your CM Account (without the `0x` prefix).
+-   **--private-key:**  
+    The static private key of the wallet used to create your CM Account (without the `0x` prefix).
 
-- **--service-name:**  
-  The full service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs).
+-   **--service-name:**  
+    The full service name to register. For a complete list of supported services, consult the [Camino Messenger Protocol documentation](https://buf.build/chain4travel/camino-messenger-protocol/docs).
 
-- **--fee:**  
-  The service fee associated with your service.
+-   **--fee:**  
+    The service fee associated with your service.
 
-- **--network:**  
-  Specify the network (as configured in your `hardhat.config.json`).
+-   **--network:**  
+    Specify the network (as configured in your `hardhat.config.json`).
+
 ## Summary
 
 Following these steps, you will have:
