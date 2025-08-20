@@ -605,3 +605,11 @@ Following these steps, you will have:
 3. Added and configured services to enhance your account's capabilities.
 
 You can now add your CM Account address to the Camino Messenger Bot configuration and start running the bot.
+
+## License
+
+The Camino Messenger Contracts are licensed under the terms of the [Camino Messenger License](LICENSE.md).
+
+## Data Protection
+
+Please take note of the [Camino Messenger Data Protection Guidelines](DATA_PROTECTION.md).
