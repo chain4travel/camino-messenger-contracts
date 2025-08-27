@@ -35,23 +35,11 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      *
      * ```
      * keccak256(
-     *     "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt)"
-     * );
-     * ```
-     */
-    bytes32 public constant MESSENGER_CHEQUE_TYPEHASH =
-        0x87b38f131334165ac2b361f08966c9fcff3a953fa7d9d9c2861b7f0b50445bcb;
-
-    /**
-     * @notice Pre-computed hash of the MessengerCheque type
-     *
-     * ```
-     * keccak256(
      *     "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt,address paymentToken)"
      * );
      * ```
      */
-    bytes32 public constant MESSENGER_CHEQUE_V2_TYPEHASH =
+    bytes32 public constant MESSENGER_CHEQUE_TYPEHASH =
         0x47a14584cc614c4358a01f9a3731417edd2a8d4528cf486fc8b0489059a33214;
 
     /**
@@ -76,16 +64,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      * @notice Struct representing a Messenger Cheque.
      */
     struct MessengerCheque {
-        address fromCMAccount; // CM Account that will pay the amount
-        address toCMAccount; // CM Account that will receive the amount
-        address toBot; // The address of the bot that receives the cheque
-        uint256 counter; // This should be increased with every cheque
-        uint256 amount; // The amount to be transferred
-        uint256 createdAt; // Creation timestamp of the cheque
-        uint256 expiresAt; // Expiration timestamp of the cheque
-    }
-
-    struct MessengerChequeV2 {
         address fromCMAccount; // CM Account that will pay the amount
         address toCMAccount; // CM Account that will receive the amount
         address toBot; // The address of the bot that receives the cheque
@@ -127,9 +105,9 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
          */
         bytes32 _domainSeparator;
         /**
-         * @dev Domain separator for MessengerChequeV2 type
+         * @notice Mapping to track the cash-in details per payment token for each pair of fromBot and toBot addresses.
          */
-        bytes32 _domainSeparatorV2;
+        mapping(address fromBot => mapping(address toBot => mapping(address paymentToken => LastCashIn))) _lastCashInsPerToken;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ChequeManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -230,8 +208,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         $._domainSeparator = keccak256(
             abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("1"), block.chainid)
         );
-
-        setDomainSeparatorV2();
     }
 
     /**
@@ -240,25 +216,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     function getDomainSeparator() public view returns (bytes32) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         return $._domainSeparator;
-    }
-
-    /**
-     * @notice Returns the domain separator.
-     */
-    function getDomainSeparatorV2() public view returns (bytes32) {
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        return $._domainSeparatorV2;
-    }
-
-    /**
-     * @notice Set domain separator for MessengerChequeV2 type
-     */
-    function setDomainSeparatorV2() internal {
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
-
-        $._domainSeparatorV2 = keccak256(
-            abi.encode(DOMAIN_TYPEHASH, keccak256("CaminoMessenger"), keccak256("2"), block.chainid)
-        );
     }
 
     /**
@@ -272,41 +229,13 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 counter,
         uint256 amount,
         uint256 createdAt,
-        uint256 expiresAt
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    MESSENGER_CHEQUE_TYPEHASH,
-                    fromCMAccount,
-                    toCMAccount,
-                    toBot,
-                    counter,
-                    amount,
-                    createdAt,
-                    expiresAt
-                )
-            );
-    }
-
-    /**
-     * @notice Returns the hash of the `MessengerCheque` encoded with
-     * `MESSENGER_CHEQUE_TYPEHASH`.
-     */
-    function hashMessengerChequeV2(
-        address fromCMAccount,
-        address toCMAccount,
-        address toBot,
-        uint256 counter,
-        uint256 amount,
-        uint256 createdAt,
         uint256 expiresAt,
         address paymentToken
     ) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    MESSENGER_CHEQUE_V2_TYPEHASH,
+                    MESSENGER_CHEQUE_TYPEHASH,
                     fromCMAccount,
                     toCMAccount,
                     toBot,
@@ -330,29 +259,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 counter,
         uint256 amount,
         uint256 createdAt,
-        uint256 expiresAt
-    ) public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    getDomainSeparator(),
-                    hashMessengerCheque(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt)
-                )
-            );
-    }
-
-    /**
-     * @notice Returns the hash of the typed data (cheque) with prefix and domain
-     * separator.
-     */
-    function hashTypedDataV4_V2(
-        address fromCMAccount,
-        address toCMAccount,
-        address toBot,
-        uint256 counter,
-        uint256 amount,
-        uint256 createdAt,
         uint256 expiresAt,
         address paymentToken
     ) public view returns (bytes32) {
@@ -360,8 +266,8 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
             keccak256(
                 abi.encodePacked(
                     "\x19\x01",
-                    getDomainSeparatorV2(),
-                    hashMessengerChequeV2(
+                    getDomainSeparator(),
+                    hashMessengerCheque(
                         fromCMAccount,
                         toCMAccount,
                         toBot,
@@ -387,29 +293,10 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 amount,
         uint256 createdAt,
         uint256 expiresAt,
-        bytes memory signature
-    ) internal view returns (address signer) {
-        bytes32 digest = hashTypedDataV4(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt);
-        signer = digest.recover(signature);
-        return signer;
-    }
-
-    /**
-     * @notice Returns the signer for the given cheque and signature. Uses {ECDSA} library to
-     * recover the signer.
-     */
-    function recoverSignerV2(
-        address fromCMAccount,
-        address toCMAccount,
-        address toBot,
-        uint256 counter,
-        uint256 amount,
-        uint256 createdAt,
-        uint256 expiresAt,
         address paymentToken,
         bytes memory signature
     ) internal view returns (address signer) {
-        bytes32 digest = hashTypedDataV4_V2(
+        bytes32 digest = hashTypedDataV4(
             fromCMAccount,
             toCMAccount,
             toBot,
@@ -426,65 +313,13 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     /**
      * @notice Returns signer and payment amount if the signature is valid for the
      * given cheque, the signer is an allowed bot, cheque counter and amounts are
-     * valid according to last cash ins.
+     * valid according to last cash ins per payment token.
      *
      * Please be aware that `cheque.amount < paymentAmount` for a valid cheque as
      * long as the last amount is lower than the cheque amount. Only the difference
      * between the cheque amount and the last recorded amount is paid.
      */
     function verifyCheque(
-        address fromCMAccount,
-        address toCMAccount,
-        address toBot,
-        uint256 counter,
-        uint256 amount,
-        uint256 createdAt,
-        uint256 expiresAt,
-        bytes memory signature
-    ) public view returns (address signer, uint256 paymentAmount) {
-        // Revert if cheque is not for this contract
-        if (fromCMAccount != address(this)) {
-            revert InvalidFromCMAccount(fromCMAccount);
-        }
-
-        // Revert if cheque payee is not a CM account
-        if (!ICMAccountManager(getManagerAddress()).isCMAccount(toCMAccount)) {
-            revert InvalidToCMAccount(toCMAccount);
-        }
-
-        // Revert if the cheque is expired
-        if (block.timestamp >= expiresAt) {
-            revert ChequeExpired(expiresAt);
-        }
-
-        // Recover signer
-        signer = recoverSigner(fromCMAccount, toCMAccount, toBot, counter, amount, createdAt, expiresAt, signature);
-
-        // Check if the signer is an allowed bot.
-        if (!isBotAllowed(signer)) {
-            revert NotAllowedToSignCheques(signer);
-        }
-
-        ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        LastCashIn storage lastCashIn = $._lastCashIns[signer][toBot];
-
-        // Revert if the cheque amount is lower then the last recorded amount
-        if (amount < lastCashIn.amount) {
-            revert InvalidAmount(amount, lastCashIn.amount);
-        }
-
-        // Ensure the current cheque's counter is greater than the last recorded one
-        if (counter <= lastCashIn.counter) {
-            revert InvalidCounter(counter, lastCashIn.counter);
-        }
-
-        // Everything is valid. Calculate payment amount.
-        paymentAmount = amount - lastCashIn.amount;
-
-        return (signer, paymentAmount);
-    }
-
-    function verifyChequeV2(
         address fromCMAccount,
         address toCMAccount,
         address toBot,
@@ -511,7 +346,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         }
 
         // Recover signer
-        signer = recoverSignerV2(
+        signer = recoverSigner(
             fromCMAccount,
             toCMAccount,
             toBot,
@@ -549,7 +384,8 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Cash in a cheque by verifying it and paying the difference between the
-     * cheque amount and the last recorded amount for the signer and `toBot` pair.
+     * cheque amount and the last recorded amount for the signer and `toBot` pair per
+     * payment token.
      *
      * A percentage of the amount is also paid to the developer wallet.
      *
@@ -562,67 +398,10 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      * last recorded amount.
      * @param createdAt The creation timestamp of the cheque.
      * @param expiresAt The expiration timestamp of the cheque.
+     * @param paymentToken The payment token of the cheque.
      * @param signature The signature of the cheque.
      */
     function cashInCheque(
-        address fromCMAccount,
-        address toCMAccount,
-        address toBot,
-        uint256 counter,
-        uint256 amount,
-        uint256 createdAt,
-        uint256 expiresAt,
-        bytes memory signature
-    ) public nonReentrant {
-        // Verify the cheque and get the signer and payment amount
-        (address signer, uint256 paymentAmount) = verifyCheque(
-            fromCMAccount,
-            toCMAccount,
-            toBot,
-            counter,
-            amount,
-            createdAt,
-            expiresAt,
-            signature
-        );
-
-        // If we didn't revert in the verifyCheque above, the cheque is valid.
-        // Update the last cash ins.
-        setLastCashIn(signer, toBot, counter, amount, createdAt, expiresAt);
-
-        // Calculate developer fee
-        // For amounts lower then fee basis point, the developer fee is 0.
-        uint256 developerFee = (paymentAmount * ICMAccountManager(getManagerAddress()).getDeveloperFeeBp()) / 10000;
-
-        // Subtract developer fee from payment amount
-        uint256 chequePaymentAmount = paymentAmount - developerFee;
-
-        // Update total cheque payments excluding cheques to the same account
-        if (fromCMAccount != toCMAccount) {
-            ChequeManagerStorage storage $ = _getChequeManagerStorage();
-            $._totalChequePayments += paymentAmount;
-        }
-
-        // Transfer developer fee to the developer wallet
-        payable(ICMAccountManager(getManagerAddress()).getDeveloperWallet()).sendValue(developerFee);
-
-        // Transfer the cheque payment amount to the `toCMAccount`
-        payable(toCMAccount).sendValue(chequePaymentAmount);
-
-        // Emit cash-in event
-        emit ChequeCashedIn(
-            fromCMAccount,
-            toCMAccount,
-            signer, // fromBot
-            toBot,
-            counter,
-            amount, // Amount of the cheque
-            chequePaymentAmount, // Paid cheque amount to the `toCMAccount`
-            developerFee // Paid developer fee (cut from the cheque amount)
-        );
-    }
-
-    function cashInChequeV2(
         address fromCMAccount,
         address toCMAccount,
         address toBot,
@@ -634,7 +413,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         bytes memory signature
     ) public nonReentrant {
         // Verify the cheque and get the signer and payment amount
-        (address signer, uint256 paymentAmount) = verifyChequeV2(
+        (address signer, uint256 paymentAmount) = verifyCheque(
             fromCMAccount,
             toCMAccount,
             toBot,
@@ -648,7 +427,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
 
         // If we didn't revert in the verifyCheque above, the cheque is valid.
         // Update the last cash ins.
-        setLastCashIn(signer, toBot, counter, amount, createdAt, expiresAt);
+        setLastCashIn(signer, toBot, counter, amount, createdAt, expiresAt, paymentToken);
 
         // Calculate developer fee
         // For amounts lower then fee basis point, the developer fee is 0.
@@ -705,10 +484,11 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Returns last cash-in details for given `fromBot` & `toBot` pair.
+     * @notice Returns last cash-in details for given `fromBot` & `toBot` pair and payment token.
      *
      * @param fromBot The address of the bot that sent the cheque.
      * @param toBot The address of the bot that received the cheque.
+     * @param paymentToken The payment token of the cheque.
      *
      * Returns (lastCounter, lastAmount, lastCreatedAt, lastExpiresAt)
      *
@@ -719,15 +499,16 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      */
     function getLastCashIn(
         address fromBot,
-        address toBot
+        address toBot,
+        address paymentToken
     ) public view returns (uint256 lastCounter, uint256 lastAmount, uint256 lastCreatedAt, uint256 lastExpiresAt) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        LastCashIn storage lastCashIn = $._lastCashIns[fromBot][toBot];
+        LastCashIn storage lastCashIn = $._lastCashInsPerToken[fromBot][toBot][paymentToken];
         return (lastCashIn.counter, lastCashIn.amount, lastCashIn.createdAt, lastCashIn.expiresAt);
     }
 
     /**
-     * @notice Sets last cash-in for given `fromBot`, `toBot` pair.
+     * @notice Sets last cash-in for given `fromBot`, `toBot` pair and payment token.
      *
      * @param fromBot The address of the bot that sent the cheque.
      * @param toBot The address of the bot that received the cheque.
@@ -735,6 +516,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      * @param amount The amount of the cheque.
      * @param createdAt The creation timestamp of the cheque.
      * @param expiresAt The expiration timestamp of the cheque.
+     * @param paymentToken The payment token of the cheque.
      */
     function setLastCashIn(
         address fromBot,
@@ -742,10 +524,11 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 counter,
         uint256 amount,
         uint256 createdAt,
-        uint256 expiresAt
+        uint256 expiresAt,
+        address paymentToken
     ) internal {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        $._lastCashIns[fromBot][toBot] = LastCashIn(counter, amount, createdAt, expiresAt);
+        $._lastCashInsPerToken[fromBot][toBot][paymentToken] = LastCashIn(counter, amount, createdAt, expiresAt);
     }
 
     /**

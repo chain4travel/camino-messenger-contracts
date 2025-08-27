@@ -52,6 +52,18 @@ async function setupSigners() {
     };
 }
 
+// Deploy NullUSD
+async function deployNullUSDFixture() {
+    await setupSigners();
+
+    const NullUSD = await ethers.getContractFactory("NullUSD");
+    const nullUSD = await NullUSD.deploy();
+
+    const nullUSDDecimals = await nullUSD.decimals();
+
+    return { nullUSD, nullUSDDecimals };
+}
+
 async function deployCMAccountManagerFixture() {
     // Set up signers
     await setupSigners();
@@ -521,4 +533,5 @@ module.exports = {
     deployAndConfigureAllWithRegisteredServicesFixture,
     deployBookingTokenWithNullUSDFixture,
     deployCancellationSupportFixture,
+    deployNullUSDFixture,
 };

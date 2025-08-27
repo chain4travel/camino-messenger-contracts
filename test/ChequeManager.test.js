@@ -11,12 +11,12 @@ const {
     deployCMAccountManagerWithCMAccountImplFixture,
     deployAndConfigureAllFixture,
     deployCMAccountWithDepositFixture,
+    deployNullUSDFixture,
 } = require("./utils/fixtures");
 
 // Cheque utils
 const {
     calculateMessengerChequeTypeHash,
-    calculateMessengerChequeV2TypeHash,
     calculateTypedDataHash,
     calculateMessengerChequeHash,
     calculateDomainTypeHash,
@@ -25,7 +25,6 @@ const {
     calculateDomainSeparatorColumbus,
     calculateDomainSeparatorKopernikus,
     calculateDomainSeparatorForChain,
-    calculateDomainSeparatorV2ForChain,
     signMessengerCheque,
     signInvalidMessengerCheque,
     _signMessengerCheque,
@@ -64,6 +63,8 @@ describe("ChequeManager", function () {
 
         it("Should hash the messenger cheque correctly", async function () {
             const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD } = await loadFixture(deployNullUSDFixture);
+
             const cheque = {
                 fromCMAccount: await cmAccount.getAddress(),
                 toCMAccount: signers.chequeOperator.address,
@@ -72,6 +73,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             const calculatedHash = calculateMessengerChequeHash(cheque);
@@ -84,6 +86,7 @@ describe("ChequeManager", function () {
                 cheque.amount,
                 cheque.createdAt,
                 cheque.expiresAt,
+                cheque.paymentToken,
             );
 
             expect(hashFromContract).to.be.equal(calculatedHash);
@@ -92,6 +95,7 @@ describe("ChequeManager", function () {
         it("Should hash TypedData correctly", async function () {
             // Set up signers and contract instance
             const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD } = await loadFixture(deployNullUSDFixture);
 
             // Create a MessengerCheque object
             const cheque = {
@@ -102,6 +106,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Calculate domain separator
@@ -120,6 +125,7 @@ describe("ChequeManager", function () {
                 cheque.amount,
                 cheque.createdAt,
                 cheque.expiresAt,
+                cheque.paymentToken,
             );
 
             // Assert that the calculated typedDataHash is equal to the typedDataHash from contract
@@ -127,30 +133,10 @@ describe("ChequeManager", function () {
         });
     });
 
-    describe("Main V2", function () {
-        it("Should return the correct MESSENGER_CHEQUE_V2_TYPEHASH", async function () {
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-
-            const calculatedMessengerChequeV2TypeHash = calculateMessengerChequeV2TypeHash();
-
-            const cmAccountMessengerChequeV2TypeHash = await cmAccount.MESSENGER_CHEQUE_V2_TYPEHASH();
-            expect(cmAccountMessengerChequeV2TypeHash).to.be.equal(calculatedMessengerChequeV2TypeHash);
-        });
-
-        it("Should initialize the DOMAIN_SEPARATOR V2 correctly", async function () {
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-
-            const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
-            const calculatedDomainSeparator = calculateDomainSeparatorV2ForChain(chainId);
-
-            const cmAccountDomainSeparator = await cmAccount.getDomainSeparatorV2();
-            expect(cmAccountDomainSeparator).to.be.equal(calculatedDomainSeparator);
-        });
-    });
-
     describe("Cheque Operations", function () {
         it("Should verify a cheque with a valid signature", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -179,9 +165,10 @@ describe("ChequeManager", function () {
                 toCMAccount: toCMAccountAddress,
                 toBot: signers.otherAccount2.address,
                 counter: 1,
-                amount: ethers.parseEther("1"),
+                amount: ethers.parseUnits("1", nullUSDDecimals),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -201,14 +188,19 @@ describe("ChequeManager", function () {
                 cheque.amount,
                 cheque.createdAt,
                 cheque.expiresAt,
+                cheque.paymentToken,
                 signature,
             );
 
-            expect(verifyResponse).to.be.deep.equal([signers.chequeOperator.address, ethers.parseEther("1")]);
+            expect(verifyResponse).to.be.deep.equal([
+                signers.chequeOperator.address,
+                ethers.parseUnits("1", nullUSDDecimals),
+            ]);
         });
 
         it("Should not verify a cheque with an invalid signature", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -240,6 +232,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -262,6 +255,7 @@ describe("ChequeManager", function () {
                     cheque.amount,
                     cheque.createdAt,
                     cheque.expiresAt,
+                    cheque.paymentToken,
                     signature,
                 ),
             )
@@ -271,6 +265,7 @@ describe("ChequeManager", function () {
 
         it("Should not verify a cheque with non-allowed signer", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -302,6 +297,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Be sure that the signer does not have the CHEQUE_OPERATOR_ROLE role
@@ -321,6 +317,7 @@ describe("ChequeManager", function () {
                     cheque.amount,
                     cheque.createdAt,
                     cheque.expiresAt,
+                    cheque.paymentToken,
                     signature,
                 ),
             )
@@ -330,6 +327,7 @@ describe("ChequeManager", function () {
 
         it("Should not verify a cheque if from/to is not CMAccount", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -362,6 +360,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             const chequeWithInvalidTo = {
@@ -372,6 +371,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
                 expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -392,6 +392,7 @@ describe("ChequeManager", function () {
                     chequeWithInvalidFrom.amount,
                     chequeWithInvalidFrom.createdAt,
                     chequeWithInvalidFrom.expiresAt,
+                    chequeWithInvalidFrom.paymentToken,
                     signatureFrom,
                 ),
             )
@@ -407,6 +408,7 @@ describe("ChequeManager", function () {
                     chequeWithInvalidTo.amount,
                     chequeWithInvalidTo.createdAt,
                     chequeWithInvalidTo.expiresAt,
+                    chequeWithInvalidTo.paymentToken,
                     signatureTo,
                 ),
             )
@@ -416,6 +418,7 @@ describe("ChequeManager", function () {
 
         it("Should not verify an expired cheque", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -450,6 +453,7 @@ describe("ChequeManager", function () {
                 amount: ethers.parseEther("1"),
                 createdAt: createdAt,
                 expiresAt: expiresAt,
+                paymentToken: await nullUSD.getAddress(),
             };
 
             // Grant CHEQUE_OPERATOR_ROLE
@@ -470,6 +474,7 @@ describe("ChequeManager", function () {
                     cheque.amount,
                     cheque.createdAt,
                     cheque.expiresAt,
+                    cheque.paymentToken,
                     signature,
                 ),
             )
@@ -479,6 +484,7 @@ describe("ChequeManager", function () {
 
         it("Should cash-in multiple cheques correctly", async function () {
             const { cmAccount, cmAccountManager, prefundAmount } = await loadFixture(deployCMAccountWithDepositFixture);
+            const { nullUSD, nullUSDDecimals } = await loadFixture(deployNullUSDFixture);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
