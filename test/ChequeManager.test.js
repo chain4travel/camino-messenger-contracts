@@ -16,6 +16,7 @@ const {
 // Cheque utils
 const {
     calculateMessengerChequeTypeHash,
+    calculateMessengerChequeV2TypeHash,
     calculateTypedDataHash,
     calculateMessengerChequeHash,
     calculateDomainTypeHash,
@@ -24,6 +25,7 @@ const {
     calculateDomainSeparatorColumbus,
     calculateDomainSeparatorKopernikus,
     calculateDomainSeparatorForChain,
+    calculateDomainSeparatorV2ForChain,
     signMessengerCheque,
     signInvalidMessengerCheque,
     _signMessengerCheque,
@@ -122,6 +124,27 @@ describe("ChequeManager", function () {
 
             // Assert that the calculated typedDataHash is equal to the typedDataHash from contract
             expect(typedDataHashFromContract).to.be.equal(calculatedTypedDataHash);
+        });
+    });
+
+    describe("Main V2", function () {
+        it("Should return the correct MESSENGER_CHEQUE_V2_TYPEHASH", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const calculatedMessengerChequeV2TypeHash = calculateMessengerChequeV2TypeHash();
+
+            const cmAccountMessengerChequeV2TypeHash = await cmAccount.MESSENGER_CHEQUE_V2_TYPEHASH();
+            expect(cmAccountMessengerChequeV2TypeHash).to.be.equal(calculatedMessengerChequeV2TypeHash);
+        });
+
+        it("Should initialize the DOMAIN_SEPARATOR V2 correctly", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
+            const calculatedDomainSeparator = calculateDomainSeparatorV2ForChain(chainId);
+
+            const cmAccountDomainSeparator = await cmAccount.getDomainSeparatorV2();
+            expect(cmAccountDomainSeparator).to.be.equal(calculatedDomainSeparator);
         });
     });
 

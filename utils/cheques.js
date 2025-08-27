@@ -10,6 +10,15 @@ function calculateMessengerChequeTypeHash() {
     return typeHash;
 }
 
+function calculateMessengerChequeV2TypeHash() {
+    const typeHash = ethers.keccak256(
+        ethers.toUtf8Bytes(
+            "MessengerCheque(address fromCMAccount,address toCMAccount,address toBot,uint256 counter,uint256 amount,uint256 createdAt,uint256 expiresAt,address paymentToken)",
+        ),
+    );
+    return typeHash;
+}
+
 function calculateDomainTypeHash() {
     const domainTypeHash = ethers.keccak256(
         ethers.toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId)"),
@@ -36,6 +45,13 @@ function calculateDomainSeparator(domainName, domainVersion, chainId) {
 function calculateDomainSeparatorForChain(_chainId) {
     const domainName = "CaminoMessenger";
     const domainVersion = "1";
+    const chainId = _chainId;
+    return calculateDomainSeparator(domainName, domainVersion, chainId);
+}
+
+function calculateDomainSeparatorV2ForChain(_chainId) {
+    const domainName = "CaminoMessenger";
+    const domainVersion = "2";
     const chainId = _chainId;
     return calculateDomainSeparator(domainName, domainVersion, chainId);
 }
@@ -147,6 +163,7 @@ async function signInvalidMessengerCheque(cheque, signer) {
 
 module.exports = {
     calculateMessengerChequeTypeHash,
+    calculateMessengerChequeV2TypeHash,
     calculateTypedDataHash,
     calculateMessengerChequeHash,
     calculateDomainTypeHash,
@@ -155,6 +172,7 @@ module.exports = {
     calculateDomainSeparatorColumbus,
     calculateDomainSeparatorKopernikus,
     calculateDomainSeparatorForChain,
+    calculateDomainSeparatorV2ForChain,
     signMessengerCheque,
     signInvalidMessengerCheque,
     _signMessengerCheque,

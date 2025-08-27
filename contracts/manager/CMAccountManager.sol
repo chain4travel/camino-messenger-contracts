@@ -109,6 +109,11 @@ contract CMAccountManager is
      */
     bytes32 public constant CMACCOUNT_ROLE = keccak256("CMACCOUNT_ROLE");
 
+    /**
+     * @notice This role is able to set the service fee token address.
+     */
+    bytes32 public constant SERVICE_FEE_TOKEN_ADMIN_ROLE = keccak256("SERVICE_FEE_TOKEN_ADMIN_ROLE");
+
     /***************************************************
      *                   STORAGE                       *
      ***************************************************/
@@ -155,6 +160,10 @@ contract CMAccountManager is
          * @dev CMAccount info mapping to track if an address is a CMAccount and initial creators.
          */
         mapping(address account => CMAccountInfo) _cmAccountInfo;
+        /**
+         * @dev ERC20 Service fee token address.
+         */
+        address _serviceFeeToken;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.CMAccountManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -204,6 +213,13 @@ contract CMAccountManager is
      * @param newBookingToken The new booking token address
      */
     event BookingTokenAddressUpdated(address indexed oldBookingToken, address indexed newBookingToken);
+
+    /**
+     * @notice Service fee token address updated event.
+     * @param oldServiceFeeToken The old service fee token address
+     * @param newServiceFeeToken The new service fee token address
+     */
+    event ServiceFeeTokenUpdated(address indexed oldServiceFeeToken, address indexed newServiceFeeToken);
 
     /***************************************************
      *                    ERRORS                       *
@@ -383,6 +399,33 @@ contract CMAccountManager is
     function isCMAccount(address account) public view returns (bool) {
         CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
         return $._cmAccountInfo[account].isCMAccount;
+    }
+
+    /***************************************************
+     *               SERVICE FEE TOKEN                 *
+     ***************************************************/
+
+    /**
+     * @notice Returns the service fee token address.
+     */
+    function getServiceFeeToken() public view returns (address) {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        return $._serviceFeeToken;
+    }
+
+    /**
+     * @notice Sets the service fee token address.
+     * @param serviceFeeToken The service fee token address
+     */
+    function setServiceFeeToken(address serviceFeeToken) public onlyRole(SERVICE_FEE_TOKEN_ADMIN_ROLE) {
+        address oldServiceFeeToken = getServiceFeeToken();
+        _setServiceFeeToken(serviceFeeToken);
+        emit ServiceFeeTokenUpdated(oldServiceFeeToken, serviceFeeToken);
+    }
+
+    function _setServiceFeeToken(address serviceFeeToken) internal {
+        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
+        $._serviceFeeToken = serviceFeeToken;
     }
 
     /***************************************************
