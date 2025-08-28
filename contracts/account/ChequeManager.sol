@@ -346,6 +346,8 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
             revert ChequeExpired(expiresAt);
         }
 
+        // FIXME: Revert if payment token is not the service fee token on CMAccountManager
+
         // Recover signer
         signer = recoverSigner(
             fromCMAccount,
