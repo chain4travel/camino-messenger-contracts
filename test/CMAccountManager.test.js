@@ -11,6 +11,7 @@ const { setCode } = require("@nomicfoundation/hardhat-network-helpers");
 const {
     setupSigners,
     developerFeeBp,
+    deployNullUSDFixture,
     deployCMAccountManagerFixture,
     deployCMAccountImplFixture,
     deployCMAccountManagerWithCMAccountImplFixture,
@@ -206,6 +207,36 @@ describe("CMAccountManager", function () {
             await expect(
                 cmAccountManager.connect(signers.otherAccount3).setPrefundAmount(newPrefundAmount),
             ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
+        });
+
+        it("should set and get correct service fee token address", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
+            const { nullUSD } = await loadFixture(deployNullUSDFixture);
+
+            // Get service fee token address - should be zero address
+            expect(await cmAccountManager.getServiceFeeToken()).to.be.equal(ethers.ZeroAddress);
+
+            // Try to set service fee token addr with non-auth address
+            await expect(
+                cmAccountManager.connect(signers.otherAccount3).setServiceFeeToken(ethers.ZeroAddress),
+            ).to.be.revertedWithCustomError(cmAccountManager, "AccessControlUnauthorizedAccount");
+
+            // Grant the SERVICE_FEE_TOKEN_ADMIN_ROLE role
+            const SERVICE_FEE_TOKEN_ADMIN_ROLE = await cmAccountManager.SERVICE_FEE_TOKEN_ADMIN_ROLE();
+            await cmAccountManager
+                .connect(signers.managerAdmin)
+                .grantRole(SERVICE_FEE_TOKEN_ADMIN_ROLE, signers.otherAccount1.address);
+
+            // Try to set service fee token with auth address
+            await expect(cmAccountManager.connect(signers.otherAccount1).setServiceFeeToken(await nullUSD.getAddress()))
+                .to.emit(cmAccountManager, "ServiceFeeTokenUpdated")
+                .withArgs(ethers.ZeroAddress, await nullUSD.getAddress());
+
+            // Get service fee token address
+            expect(await cmAccountManager.getServiceFeeToken()).to.be.equal(await nullUSD.getAddress());
         });
     });
 
@@ -405,41 +436,106 @@ describe("CMAccountManager", function () {
             ).to.be.revertedWithCustomError(cmAccountManager, "EnforcedPause");
         });
 
-        it("should fail if the prefund amount is lower then the minimum", async function () {
+        it("should not fail for any msg.value", async function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, nullUSD, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
 
+            // Approve service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
+
+            // Zero msg.value
             await expect(
                 cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader, {
-                    value: prefundAmount - 1n,
+                    value: 0n,
                 }),
-            )
-                .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
-                .withArgs(prefundAmount, prefundAmount - 1n);
+            ).to.be.not.reverted;
+
+            // Approve service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
+
+            const nonZeroMsgValue = ethers.parseEther("300");
+
+            // Non-zero msg.value
+            const nonZeroMsgValueTx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader,
+                {
+                    value: nonZeroMsgValue,
+                },
+            );
+
+            await expect(nonZeroMsgValueTx).to.be.not.reverted;
+
+            const receipt = await nonZeroMsgValueTx.wait();
+
+            // Parse event to get the CMAccount address (this is the UUPS proxy address)
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const cmAccountAddress = parsedEvent.args.account;
+
+            // Check balances
+            await expect(nonZeroMsgValueTx).to.changeEtherBalances(
+                [signers.managerAdmin, cmAccountAddress],
+                [-nonZeroMsgValue, nonZeroMsgValue],
+            );
+            await expect(nonZeroMsgValueTx).to.changeTokenBalances(
+                nullUSD,
+                [signers.managerAdmin, cmAccountAddress],
+                [-prefundAmount, prefundAmount],
+            );
         });
 
-        it("should fail if the prefund amount is zero", async function () {
+        it("should fail if service fee token address is zero", async function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Grant the SERVICE_FEE_TOKEN_ADMIN_ROLE role so we can set it to zero address
+            const SERVICE_FEE_TOKEN_ADMIN_ROLE = await cmAccountManager.SERVICE_FEE_TOKEN_ADMIN_ROLE();
+            await cmAccountManager.grantRole(SERVICE_FEE_TOKEN_ADMIN_ROLE, signers.feeAdmin.address);
+
+            // Set service fee token address to zero
+            await cmAccountManager.connect(signers.feeAdmin).setServiceFeeToken(ethers.ZeroAddress);
+
+            // Check if service fee token address is zero
+            const serviceFeeTokenAddress = await cmAccountManager.getServiceFeeToken();
+            expect(serviceFeeTokenAddress).to.equal(ethers.ZeroAddress);
 
             await expect(cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader))
-                .to.be.revertedWithCustomError(cmAccountManager, "IncorrectPrefundAmount")
-                .withArgs(prefundAmount, 0n);
+                .to.be.revertedWithCustomError(cmAccountManager, "InvalidServiceFeeToken")
+                .withArgs(ethers.ZeroAddress);
+        });
+
+        it("should fail if the prefund amount is not approved", async function () {
+            // Set up signers
+            await setupSigners();
+
+            const { cmAccountManager, nullUSD, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+
+            await expect(cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader))
+                .to.be.revertedWithCustomError(nullUSD, "ERC20InsufficientAllowance")
+                .withArgs(await cmAccountManager.getAddress(), 0n, prefundAmount);
         });
 
         it("should allow the prefund amount to be higher then the minimum", async function () {
-            const { cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
+            const { cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } =
                 await loadFixture(deployAndConfigureAllFixture);
 
             const overPrefund = ethers.parseEther("100");
             const newPrefundAmount = prefundAmount + overPrefund;
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
@@ -470,13 +566,12 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD } =
-                await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, prefundAmount, nullUSD } = await loadFixture(deployAndConfigureAllFixture);
 
             newPrefundAmount = prefundAmount + ethers.parseEther("100");
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create distributor CMAccount
             // This is called with managerAdmin as the signer

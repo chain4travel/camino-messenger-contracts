@@ -108,6 +108,10 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
          * @notice Mapping to track the cash-in details per payment token for each pair of fromBot and toBot addresses.
          */
         mapping(address fromBot => mapping(address toBot => mapping(address paymentToken => LastCashIn))) _lastCashInsPerToken;
+        /**
+         * @dev Total cheque payments per payment token
+         */
+        mapping(address => uint256) _totalChequePaymentsPerToken;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ChequeManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -451,10 +455,11 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         // Subtract developer fee from payment amount
         uint256 chequePaymentAmount = paymentAmount - developerFee;
 
-        // Update total cheque payments excluding cheques to the same account
+        // Update total cheque payments per payment token, excluding cheques to the
+        // same account.
         if (fromCMAccount != toCMAccount) {
             ChequeManagerStorage storage $ = _getChequeManagerStorage();
-            $._totalChequePayments += paymentAmount;
+            $._totalChequePaymentsPerToken[paymentToken] += paymentAmount; // Use paymentAmount to include developer fee
         }
 
         // Transfer developer fee to the developer wallet
@@ -548,13 +553,27 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Returns total cheque payments. This is the sum of all cashed in cheques.
+     * @notice [Legacy] Returns total cheque payments. This is the sum [CAM] of all cashed in cheques.
+     *
+     * This function is deprecated, please use `getTotalChequePaymentsPerToken` instead.
      *
      * @return totalChequePayments The total cheque payments made.
      */
     function getTotalChequePayments() public view returns (uint256) {
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
         return $._totalChequePayments;
+    }
+
+    /**
+     * @notice Returns total cheque payments for given payment token.
+     *
+     * @param paymentToken The payment token of the cheque.
+     *
+     * @return totalChequePayments The total cheque payments made for the payment token.
+     */
+    function getTotalChequePaymentsPerToken(address paymentToken) public view returns (uint256) {
+        ChequeManagerStorage storage $ = _getChequeManagerStorage();
+        return $._totalChequePaymentsPerToken[paymentToken];
     }
 
     /***************************************************

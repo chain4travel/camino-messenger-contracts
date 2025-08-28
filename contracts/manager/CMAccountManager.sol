@@ -166,10 +166,6 @@ contract CMAccountManager is
          * @dev ERC20 Service fee token address.
          */
         address _serviceFeeToken;
-        /**
-         * @dev ERC20 Service fee prefund amount.
-         */
-        uint256 _serviceFeePrefundAmount;
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.CMAccountManager")) - 1)) & ~bytes32(uint256(0xff));
@@ -234,16 +230,6 @@ contract CMAccountManager is
      */
     event PrefundAmountUpdated(uint256 indexed oldPrefundAmount, uint256 indexed newPrefundAmount);
 
-    /**
-     * @notice Service fee prefund amount updated event.
-     * @param oldServiceFeePrefundAmount The old service fee prefund amount
-     * @param newServiceFeePrefundAmount The new service fee prefund amount
-     */
-    event ServiceFeePrefundAmountUpdated(
-        uint256 indexed oldServiceFeePrefundAmount,
-        uint256 indexed newServiceFeePrefundAmount
-    );
-
     /***************************************************
      *                    ERRORS                       *
      ***************************************************/
@@ -271,12 +257,6 @@ contract CMAccountManager is
      * @param bookingToken The booking token address
      */
     error InvalidBookingTokenAddress(address bookingToken);
-
-    /**
-     * @notice Incorrect pre fund amount.
-     * @param expected The expected pre fund amount
-     */
-    error IncorrectPrefundAmount(uint256 expected, uint256 sended);
 
     /**
      * @notice Invalid service fee token event.
@@ -315,7 +295,7 @@ contract CMAccountManager is
         $._developerWallet = developerWallet;
         $._developerFeeBp = developerFeeBp;
 
-        // Set initial prefund amount to 100 CAM
+        // Set initial prefund amount to 100 ethers (assuming the service token is 18 decimals)
         $._prefundAmount = 100 ether;
     }
 
@@ -370,13 +350,6 @@ contract CMAccountManager is
             revert CMAccountInvalidAdmin(admin);
         }
 
-        uint256 prefundAmount = getPrefundAmount();
-
-        // Check pre-fund amount
-        if (msg.value < prefundAmount) {
-            revert IncorrectPrefundAmount(prefundAmount, msg.value);
-        }
-
         address latestAccountImplementation = getAccountImplementation();
         if (latestAccountImplementation.code.length == 0) {
             revert CMAccountInvalidImplementation(latestAccountImplementation);
@@ -391,7 +364,7 @@ contract CMAccountManager is
         ERC1967Proxy cmAccountProxy = new ERC1967Proxy(latestAccountImplementation, "");
 
         // Initialize the CMAccount
-        ICMAccount(address(cmAccountProxy)).initialize(address(this), bookingToken, prefundAmount, admin, upgrader);
+        ICMAccount(address(cmAccountProxy)).initialize(address(this), bookingToken, admin, upgrader);
 
         // Set the isCMAccount and creator
         _setCMAccountInfo(address(cmAccountProxy), CMAccountInfo({ isCMAccount: true, creator: msg.sender }));
@@ -399,7 +372,7 @@ contract CMAccountManager is
         // Grant CMACCOUNT_ROLE
         _grantRole(CMACCOUNT_ROLE, address(cmAccountProxy));
 
-        // [CAM] Send the pre fund to the CMAccount
+        // [CAM] Send the msg.value to the CMAccount
         payable(cmAccountProxy).sendValue(msg.value);
 
         // [ServiceFee] Transfer the service fee prefund amount to the CMAccount
@@ -410,6 +383,15 @@ contract CMAccountManager is
         return address(cmAccountProxy);
     }
 
+    /**
+     * @notice Transfers the service fee prefund amount to the CMAccount
+     *
+     * @dev This function is called when a CMAccount is created. The msg.sender
+     * should approve the allowance of the service fee token to the
+     * CMAccountManager.
+     *
+     * @param account The CMAccount address
+     */
     function _transferServiceFeePrefund(address account) internal {
         address serviceFeeToken = getServiceFeeToken();
 
@@ -417,7 +399,7 @@ contract CMAccountManager is
             revert InvalidServiceFeeToken(serviceFeeToken);
         }
 
-        IERC20(serviceFeeToken).safeTransferFrom(msg.sender, account, getServiceFeePrefundAmount());
+        IERC20(serviceFeeToken).safeTransferFrom(msg.sender, account, getPrefundAmount());
     }
 
     function _setCMAccountInfo(address account, CMAccountInfo memory info) internal {
@@ -521,24 +503,6 @@ contract CMAccountManager is
         uint256 oldPrefundAmount = $._prefundAmount;
         $._prefundAmount = newPrefundAmount;
         emit PrefundAmountUpdated(oldPrefundAmount, newPrefundAmount);
-    }
-
-    /**
-     * @notice Returns the service fee prefund amount
-     */
-    function getServiceFeePrefundAmount() public view returns (uint256) {
-        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
-        return $._serviceFeePrefundAmount;
-    }
-
-    /**
-     * @notice Sets the service fee prefund amount
-     */
-    function setServiceFeePrefundAmount(uint256 newServiceFeePrefundAmount) public onlyRole(PREFUND_ADMIN_ROLE) {
-        CMAccountManagerStorage storage $ = _getCMAccountManagerStorage();
-        uint256 oldServiceFeePrefundAmount = $._serviceFeePrefundAmount;
-        $._serviceFeePrefundAmount = newServiceFeePrefundAmount;
-        emit ServiceFeePrefundAmountUpdated(oldServiceFeePrefundAmount, newServiceFeePrefundAmount);
     }
 
     /***************************************************

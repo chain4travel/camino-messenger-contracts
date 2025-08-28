@@ -178,22 +178,7 @@ describe("CMAccount", function () {
                 .withArgs(withdrawer.address, WITHDRAWER_ROLE);
         });
 
-        it("should revert if prefund not spent yet", async function () {
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-
-            const withdrawer = signers.withdrawer;
-            // Try to withdraw more than prefundLeft. cmAccount has 100 CAM prefund and 1 CAM deposit initially
-            const withdrawAmount = ethers.parseEther("50");
-
-            // Try withdraw
-            // PrefundNotSpentYet(withdrawableAmount, prefundLeft, amount);
-            const withdrawTx = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount);
-            await expect(withdrawTx)
-                .to.be.revertedWithCustomError(cmAccount, "PrefundNotSpentYet")
-                .withArgs(ethers.parseEther("1"), ethers.parseEther("100"), ethers.parseEther("50"));
-        });
-
-        it("should withdraw amount if it's not violating the prefund spent", async function () {
+        it("should withdraw all amount (removed prefund checkPrefundCheck)", async function () {
             const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
 
             const withdrawer = signers.withdrawer;
@@ -207,6 +192,33 @@ describe("CMAccount", function () {
 
             // Check balances
             await expect(withdrawTx).to.changeEtherBalances([cmAccount, withdrawer], [-withdrawAmount, withdrawAmount]);
+
+            // Update @2025-08-28: We have removed checkPrefund check, so we can withdraw all amount
+
+            // Try to withdraw all amount. We withdrawn 1 CAM above, so now
+            // cmAccount has 100 CAM left.
+            const withdrawAmount2 = ethers.parseEther("100");
+
+            // Try withdraw
+            const withdrawTx2 = cmAccount.connect(withdrawer).withdraw(withdrawer.address, withdrawAmount2);
+            await expect(withdrawTx2).to.be.emit(cmAccount, "Withdraw").withArgs(withdrawer.address, withdrawAmount2);
+
+            // Check balances
+            await expect(withdrawTx2).to.changeEtherBalances(
+                [cmAccount, withdrawer],
+                [-withdrawAmount2, withdrawAmount2],
+            );
+        });
+
+        it("should revert if withdraw recipient is zero address", async function () {
+            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
+
+            const withdrawer = signers.withdrawer;
+            const withdrawAmount = ethers.parseEther("0.5");
+
+            // Withdraw
+            const withdrawTx = cmAccount.connect(withdrawer).withdraw(ethers.ZeroAddress, withdrawAmount);
+            await expect(withdrawTx).to.be.revertedWithCustomError(cmAccount, "TransferToZeroAddress");
         });
     });
 
@@ -277,7 +289,7 @@ describe("CMAccount", function () {
 
             const bot = signers.otherAccount1;
 
-            const withdrawAmount = ethers.parseEther("0.1"); // Small amount, fixture has +1 CAM surplus over the prefund
+            const withdrawAmount = ethers.parseEther("25"); // Big amount, we removed checkPrefundCheck.
 
             // Register bot
             const withdrawTx = cmAccount
@@ -286,23 +298,6 @@ describe("CMAccount", function () {
 
             await expect(withdrawTx).to.changeEtherBalances([cmAccount, bot], [-withdrawAmount, withdrawAmount]);
             await expect(withdrawTx).to.emit(cmAccount, "MessengerBotAdded").withArgs(bot.address);
-        });
-
-        it("should revert adding messenger bot with gas money withdrawal if prefund not spent", async function () {
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-
-            const bot = signers.otherAccount1;
-
-            const withdrawAmount = ethers.parseEther("10"); // Fixture has +1 CAM surplus over the prefund, 10 CAM should revert
-
-            // Register bot
-            await expect(
-                cmAccount
-                    .connect(signers.cmAccountAdmin)
-                    ["addMessengerBot(address,uint256)"](bot.address, withdrawAmount),
-            )
-                .to.revertedWithCustomError(cmAccount, "PrefundNotSpentYet")
-                .withArgs(ethers.parseEther("1"), ethers.parseEther("100"), ethers.parseEther("10"));
         });
     });
 
@@ -313,6 +308,20 @@ describe("CMAccount", function () {
 
             // Supplier and distributor CM accounts has 10k NullUSD from the fixture
             const amount = ethers.parseEther("100");
+
+            // Try to send to zero address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.withdrawer)
+                    .transferERC20(await nullUSD.getAddress(), ethers.ZeroAddress, amount),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "TransferToZeroAddress");
+
+            // Try to send with non-auth address
+            await expect(
+                supplierCMAccount
+                    .connect(signers.otherAccount1)
+                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount2.address, amount),
+            ).to.be.revertedWithCustomError(supplierCMAccount, "AccessControlUnauthorizedAccount");
 
             // Transfer
             await expect(
@@ -328,19 +337,23 @@ describe("CMAccount", function () {
             // Check balance
             expect(await nullUSD.balanceOf(signers.otherAccount1.address)).to.be.equal(amount);
 
-            // Try to send to zero address
+            // Get remaining balance of NullUSD
+            const supplierNullUSDBalance = await nullUSD.balanceOf(await supplierCMAccount.getAddress());
+
+            // Try to transfer all remaining balance
             await expect(
                 supplierCMAccount
                     .connect(signers.withdrawer)
-                    .transferERC20(await nullUSD.getAddress(), ethers.ZeroAddress, amount),
-            ).to.be.revertedWithCustomError(supplierCMAccount, "TransferToZeroAddress");
+                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount1.address, supplierNullUSDBalance),
+            ).to.changeTokenBalances(
+                nullUSD,
+                [await supplierCMAccount.getAddress(), signers.otherAccount1],
+                [-supplierNullUSDBalance, supplierNullUSDBalance],
+            );
 
-            // Try to send with non-auth address
-            await expect(
-                supplierCMAccount
-                    .connect(signers.otherAccount1)
-                    .transferERC20(await nullUSD.getAddress(), signers.otherAccount2.address, amount),
-            ).to.be.revertedWithCustomError(supplierCMAccount, "AccessControlUnauthorizedAccount");
+            // Check balances
+            expect(await nullUSD.balanceOf(signers.otherAccount1.address)).to.be.equal(supplierNullUSDBalance + amount);
+            expect(await nullUSD.balanceOf(await supplierCMAccount.getAddress())).to.be.equal(0n);
         });
 
         it("should transfer ERC721 correctly after it expires", async function () {

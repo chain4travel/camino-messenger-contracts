@@ -62,8 +62,7 @@ describe("ChequeManager", function () {
         });
 
         it("Should hash the messenger cheque correctly", async function () {
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-            const { nullUSD } = await loadFixture(deployNullUSDFixture);
+            const { cmAccount, nullUSD } = await loadFixture(deployCMAccountWithDepositFixture);
 
             const cheque = {
                 fromCMAccount: await cmAccount.getAddress(),
@@ -94,8 +93,7 @@ describe("ChequeManager", function () {
 
         it("Should hash TypedData correctly", async function () {
             // Set up signers and contract instance
-            const { cmAccount } = await loadFixture(deployCMAccountWithDepositFixture);
-            const { nullUSD } = await loadFixture(deployNullUSDFixture);
+            const { cmAccount, nullUSD } = await loadFixture(deployCMAccountWithDepositFixture);
 
             // Create a MessengerCheque object
             const cheque = {
@@ -135,11 +133,12 @@ describe("ChequeManager", function () {
 
     describe("Cheque Operations", function () {
         it("Should verify a cheque with a valid signature", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -202,11 +201,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify a cheque with an invalid signature", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -270,11 +270,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify a cheque with non-allowed signer", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -335,11 +336,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify a cheque if from/to is not CMAccount", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -429,11 +431,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify an expired cheque", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -498,11 +501,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should not verify/cash in a cheque with an invalid payment token", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -581,11 +585,12 @@ describe("ChequeManager", function () {
         });
 
         it("Should cash-in multiple cheques correctly", async function () {
-            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
-                await loadFixture(deployCMAccountWithDepositFixture);
+            const { cmAccount, cmAccountManager, prefundAmount, nullUSD, nullUSDDecimals } = await loadFixture(
+                deployCMAccountWithDepositFixture,
+            );
 
             // Approve service fee
-            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
 
             // Create receiving account (toCMAccount)
             const tx = await cmAccountManager.createCMAccount(
@@ -678,10 +683,11 @@ describe("ChequeManager", function () {
             // Sanity checks: should set lastCashIns
             const lastCashIn = await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot, cheque.paymentToken);
             expect(lastCashIn).to.be.deep.equal([cheque.counter, cheque.amount, createdAt, createdAt + 300n]);
+
             // Check total cheque payments
             // Total cheque payments should be equal to the last cheque amount
             // because we use same from/to CM accounts
-            expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque.amount);
+            expect(await cmAccount.getTotalChequePaymentsPerToken(cheque.paymentToken)).to.be.equal(cheque.amount);
 
             /**
              * Second cheque
@@ -760,7 +766,105 @@ describe("ChequeManager", function () {
             // Check total cheque payments
             // Total cheque payments should be equal to the last cheque amount
             // because we use same from/to CM account pairs for cheques above
-            expect(await cmAccount.getTotalChequePayments()).to.be.equal(cheque2.amount);
+            expect(await cmAccount.getTotalChequePaymentsPerToken(cheque2.paymentToken)).to.be.equal(cheque2.amount);
+
+            // DIFFERENT CM ACCOUNT ----------------------------------------------------------------
+
+            // Approve ERC20 service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), prefundAmount);
+
+            // Create different CM Account to test total cheque payments
+            const diffCMAccount_tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
+            );
+
+            const diffCMAccount_receipt = await diffCMAccount_tx.wait();
+
+            // Parse event to get the CMAccount address
+            const diffCMAccount_event = diffCMAccount_receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const diffCMAccount_parsedEvent = cmAccountManager.interface.parseLog(diffCMAccount_event);
+            const diffCMAccountAddress = diffCMAccount_parsedEvent.args.account;
+
+            // New cheque with a higher counter and amount
+            const diffCMAccount_cheque = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: diffCMAccountAddress,
+                toBot: signers.otherAccount3.address, // Use different bot
+                counter: 100,
+                amount: ethers.parseEther("0.432"),
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: await nullUSD.getAddress(),
+            };
+
+            // Sign Cheque
+            const diffCMAccount_signature = await signMessengerCheque(diffCMAccount_cheque, signers.chequeOperator);
+
+            // Cash-in cheque
+            const diffCMAccount_cashInResponse = await cmAccount.cashInCheque(
+                diffCMAccount_cheque.fromCMAccount,
+                diffCMAccount_cheque.toCMAccount,
+                diffCMAccount_cheque.toBot,
+                diffCMAccount_cheque.counter,
+                diffCMAccount_cheque.amount,
+                diffCMAccount_cheque.createdAt,
+                diffCMAccount_cheque.expiresAt,
+                diffCMAccount_cheque.paymentToken,
+                diffCMAccount_signature,
+            );
+
+            // Calculate developer fee
+            const diffCMAccount_developerFee = (diffCMAccount_cheque.amount * developerFeeBp) / 10000n;
+
+            // Should emit event with correct data
+            await expect(await diffCMAccount_cashInResponse)
+                .to.emit(cmAccount, "ChequeCashedIn")
+                .withArgs(
+                    diffCMAccount_cheque.fromCMAccount,
+                    diffCMAccount_cheque.toCMAccount,
+                    signers.chequeOperator.address, // fromBot
+                    diffCMAccount_cheque.toBot,
+                    diffCMAccount_cheque.counter,
+                    diffCMAccount_cheque.amount,
+                    diffCMAccount_cheque.amount - diffCMAccount_developerFee, // paid amount for this cheque
+                    diffCMAccount_developerFee,
+                    diffCMAccount_cheque.paymentToken,
+                );
+
+            // CMAccount balance decrease by cheque amount
+            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+                nullUSD,
+                cmAccount,
+                -diffCMAccount_cheque.amount,
+            );
+
+            // diffCMAccount balance increase by cheque amount - developerFee
+            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+                nullUSD,
+                diffCMAccountAddress,
+                diffCMAccount_cheque.amount - diffCMAccount_developerFee,
+            );
+
+            // DeveloperWallet balance increase by developerFee
+            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+                nullUSD,
+                signers.developerWallet,
+                diffCMAccount_developerFee,
+            );
+
+            // Check total cheque payments per payment token, it should be equal to the sum of cheque2.amount and diffCMAccount_cheque.amount
+            expect(await cmAccount.getTotalChequePaymentsPerToken(diffCMAccount_cheque.paymentToken)).to.be.equal(
+                diffCMAccount_cheque.amount + cheque2.amount,
+            );
 
             // CHECK INVALID AMOUNT AND COUNTER ----------------------------------------------------
 
@@ -866,10 +970,6 @@ describe("ChequeManager", function () {
 
             await expect(cashInResponse3).to.be.not.reverted;
 
-            // FIXME: Withdraw logic should revised. We can not enforce it only for
-            // cheques as we do not them for that anymore.Do we need to prevent
-            // prefund to be withdrawn? Leave it only for gas money?
-
             // Try withdraw
             const withdrawAmount = ethers.parseEther("0.1");
             const withdrawer = signers.withdrawer;
@@ -906,7 +1006,7 @@ describe("ChequeManager", function () {
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
 
             // Initial total cheque payments should be zero
-            expect(await cmAccount.getTotalChequePayments()).to.be.equal(0n);
+            expect(await cmAccount.getTotalChequePaymentsPerToken(cheque.paymentToken)).to.be.equal(0n);
 
             // Cash-in cheque
             const cashInResponse = await cmAccount.cashInCheque(
@@ -924,6 +1024,9 @@ describe("ChequeManager", function () {
 
             // After cash-in total cheque payments should still be zero because the
             // cheque is from the same account (fromCMAccount === toCMAccount)
+            expect(await cmAccount.getTotalChequePaymentsPerToken(cheque.paymentToken)).to.be.equal(0n);
+
+            // Check legacy `getTotalChequePayments` function (for old CAM cheques)
             expect(await cmAccount.getTotalChequePayments()).to.be.equal(0n);
         });
     });
