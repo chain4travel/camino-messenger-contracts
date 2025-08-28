@@ -323,6 +323,7 @@ contract CMAccount is
      * @param amount The amount to check if it's withdrawable
      */
     function _checkPrefundSpent(uint256 amount) private view {
+        // FIXME: Revise prefund logic. We don't use the prefund for cheques anymore. Maybe leave it only for gas money?
         uint256 prefundAmount = getPrefundAmount();
         uint256 totalChequePayments = getTotalChequePayments();
 

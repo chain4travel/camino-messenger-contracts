@@ -432,10 +432,14 @@ describe("CMAccountManager", function () {
         });
 
         it("should allow the prefund amount to be higher then the minimum", async function () {
-            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
+                await loadFixture(deployAndConfigureAllFixture);
 
             const overPrefund = ethers.parseEther("100");
             const newPrefundAmount = prefundAmount + overPrefund;
+
+            // Approve service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
 
             const tx = await cmAccountManager.createCMAccount(
                 signers.cmAccountAdmin.address,
@@ -466,9 +470,13 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager, prefundAmount } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD } =
+                await loadFixture(deployAndConfigureAllFixture);
 
             newPrefundAmount = prefundAmount + ethers.parseEther("100");
+
+            // Approve service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
 
             // Create distributor CMAccount
             // This is called with managerAdmin as the signer

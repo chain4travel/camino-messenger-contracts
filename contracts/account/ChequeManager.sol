@@ -135,7 +135,8 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         uint256 counter,
         uint256 amount,
         uint256 paidChequeAmount,
-        uint256 paidDeveloperFee
+        uint256 paidDeveloperFee,
+        address paymentToken
     );
 
     /***************************************************
@@ -364,7 +365,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         }
 
         ChequeManagerStorage storage $ = _getChequeManagerStorage();
-        LastCashIn storage lastCashIn = $._lastCashIns[signer][toBot];
+        LastCashIn storage lastCashIn = $._lastCashInsPerToken[signer][toBot][paymentToken];
 
         // Revert if the cheque amount is lower then the last recorded amount
         if (amount < lastCashIn.amount) {
@@ -443,7 +444,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         }
 
         // Transfer developer fee to the developer wallet
-        payable(ICMAccountManager(getManagerAddress()).getDeveloperWallet()).sendValue(developerFee);
+        processPayment(IERC20(paymentToken), developerFee, ICMAccountManager(getManagerAddress()).getDeveloperWallet());
 
         // Transfer the cheque payment amount to the `toCMAccount`
         processPayment(IERC20(paymentToken), chequePaymentAmount, toCMAccount);
@@ -457,7 +458,8 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
             counter,
             amount, // Amount of the cheque
             chequePaymentAmount, // Paid cheque amount to the `toCMAccount`
-            developerFee // Paid developer fee (cut from the cheque amount)
+            developerFee, // Paid developer fee (cut from the cheque amount)
+            paymentToken // Payment token
         );
     }
 
