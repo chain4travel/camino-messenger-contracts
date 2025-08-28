@@ -1,743 +1,5 @@
 # Solidity API
 
-## ICMAccount
-
-### initialize
-
-```solidity
-function initialize(address manager, address bookingToken, address owner, address upgrader) external
-```
-
-## CMAccountManager
-
-This contract manages the creation of the Camino Messenger accounts by
-deploying {ERC1967Proxy} proxies that point to the{CMAccount} implementation
-address.
-
-Create CM Account: Users who want to create an account should call
-`createCMAccount(address admin, address upgrader)` function with addresses of
-the accounts admin and upgrader roles and also send the pre fund amount,
-which is currently set as 100 CAMs. When the manager contract is paused,
-account creation is stopped.
-
-Developer Fee: This contracts also keeps the info about the developer wallet
-and fee basis points. Which are used during the cheque cash in to pay for the
-developer fee.
-
-Service Registry: {CMAccountManager} also acts as a registry for the services
-that {CMAccount} contracts add as a supported or wanted service. Registry
-works by hashing (keccak256) the service name (string) and creating a mapping
-as keccak256(serviceName) => serviceName. And provides functions that
-{CMAccount} function uses to register services. The {CMAccount} only keeps
-the hashes (byte32) of the registered services.
-
-### PAUSER_ROLE
-
-```solidity
-bytes32 PAUSER_ROLE
-```
-
-Pauser role can pause the contract. Currently this only affects the
-creation of CM Accounts. When paused, account creation is stopped.
-
-### UPGRADER_ROLE
-
-```solidity
-bytes32 UPGRADER_ROLE
-```
-
-Upgrader role can upgrade the contract to a new implementation.
-
-### VERSIONER_ROLE
-
-```solidity
-bytes32 VERSIONER_ROLE
-```
-
-Versioner role can set new {CMAccount} implementation address. When a
-new implementation address is set, it is used for the new {CMAccount}
-creations.
-
-The old {CMAccount} contracts are not affected by this. Owners of those
-should do the upgrade manually by calling the `upgradeToAndCall(address)`
-function on the account.
-
-### FEE_ADMIN_ROLE
-
-```solidity
-bytes32 FEE_ADMIN_ROLE
-```
-
-Fee admin role can set the developer fee basis points which used for
-calculating the developer fee that is cut from the cheque payments.
-
-### DEVELOPER_WALLET_ADMIN_ROLE
-
-```solidity
-bytes32 DEVELOPER_WALLET_ADMIN_ROLE
-```
-
-Developer wallet admin role can set the developer wallet address
-which is used to receive the developer fee.
-
-### PREFUND_ADMIN_ROLE
-
-```solidity
-bytes32 PREFUND_ADMIN_ROLE
-```
-
-Prefund admin role can set the mandatory prefund amount for {CMAccount}
-contracts.
-
-### SERVICE_REGISTRY_ADMIN_ROLE
-
-```solidity
-bytes32 SERVICE_REGISTRY_ADMIN_ROLE
-```
-
-Service registry admin role can add and remove services to the service
-registry mapping. Implemented by {ServiceRegistry} contract.
-
-### CMACCOUNT_ROLE
-
-```solidity
-bytes32 CMACCOUNT_ROLE
-```
-
-This role is granted to the created CM Accounts. It is used to keep
-an enumerable list of CM Accounts.
-
-### SERVICE_FEE_TOKEN_ADMIN_ROLE
-
-```solidity
-bytes32 SERVICE_FEE_TOKEN_ADMIN_ROLE
-```
-
-This role is able to set the service fee token address.
-
-### CMAccountInfo
-
-CMAccount info struct, to keep track of created CM Accounts and their
-creators.
-
-```solidity
-struct CMAccountInfo {
-    bool isCMAccount;
-    address creator;
-}
-```
-
-### CMAccountManagerStorage
-
-```solidity
-struct CMAccountManagerStorage {
-  address _latestAccountImplementation;
-  uint256 _prefundAmount;
-  address _developerWallet;
-  uint256 _developerFeeBp;
-  address _bookingToken;
-  mapping(address => struct CMAccountManager.CMAccountInfo) _cmAccountInfo;
-  address _serviceFeeToken;
-}
-```
-
-### CMAccountCreated
-
-```solidity
-event CMAccountCreated(address account)
-```
-
-CM Account created event.
-
-#### Parameters
-
-| Name    | Type    | Description                      |
-| ------- | ------- | -------------------------------- |
-| account | address | The address of the new CMAccount |
-
-### CMAccountImplementationUpdated
-
-```solidity
-event CMAccountImplementationUpdated(address oldImplementation, address newImplementation)
-```
-
-CM Account implementation address updated event.
-
-#### Parameters
-
-| Name              | Type    | Description                    |
-| ----------------- | ------- | ------------------------------ |
-| oldImplementation | address | The old implementation address |
-| newImplementation | address | The new implementation address |
-
-### DeveloperWalletUpdated
-
-```solidity
-event DeveloperWalletUpdated(address oldDeveloperWallet, address newDeveloperWallet)
-```
-
-Developer wallet address updated event.
-
-#### Parameters
-
-| Name               | Type    | Description                      |
-| ------------------ | ------- | -------------------------------- |
-| oldDeveloperWallet | address | The old developer wallet address |
-| newDeveloperWallet | address | The new developer wallet address |
-
-### DeveloperFeeBpUpdated
-
-```solidity
-event DeveloperFeeBpUpdated(uint256 oldDeveloperFeeBp, uint256 newDeveloperFeeBp)
-```
-
-Developer fee basis points updated event.
-
-#### Parameters
-
-| Name              | Type    | Description                        |
-| ----------------- | ------- | ---------------------------------- |
-| oldDeveloperFeeBp | uint256 | The old developer fee basis points |
-| newDeveloperFeeBp | uint256 | The new developer fee basis points |
-
-### BookingTokenAddressUpdated
-
-```solidity
-event BookingTokenAddressUpdated(address oldBookingToken, address newBookingToken)
-```
-
-Booking token address updated event.
-
-#### Parameters
-
-| Name            | Type    | Description                   |
-| --------------- | ------- | ----------------------------- |
-| oldBookingToken | address | The old booking token address |
-| newBookingToken | address | The new booking token address |
-
-### ServiceFeeTokenUpdated
-
-```solidity
-event ServiceFeeTokenUpdated(address oldServiceFeeToken, address newServiceFeeToken)
-```
-
-Service fee token address updated event.
-
-#### Parameters
-
-| Name               | Type    | Description                       |
-| ------------------ | ------- | --------------------------------- |
-| oldServiceFeeToken | address | The old service fee token address |
-| newServiceFeeToken | address | The new service fee token address |
-
-### PrefundAmountUpdated
-
-```solidity
-event PrefundAmountUpdated(uint256 oldPrefundAmount, uint256 newPrefundAmount)
-```
-
-Prefund amount updated event.
-
-#### Parameters
-
-| Name             | Type    | Description            |
-| ---------------- | ------- | ---------------------- |
-| oldPrefundAmount | uint256 | The old prefund amount |
-| newPrefundAmount | uint256 | The new prefund amount |
-
-### CMAccountInvalidImplementation
-
-```solidity
-error CMAccountInvalidImplementation(address implementation)
-```
-
-The implementation of the CMAccount is invalid.
-
-#### Parameters
-
-| Name           | Type    | Description                                 |
-| -------------- | ------- | ------------------------------------------- |
-| implementation | address | The implementation address of the CMAccount |
-
-### CMAccountInvalidAdmin
-
-```solidity
-error CMAccountInvalidAdmin(address admin)
-```
-
-The admin address is invalid.
-
-#### Parameters
-
-| Name  | Type    | Description       |
-| ----- | ------- | ----------------- |
-| admin | address | The admin address |
-
-### InvalidDeveloperWallet
-
-```solidity
-error InvalidDeveloperWallet(address developerWallet)
-```
-
-Invalid developer address.
-
-#### Parameters
-
-| Name            | Type    | Description                  |
-| --------------- | ------- | ---------------------------- |
-| developerWallet | address | The developer wallet address |
-
-### InvalidBookingTokenAddress
-
-```solidity
-error InvalidBookingTokenAddress(address bookingToken)
-```
-
-Invalid booking token address.
-
-#### Parameters
-
-| Name         | Type    | Description               |
-| ------------ | ------- | ------------------------- |
-| bookingToken | address | The booking token address |
-
-### InvalidServiceFeeToken
-
-```solidity
-error InvalidServiceFeeToken(address serviceFeeToken)
-```
-
-Invalid service fee token event.
-
-#### Parameters
-
-| Name            | Type    | Description                   |
-| --------------- | ------- | ----------------------------- |
-| serviceFeeToken | address | The service fee token address |
-
-### constructor
-
-```solidity
-constructor() public
-```
-
-### initialize
-
-```solidity
-function initialize(address defaultAdmin, address pauser, address upgrader, address versioner, address developerWallet, uint256 developerFeeBp) public
-```
-
-### pause
-
-```solidity
-function pause() public
-```
-
-Pauses the CMAccountManager contract. Currently this only affects the
-creation of CMAccount. When paused, account creation is stopped.
-
-### unpause
-
-```solidity
-function unpause() public
-```
-
-Unpauses the CMAccountManager contract.
-
-### \_authorizeUpgrade
-
-```solidity
-function _authorizeUpgrade(address newImplementation) internal
-```
-
-Authorization for the CMAccountManager contract upgrade.
-
-### createCMAccount
-
-```solidity
-function createCMAccount(address admin, address upgrader) external payable returns (address)
-```
-
-Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
-implementation from the manager.
-
-Because this function is deploying a contract, it reverts if the caller is
-not KYC or KYB verified. (For EOAs only)
-
-Caller must send the pre-fund amount with the transaction.
-
-_Emits a {CMAccountCreated} event._
-
-### \_transferServiceFeePrefund
-
-```solidity
-function _transferServiceFeePrefund(address account) internal
-```
-
-Transfers the service fee prefund amount to the CMAccount
-
-_This function is called when a CMAccount is created. The msg.sender
-should approve the allowance of the service fee token to the
-CMAccountManager._
-
-#### Parameters
-
-| Name    | Type    | Description           |
-| ------- | ------- | --------------------- |
-| account | address | The CMAccount address |
-
-### \_setCMAccountInfo
-
-```solidity
-function _setCMAccountInfo(address account, struct CMAccountManager.CMAccountInfo info) internal
-```
-
-### getCMAccountCreator
-
-```solidity
-function getCMAccountCreator(address account) public view returns (address)
-```
-
-Returns the given account's creator.
-
-#### Parameters
-
-| Name    | Type    | Description         |
-| ------- | ------- | ------------------- |
-| account | address | The account address |
-
-### isCMAccount
-
-```solidity
-function isCMAccount(address account) public view returns (bool)
-```
-
-Check if an address is CMAccount created by the manager.
-
-#### Parameters
-
-| Name    | Type    | Description                  |
-| ------- | ------- | ---------------------------- |
-| account | address | The account address to check |
-
-### getServiceFeeToken
-
-```solidity
-function getServiceFeeToken() public view returns (address)
-```
-
-Returns the service fee token address.
-
-### setServiceFeeToken
-
-```solidity
-function setServiceFeeToken(address serviceFeeToken) public
-```
-
-Sets the service fee token address.
-
-#### Parameters
-
-| Name            | Type    | Description                   |
-| --------------- | ------- | ----------------------------- |
-| serviceFeeToken | address | The service fee token address |
-
-### \_setServiceFeeToken
-
-```solidity
-function _setServiceFeeToken(address serviceFeeToken) internal
-```
-
-### getAccountImplementation
-
-```solidity
-function getAccountImplementation() public view returns (address)
-```
-
-Returns the CMAccount implementation address.
-
-### setAccountImplementation
-
-```solidity
-function setAccountImplementation(address newImplementation) public
-```
-
-Set a new CMAccount implementation address.
-
-#### Parameters
-
-| Name              | Type    | Description                    |
-| ----------------- | ------- | ------------------------------ |
-| newImplementation | address | The new implementation address |
-
-### \_setAccountImplementation
-
-```solidity
-function _setAccountImplementation(address newImplementation) internal
-```
-
-### getPrefundAmount
-
-```solidity
-function getPrefundAmount() public view returns (uint256)
-```
-
-Returns the prefund amount.
-
-### setPrefundAmount
-
-```solidity
-function setPrefundAmount(uint256 newPrefundAmount) public
-```
-
-Sets the prefund amount.
-
-### getBookingTokenAddress
-
-```solidity
-function getBookingTokenAddress() public view returns (address)
-```
-
-Returns the booking token address.
-
-### setBookingTokenAddress
-
-```solidity
-function setBookingTokenAddress(address token) public
-```
-
-Sets booking token address.
-
-### \_setBookingTokenAddress
-
-```solidity
-function _setBookingTokenAddress(address token) internal
-```
-
-### getDeveloperWallet
-
-```solidity
-function getDeveloperWallet() public view returns (address developerWallet)
-```
-
-Returns developer wallet address.
-
-### setDeveloperWallet
-
-```solidity
-function setDeveloperWallet(address developerWallet) public
-```
-
-Sets developer wallet address.
-
-### getDeveloperFeeBp
-
-```solidity
-function getDeveloperFeeBp() public view returns (uint256 developerFeeBp)
-```
-
-Returns developer fee in basis points.
-
-### setDeveloperFeeBp
-
-```solidity
-function setDeveloperFeeBp(uint256 bp) public
-```
-
-Sets developer fee in basis points.
-
-A basis point (bp) is one hundredth of 1 percentage point.
-
-1 bp = 0.01%, 1/10,000⁠, or 0.0001.
-10 bp = 0.1%, 1/1,000⁠, or 0.001.
-100 bp = 1%, ⁠1/100⁠, or 0.01.
-
-### registerService
-
-```solidity
-function registerService(string serviceName) public
-```
-
-Registers a given service name. CM Accounts can only register services
-if they are also registered in the service registry on the manager contract.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### unregisterService
-
-```solidity
-function unregisterService(string serviceName) public
-```
-
-Unregisters a given service name. CM Accounts will not be able to register
-the service anymore.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-## CMAccountManagerTest
-
-### getVersion
-
-```solidity
-function getVersion() public pure returns (string)
-```
-
-## ServiceRegistry
-
-Service registry is used by the {CMAccountManager} contract to register
-services by hashing (keccak256) the service name (string) and creating a mapping
-as keccak256(serviceName) => serviceName.
-
-### ServiceRegistryStorage
-
-```solidity
-struct ServiceRegistryStorage {
-  struct EnumerableSet.Bytes32Set _servicesHashSet;
-  mapping(bytes32 => string) _serviceNameByHash;
-  mapping(string => bytes32) _hashByServiceName;
-}
-```
-
-### ServiceRegistered
-
-```solidity
-event ServiceRegistered(string serviceName, bytes32 serviceHash)
-```
-
-### ServiceUnregistered
-
-```solidity
-event ServiceUnregistered(string serviceName, bytes32 serviceHash)
-```
-
-### ServiceAlreadyRegistered
-
-```solidity
-error ServiceAlreadyRegistered(string serviceName)
-```
-
-### ServiceNotRegistered
-
-```solidity
-error ServiceNotRegistered()
-```
-
-### \_\_ServiceRegistry_init
-
-```solidity
-function __ServiceRegistry_init() internal
-```
-
-### \_\_ServiceRegistry_init_unchained
-
-```solidity
-function __ServiceRegistry_init_unchained() internal
-```
-
-### \_registerServiceName
-
-```solidity
-function _registerServiceName(string serviceName) internal virtual
-```
-
-Adds a new service by its name. This function calculates the hash of the
-service name and adds it to the registry
-
-{serviceName} is the pkg + service name as:
-
-```text
- ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
-"cmp.services.accommodation.v1alpha.AccommodationSearchService"
-```
-
-_These services are coming from the Camino Messenger Protocol's protobuf
-definitions._
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### \_unregisterServiceName
-
-```solidity
-function _unregisterServiceName(string serviceName) internal virtual
-```
-
-Removes a service by its name. This function calculates the hash of the
-service name and removes it from the registry.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### getRegisteredServiceNameByHash
-
-```solidity
-function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
-```
-
-Returns the name of a service by its hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getRegisteredServiceHashByName
-
-```solidity
-function getRegisteredServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
-```
-
-Returns the hash of a service by its name.
-
-#### Parameters
-
-| Name        | Type   | Description         |
-| ----------- | ------ | ------------------- |
-| serviceName | string | Name of the service |
-
-### getAllRegisteredServiceHashes
-
-```solidity
-function getAllRegisteredServiceHashes() public view returns (bytes32[] services)
-```
-
-Returns all registered service **hashes**.
-
-#### Return Values
-
-| Name     | Type      | Description                   |
-| -------- | --------- | ----------------------------- |
-| services | bytes32[] | All registered service hashes |
-
-### getAllRegisteredServiceNames
-
-```solidity
-function getAllRegisteredServiceNames() public view returns (string[] services)
-```
-
-Returns all registered service **names**.
-
-#### Return Values
-
-| Name     | Type     | Description                  |
-| -------- | -------- | ---------------------------- |
-| services | string[] | All registered service names |
-
 ## CMAccount
 
 A CM Account manages funds, minting/buying of booking tokens, provided
@@ -1973,6 +1235,678 @@ Returns the gas money withdrawal details for an account.
 | periodStart     | uint256 | timestamp of the withdrawal period start |
 | withdrawnAmount | uint256 | amount withdrawn within the period       |
 
+## BookingToken
+
+Booking Token contract represents a booking done on the Camino Messenger.
+
+Suppliers can mint Booking Tokens and reserve them for a distributor address to
+buy.
+
+Booking Tokens can have zero price, meaning that the payment will be done
+off-chain.
+
+When a token is minted with a reservation, it can not be transferred until the
+expiration timestamp is reached or the token is bought.
+
+### VERSION_MAJOR
+
+```solidity
+uint16 VERSION_MAJOR
+```
+
+### VERSION_MINOR
+
+```solidity
+uint16 VERSION_MINOR
+```
+
+### VERSION_PATCH
+
+```solidity
+uint16 VERSION_PATCH
+```
+
+### version
+
+```solidity
+function version() external pure virtual returns (uint16 major, uint16 minor, uint16 patch)
+```
+
+Returns the semantic version of the contract.
+
+- no version() func: Legacy version without Cancellation support
+- v1.0.0: Version with Cancellation support
+
+#### Return Values
+
+| Name  | Type   | Description                                   |
+| ----- | ------ | --------------------------------------------- |
+| major | uint16 | Major version (breaking changes)              |
+| minor | uint16 | Minor version (backwards-compatible features) |
+| patch | uint16 | Patch version (backwards-compatible fixes)    |
+
+### UPGRADER_ROLE
+
+```solidity
+bytes32 UPGRADER_ROLE
+```
+
+Upgrader role can upgrade the contract to a new implementation.
+
+### MIN_EXPIRATION_ADMIN_ROLE
+
+```solidity
+bytes32 MIN_EXPIRATION_ADMIN_ROLE
+```
+
+This role can set the mininum allowed expiration timestamp difference.
+
+### NATIVE_PAYMENT
+
+```solidity
+address NATIVE_PAYMENT
+```
+
+Tokens are directly transferred to the recipient.
+
+_Special address for native payments._
+
+### OFFCHAIN_PAYMENT
+
+```solidity
+address OFFCHAIN_PAYMENT
+```
+
+A third-party service is used to handle payments.
+
+_Special address for offchain payments. The enum for this
+is defined in the Camino Messenger Protocol's
+cmp.types.<version>.IsoCurrency enum (currency.proto file)._
+
+### BookingStatus
+
+```solidity
+enum BookingStatus {
+    UNSPECIFIED,
+    RESERVED,
+    RESERVATION_EXPIRED,
+    BOUGHT,
+    CANCELLED
+}
+```
+
+### TokenReservation
+
+```solidity
+struct TokenReservation {
+  address reservedFor;
+  address supplier;
+  uint256 expirationTimestamp;
+  uint256 price;
+  contract IERC20 paymentToken;
+  uint256 offchainPaymentCurrency;
+  bool cancellable;
+}
+```
+
+### BookingTokenStorage
+
+```solidity
+struct BookingTokenStorage {
+  address _manager;
+  uint256 _nextTokenId;
+  uint256 _minExpirationTimestampDiff;
+  mapping(uint256 => struct BookingToken.TokenReservation) _reservations;
+  mapping(uint256 => enum BookingToken.BookingStatus) _bookingStatus;
+}
+```
+
+### \_getBookingTokenStorage
+
+```solidity
+function _getBookingTokenStorage() internal pure returns (struct BookingToken.BookingTokenStorage $)
+```
+
+### TokenReserved
+
+```solidity
+event TokenReserved(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable)
+```
+
+Event emitted when a token is reserved.
+
+#### Parameters
+
+| Name                    | Type            | Description           |
+| ----------------------- | --------------- | --------------------- |
+| tokenId                 | uint256         | token id              |
+| reservedFor             | address         | reserved for address  |
+| supplier                | address         | supplier address      |
+| expirationTimestamp     | uint256         | expiration timestamp  |
+| price                   | uint256         | price of the token    |
+| paymentToken            | contract IERC20 | payment token address |
+| offchainPaymentCurrency | uint256         |                       |
+| cancellable             | bool            |                       |
+
+### TokenBought
+
+```solidity
+event TokenBought(uint256 tokenId, address buyer)
+```
+
+Event emitted when a token is bought.
+
+#### Parameters
+
+| Name    | Type    | Description   |
+| ------- | ------- | ------------- |
+| tokenId | uint256 | token id      |
+| buyer   | address | buyer address |
+
+### TokenReservationExpired
+
+```solidity
+event TokenReservationExpired(uint256 tokenId)
+```
+
+Event emitted when a token is expired.
+
+#### Parameters
+
+| Name    | Type    | Description |
+| ------- | ------- | ----------- |
+| tokenId | uint256 | token id    |
+
+### ExpirationTimestampTooSoon
+
+```solidity
+error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff)
+```
+
+Error for expiration timestamp too soon. It must be at least
+`_minExpirationTimestampDiff` seconds in the future.
+
+### NotCMAccount
+
+```solidity
+error NotCMAccount(address account)
+```
+
+Address is not a CM Account.
+
+#### Parameters
+
+| Name    | Type    | Description     |
+| ------- | ------- | --------------- |
+| account | address | account address |
+
+### ReservationMismatch
+
+```solidity
+error ReservationMismatch(address reservedFor, address buyer)
+```
+
+ReservedFor and buyer mismatch.
+
+#### Parameters
+
+| Name        | Type    | Description          |
+| ----------- | ------- | -------------------- |
+| reservedFor | address | reserved for address |
+| buyer       | address | buyer address        |
+
+### ReservationExpired
+
+```solidity
+error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp)
+```
+
+Reservation expired.
+
+#### Parameters
+
+| Name                | Type    | Description          |
+| ------------------- | ------- | -------------------- |
+| tokenId             | uint256 | token id             |
+| expirationTimestamp | uint256 | expiration timestamp |
+
+### IncorrectPrice
+
+```solidity
+error IncorrectPrice(uint256 price, uint256 reservationPrice)
+```
+
+Incorrect price.
+
+#### Parameters
+
+| Name             | Type    | Description        |
+| ---------------- | ------- | ------------------ |
+| price            | uint256 | price of the token |
+| reservationPrice | uint256 | reservation price  |
+
+### SupplierIsNotOwner
+
+```solidity
+error SupplierIsNotOwner(uint256 tokenId, address supplier)
+```
+
+Supplier is not the owner.
+
+#### Parameters
+
+| Name     | Type    | Description      |
+| -------- | ------- | ---------------- |
+| tokenId  | uint256 | token id         |
+| supplier | address | supplier address |
+
+### TokenIsReserved
+
+```solidity
+error TokenIsReserved(uint256 tokenId, address reservedFor)
+```
+
+Token is reserved and can not be transferred.
+
+#### Parameters
+
+| Name        | Type    | Description          |
+| ----------- | ------- | -------------------- |
+| tokenId     | uint256 | token id             |
+| reservedFor | address | reserved for address |
+
+### InsufficientAllowance
+
+```solidity
+error InsufficientAllowance(address sender, contract IERC20 paymentToken, uint256 price, uint256 allowance)
+```
+
+Insufficient allowance to transfer the ERC20 token to the supplier.
+
+#### Parameters
+
+| Name         | Type            | Description           |
+| ------------ | --------------- | --------------------- |
+| sender       | address         | msg.sender            |
+| paymentToken | contract IERC20 | payment token address |
+| price        | uint256         | price of the token    |
+| allowance    | uint256         | allowance amount      |
+
+### InvalidTokenStatus
+
+```solidity
+error InvalidTokenStatus(uint256 tokenId, enum BookingToken.BookingStatus status)
+```
+
+Invalid token status.
+
+#### Parameters
+
+| Name    | Type                            | Description |
+| ------- | ------------------------------- | ----------- |
+| tokenId | uint256                         | token id    |
+| status  | enum BookingToken.BookingStatus | status      |
+
+### UnexpectedOffchainPaymentCurrency
+
+```solidity
+error UnexpectedOffchainPaymentCurrency(uint256 offchainPaymentCurrency)
+```
+
+Unexpected offchain payment currency. Thrown when offchain payment currency is provided
+but payment token is not address(1).
+
+#### Parameters
+
+| Name                    | Type    | Description               |
+| ----------------------- | ------- | ------------------------- |
+| offchainPaymentCurrency | uint256 | offchain payment currency |
+
+### UnexpectedNativePayment
+
+```solidity
+error UnexpectedNativePayment(uint256 amount)
+```
+
+Error for when there is unexpected native payment.
+
+#### Parameters
+
+| Name   | Type    | Description           |
+| ------ | ------- | --------------------- |
+| amount | uint256 | The unexpected amount |
+
+### onlyCMAccount
+
+```solidity
+modifier onlyCMAccount(address account)
+```
+
+Only CMAccount modifier.
+
+### initialize
+
+```solidity
+function initialize(address manager, address defaultAdmin, address upgrader) public
+```
+
+### reinitializeV2
+
+```solidity
+function reinitializeV2(string newName, string newSymbol) public
+```
+
+This function allows reinitializing the contract to update the name and symbol
+
+_Only callable by DEFAULT_ADMIN_ROLE_
+
+#### Parameters
+
+| Name      | Type   | Description      |
+| --------- | ------ | ---------------- |
+| newName   | string | New token name   |
+| newSymbol | string | New token symbol |
+
+### \_authorizeUpgrade
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal virtual
+```
+
+Function to authorize an upgrade for UUPS proxy.
+
+### safeMintWithReservation
+
+```solidity
+function safeMintWithReservation(address reservedFor, string uri, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable) public virtual
+```
+
+Mints a new token with a reservation for a specific address.
+
+#### Parameters
+
+| Name                    | Type            | Description                                                           |
+| ----------------------- | --------------- | --------------------------------------------------------------------- |
+| reservedFor             | address         | The CM Account address that can buy the token                         |
+| uri                     | string          | The URI of the token                                                  |
+| expirationTimestamp     | uint256         | The expiration timestamp                                              |
+| price                   | uint256         | The price of the token                                                |
+| paymentToken            | contract IERC20 | The token used to pay for the reservation. If address(0) then native. |
+| offchainPaymentCurrency | uint256         | The offchain payment currency                                         |
+| cancellable             | bool            | The flag that represents whether the booking is cancellable           |
+
+### \_reserve
+
+```solidity
+function _reserve(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable) internal virtual
+```
+
+Reserve a token for a specific address with an expiration timestamp
+
+### buyReservedToken
+
+```solidity
+function buyReservedToken(uint256 tokenId) public payable virtual
+```
+
+Buys a reserved token. The reservation must be for the message sender.
+
+Also the message sender should set allowance for the payment token to this
+contract to at least the reservation price. (only for ERC20 tokens)
+
+For native coin, the message sender should send the exact amount.
+
+Only CM Accounts can call this function
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### processPayment
+
+```solidity
+function processPayment(contract IERC20 paymentToken, uint256 paymentAmount, address recipient) internal virtual
+```
+
+### getBookingStatus
+
+```solidity
+function getBookingStatus(uint256 tokenId) public view virtual returns (enum BookingToken.BookingStatus)
+```
+
+Return booking status
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+#### Return Values
+
+| Name | Type                            | Description        |
+| ---- | ------------------------------- | ------------------ |
+| [0]  | enum BookingToken.BookingStatus | The booking status |
+
+### getReservationPrice
+
+```solidity
+function getReservationPrice(uint256 tokenId) public view virtual returns (uint256 price, contract IERC20 paymentToken)
+```
+
+Returns the token reservation price for a specific token.
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### getReservationPaymentToken
+
+```solidity
+function getReservationPaymentToken(uint256 tokenId) external view returns (contract IERC20 paymentToken)
+```
+
+Retrieves the payment token for a given token.
+
+#### Parameters
+
+| Name    | Type    | Description                                    |
+| ------- | ------- | ---------------------------------------------- |
+| tokenId | uint256 | The token id to retrieve the payment token for |
+
+#### Return Values
+
+| Name         | Type            | Description       |
+| ------------ | --------------- | ----------------- |
+| paymentToken | contract IERC20 | The payment token |
+
+### isCancellable
+
+```solidity
+function isCancellable(uint256 tokenId) public view virtual returns (bool)
+```
+
+Returns if the token is cancellable
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### checkTransferable
+
+```solidity
+function checkTransferable(uint256 tokenId) internal virtual
+```
+
+Check if the token is transferable
+
+### recordExpiration
+
+```solidity
+function recordExpiration(uint256 tokenId) public virtual
+```
+
+Record expiration status if the token is expired
+
+#### Parameters
+
+| Name    | Type    | Description  |
+| ------- | ------- | ------------ |
+| tokenId | uint256 | The token id |
+
+### isCMAccount
+
+```solidity
+function isCMAccount(address account) public view virtual returns (bool)
+```
+
+Checks if an address is a CM Account.
+
+#### Parameters
+
+| Name    | Type    | Description          |
+| ------- | ------- | -------------------- |
+| account | address | The address to check |
+
+#### Return Values
+
+| Name | Type | Description                         |
+| ---- | ---- | ----------------------------------- |
+| [0]  | bool | true if the address is a CM Account |
+
+### requireCMAccount
+
+```solidity
+function requireCMAccount(address account) internal view virtual
+```
+
+Checks if the address is a CM Account and reverts if not.
+
+#### Parameters
+
+| Name    | Type    | Description          |
+| ------- | ------- | -------------------- |
+| account | address | The address to check |
+
+### setManagerAddress
+
+```solidity
+function setManagerAddress(address manager) public virtual
+```
+
+Sets for the manager address.
+
+#### Parameters
+
+| Name    | Type    | Description                |
+| ------- | ------- | -------------------------- |
+| manager | address | The address of the manager |
+
+### getManagerAddress
+
+```solidity
+function getManagerAddress() public view virtual returns (address)
+```
+
+Returns for the manager address.
+
+### setMinExpirationTimestampDiff
+
+```solidity
+function setMinExpirationTimestampDiff(uint256 minExpirationTimestampDiff) public virtual
+```
+
+Sets minimum expiration timestamp difference in seconds.
+
+#### Parameters
+
+| Name                       | Type    | Description                                        |
+| -------------------------- | ------- | -------------------------------------------------- |
+| minExpirationTimestampDiff | uint256 | Minimum expiration timestamp difference in seconds |
+
+### getMinExpirationTimestampDiff
+
+```solidity
+function getMinExpirationTimestampDiff() public view virtual returns (uint256)
+```
+
+Returns minimum expiration timestamp difference in seconds.
+
+### initiateCancellation
+
+```solidity
+function initiateCancellation(uint256 tokenId, uint256 refundAmount, uint16 cancellationReason, uint16 cancellationReasonVersion) external virtual
+```
+
+### acceptCancellation
+
+```solidity
+function acceptCancellation(uint256 tokenId, uint256 refundAmount) external virtual
+```
+
+### counterCancellation
+
+```solidity
+function counterCancellation(uint256 tokenId, uint256 refundAmount, uint16 counterReason, uint16 counterReasonVersion) external virtual
+```
+
+### withdrawCancellation
+
+```solidity
+function withdrawCancellation(uint256 tokenId, uint16 withdrawalReason, uint16 withdrawalReasonVersion) external virtual
+```
+
+### rejectCancellation
+
+```solidity
+function rejectCancellation(uint256 tokenId, uint16 rejectionReason, uint16 rejectionReasonVersion) external virtual
+```
+
+### finalizeCancellation
+
+```solidity
+function finalizeCancellation(uint256 tokenId, uint256 checkRefundAmount) external payable virtual
+```
+
+### transferFrom
+
+```solidity
+function transferFrom(address from, address to, uint256 tokenId) public virtual
+```
+
+Override transferFrom to check if token is reserved. It reverts if
+the token is reserved.
+
+### \_update
+
+```solidity
+function _update(address to, uint256 tokenId, address auth) internal returns (address)
+```
+
+### \_increaseBalance
+
+```solidity
+function _increaseBalance(address account, uint128 value) internal
+```
+
+### tokenURI
+
+```solidity
+function tokenURI(uint256 tokenId) public view returns (string)
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view returns (bool)
+```
+
 ## CancellationProposalStatus
 
 ```solidity
@@ -3017,55 +2951,45 @@ Reverts if the public key does not exist
 | ------------- | ------- | ------------------------- |
 | pubKeyAddress | address | Address of the public key |
 
-## BookingToken
+## ICMAccount
 
-Booking Token contract represents a booking done on the Camino Messenger.
-
-Suppliers can mint Booking Tokens and reserve them for a distributor address to
-buy.
-
-Booking Tokens can have zero price, meaning that the payment will be done
-off-chain.
-
-When a token is minted with a reservation, it can not be transferred until the
-expiration timestamp is reached or the token is bought.
-
-### VERSION_MAJOR
+### initialize
 
 ```solidity
-uint16 VERSION_MAJOR
+function initialize(address manager, address bookingToken, address owner, address upgrader) external
 ```
 
-### VERSION_MINOR
+## CMAccountManager
+
+This contract manages the creation of the Camino Messenger accounts by
+deploying {ERC1967Proxy} proxies that point to the{CMAccount} implementation
+address.
+
+Create CM Account: Users who want to create an account should call
+`createCMAccount(address admin, address upgrader)` function with addresses of
+the accounts admin and upgrader roles and also send the pre fund amount,
+which is currently set as 100 CAMs. When the manager contract is paused,
+account creation is stopped.
+
+Developer Fee: This contracts also keeps the info about the developer wallet
+and fee basis points. Which are used during the cheque cash in to pay for the
+developer fee.
+
+Service Registry: {CMAccountManager} also acts as a registry for the services
+that {CMAccount} contracts add as a supported or wanted service. Registry
+works by hashing (keccak256) the service name (string) and creating a mapping
+as keccak256(serviceName) => serviceName. And provides functions that
+{CMAccount} function uses to register services. The {CMAccount} only keeps
+the hashes (byte32) of the registered services.
+
+### PAUSER_ROLE
 
 ```solidity
-uint16 VERSION_MINOR
+bytes32 PAUSER_ROLE
 ```
 
-### VERSION_PATCH
-
-```solidity
-uint16 VERSION_PATCH
-```
-
-### version
-
-```solidity
-function version() external pure virtual returns (uint16 major, uint16 minor, uint16 patch)
-```
-
-Returns the semantic version of the contract.
-
-- no version() func: Legacy version without Cancellation support
-- v1.0.0: Version with Cancellation support
-
-#### Return Values
-
-| Name  | Type   | Description                                   |
-| ----- | ------ | --------------------------------------------- |
-| major | uint16 | Major version (breaking changes)              |
-| minor | uint16 | Minor version (backwards-compatible features) |
-| patch | uint16 | Patch version (backwards-compatible fixes)    |
+Pauser role can pause the contract. Currently this only affects the
+creation of CM Accounts. When paused, account creation is stopped.
 
 ### UPGRADER_ROLE
 
@@ -3075,619 +2999,695 @@ bytes32 UPGRADER_ROLE
 
 Upgrader role can upgrade the contract to a new implementation.
 
-### MIN_EXPIRATION_ADMIN_ROLE
+### VERSIONER_ROLE
 
 ```solidity
-bytes32 MIN_EXPIRATION_ADMIN_ROLE
+bytes32 VERSIONER_ROLE
 ```
 
-This role can set the mininum allowed expiration timestamp difference.
+Versioner role can set new {CMAccount} implementation address. When a
+new implementation address is set, it is used for the new {CMAccount}
+creations.
 
-### NATIVE_PAYMENT
+The old {CMAccount} contracts are not affected by this. Owners of those
+should do the upgrade manually by calling the `upgradeToAndCall(address)`
+function on the account.
+
+### FEE_ADMIN_ROLE
 
 ```solidity
-address NATIVE_PAYMENT
+bytes32 FEE_ADMIN_ROLE
 ```
 
-Tokens are directly transferred to the recipient.
+Fee admin role can set the developer fee basis points which used for
+calculating the developer fee that is cut from the cheque payments.
 
-_Special address for native payments._
-
-### OFFCHAIN_PAYMENT
+### DEVELOPER_WALLET_ADMIN_ROLE
 
 ```solidity
-address OFFCHAIN_PAYMENT
+bytes32 DEVELOPER_WALLET_ADMIN_ROLE
 ```
 
-A third-party service is used to handle payments.
+Developer wallet admin role can set the developer wallet address
+which is used to receive the developer fee.
 
-_Special address for offchain payments. The enum for this
-is defined in the Camino Messenger Protocol's
-cmp.types.<version>.IsoCurrency enum (currency.proto file)._
-
-### BookingStatus
+### PREFUND_ADMIN_ROLE
 
 ```solidity
-enum BookingStatus {
-    UNSPECIFIED,
-    RESERVED,
-    RESERVATION_EXPIRED,
-    BOUGHT,
-    CANCELLED
+bytes32 PREFUND_ADMIN_ROLE
+```
+
+Prefund admin role can set the mandatory prefund amount for {CMAccount}
+contracts.
+
+### SERVICE_REGISTRY_ADMIN_ROLE
+
+```solidity
+bytes32 SERVICE_REGISTRY_ADMIN_ROLE
+```
+
+Service registry admin role can add and remove services to the service
+registry mapping. Implemented by {ServiceRegistry} contract.
+
+### CMACCOUNT_ROLE
+
+```solidity
+bytes32 CMACCOUNT_ROLE
+```
+
+This role is granted to the created CM Accounts. It is used to keep
+an enumerable list of CM Accounts.
+
+### SERVICE_FEE_TOKEN_ADMIN_ROLE
+
+```solidity
+bytes32 SERVICE_FEE_TOKEN_ADMIN_ROLE
+```
+
+This role is able to set the service fee token address.
+
+### CMAccountInfo
+
+CMAccount info struct, to keep track of created CM Accounts and their
+creators.
+
+```solidity
+struct CMAccountInfo {
+    bool isCMAccount;
+    address creator;
 }
 ```
 
-### TokenReservation
+### CMAccountManagerStorage
 
 ```solidity
-struct TokenReservation {
-  address reservedFor;
-  address supplier;
-  uint256 expirationTimestamp;
-  uint256 price;
-  contract IERC20 paymentToken;
-  uint256 offchainPaymentCurrency;
-  bool cancellable;
+struct CMAccountManagerStorage {
+  address _latestAccountImplementation;
+  uint256 _prefundAmount;
+  address _developerWallet;
+  uint256 _developerFeeBp;
+  address _bookingToken;
+  mapping(address => struct CMAccountManager.CMAccountInfo) _cmAccountInfo;
+  address _serviceFeeToken;
 }
 ```
 
-### BookingTokenStorage
+### CMAccountCreated
 
 ```solidity
-struct BookingTokenStorage {
-  address _manager;
-  uint256 _nextTokenId;
-  uint256 _minExpirationTimestampDiff;
-  mapping(uint256 => struct BookingToken.TokenReservation) _reservations;
-  mapping(uint256 => enum BookingToken.BookingStatus) _bookingStatus;
-}
+event CMAccountCreated(address account)
 ```
 
-### \_getBookingTokenStorage
-
-```solidity
-function _getBookingTokenStorage() internal pure returns (struct BookingToken.BookingTokenStorage $)
-```
-
-### TokenReserved
-
-```solidity
-event TokenReserved(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable)
-```
-
-Event emitted when a token is reserved.
+CM Account created event.
 
 #### Parameters
 
-| Name                    | Type            | Description           |
-| ----------------------- | --------------- | --------------------- |
-| tokenId                 | uint256         | token id              |
-| reservedFor             | address         | reserved for address  |
-| supplier                | address         | supplier address      |
-| expirationTimestamp     | uint256         | expiration timestamp  |
-| price                   | uint256         | price of the token    |
-| paymentToken            | contract IERC20 | payment token address |
-| offchainPaymentCurrency | uint256         |                       |
-| cancellable             | bool            |                       |
+| Name    | Type    | Description                      |
+| ------- | ------- | -------------------------------- |
+| account | address | The address of the new CMAccount |
 
-### TokenBought
+### CMAccountImplementationUpdated
 
 ```solidity
-event TokenBought(uint256 tokenId, address buyer)
+event CMAccountImplementationUpdated(address oldImplementation, address newImplementation)
 ```
 
-Event emitted when a token is bought.
+CM Account implementation address updated event.
 
 #### Parameters
 
-| Name    | Type    | Description   |
-| ------- | ------- | ------------- |
-| tokenId | uint256 | token id      |
-| buyer   | address | buyer address |
+| Name              | Type    | Description                    |
+| ----------------- | ------- | ------------------------------ |
+| oldImplementation | address | The old implementation address |
+| newImplementation | address | The new implementation address |
 
-### TokenReservationExpired
+### DeveloperWalletUpdated
 
 ```solidity
-event TokenReservationExpired(uint256 tokenId)
+event DeveloperWalletUpdated(address oldDeveloperWallet, address newDeveloperWallet)
 ```
 
-Event emitted when a token is expired.
+Developer wallet address updated event.
 
 #### Parameters
 
-| Name    | Type    | Description |
-| ------- | ------- | ----------- |
-| tokenId | uint256 | token id    |
+| Name               | Type    | Description                      |
+| ------------------ | ------- | -------------------------------- |
+| oldDeveloperWallet | address | The old developer wallet address |
+| newDeveloperWallet | address | The new developer wallet address |
 
-### ExpirationTimestampTooSoon
-
-```solidity
-error ExpirationTimestampTooSoon(uint256 expirationTimestamp, uint256 minExpirationTimestampDiff)
-```
-
-Error for expiration timestamp too soon. It must be at least
-`_minExpirationTimestampDiff` seconds in the future.
-
-### NotCMAccount
+### DeveloperFeeBpUpdated
 
 ```solidity
-error NotCMAccount(address account)
+event DeveloperFeeBpUpdated(uint256 oldDeveloperFeeBp, uint256 newDeveloperFeeBp)
 ```
 
-Address is not a CM Account.
+Developer fee basis points updated event.
 
 #### Parameters
 
-| Name    | Type    | Description     |
-| ------- | ------- | --------------- |
-| account | address | account address |
+| Name              | Type    | Description                        |
+| ----------------- | ------- | ---------------------------------- |
+| oldDeveloperFeeBp | uint256 | The old developer fee basis points |
+| newDeveloperFeeBp | uint256 | The new developer fee basis points |
 
-### ReservationMismatch
+### BookingTokenAddressUpdated
 
 ```solidity
-error ReservationMismatch(address reservedFor, address buyer)
+event BookingTokenAddressUpdated(address oldBookingToken, address newBookingToken)
 ```
 
-ReservedFor and buyer mismatch.
+Booking token address updated event.
 
 #### Parameters
 
-| Name        | Type    | Description          |
-| ----------- | ------- | -------------------- |
-| reservedFor | address | reserved for address |
-| buyer       | address | buyer address        |
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| oldBookingToken | address | The old booking token address |
+| newBookingToken | address | The new booking token address |
 
-### ReservationExpired
+### ServiceFeeTokenUpdated
 
 ```solidity
-error ReservationExpired(uint256 tokenId, uint256 expirationTimestamp)
+event ServiceFeeTokenUpdated(address oldServiceFeeToken, address newServiceFeeToken)
 ```
 
-Reservation expired.
+Service fee token address updated event.
 
 #### Parameters
 
-| Name                | Type    | Description          |
-| ------------------- | ------- | -------------------- |
-| tokenId             | uint256 | token id             |
-| expirationTimestamp | uint256 | expiration timestamp |
+| Name               | Type    | Description                       |
+| ------------------ | ------- | --------------------------------- |
+| oldServiceFeeToken | address | The old service fee token address |
+| newServiceFeeToken | address | The new service fee token address |
 
-### IncorrectPrice
+### PrefundAmountUpdated
 
 ```solidity
-error IncorrectPrice(uint256 price, uint256 reservationPrice)
+event PrefundAmountUpdated(uint256 oldPrefundAmount, uint256 newPrefundAmount)
 ```
 
-Incorrect price.
+Prefund amount updated event.
 
 #### Parameters
 
-| Name             | Type    | Description        |
-| ---------------- | ------- | ------------------ |
-| price            | uint256 | price of the token |
-| reservationPrice | uint256 | reservation price  |
+| Name             | Type    | Description            |
+| ---------------- | ------- | ---------------------- |
+| oldPrefundAmount | uint256 | The old prefund amount |
+| newPrefundAmount | uint256 | The new prefund amount |
 
-### SupplierIsNotOwner
+### CMAccountInvalidImplementation
 
 ```solidity
-error SupplierIsNotOwner(uint256 tokenId, address supplier)
+error CMAccountInvalidImplementation(address implementation)
 ```
 
-Supplier is not the owner.
+The implementation of the CMAccount is invalid.
 
 #### Parameters
 
-| Name     | Type    | Description      |
-| -------- | ------- | ---------------- |
-| tokenId  | uint256 | token id         |
-| supplier | address | supplier address |
+| Name           | Type    | Description                                 |
+| -------------- | ------- | ------------------------------------------- |
+| implementation | address | The implementation address of the CMAccount |
 
-### TokenIsReserved
+### CMAccountInvalidAdmin
 
 ```solidity
-error TokenIsReserved(uint256 tokenId, address reservedFor)
+error CMAccountInvalidAdmin(address admin)
 ```
 
-Token is reserved and can not be transferred.
+The admin address is invalid.
 
 #### Parameters
 
-| Name        | Type    | Description          |
-| ----------- | ------- | -------------------- |
-| tokenId     | uint256 | token id             |
-| reservedFor | address | reserved for address |
+| Name  | Type    | Description       |
+| ----- | ------- | ----------------- |
+| admin | address | The admin address |
 
-### InsufficientAllowance
+### InvalidDeveloperWallet
 
 ```solidity
-error InsufficientAllowance(address sender, contract IERC20 paymentToken, uint256 price, uint256 allowance)
+error InvalidDeveloperWallet(address developerWallet)
 ```
 
-Insufficient allowance to transfer the ERC20 token to the supplier.
+Invalid developer address.
 
 #### Parameters
 
-| Name         | Type            | Description           |
-| ------------ | --------------- | --------------------- |
-| sender       | address         | msg.sender            |
-| paymentToken | contract IERC20 | payment token address |
-| price        | uint256         | price of the token    |
-| allowance    | uint256         | allowance amount      |
+| Name            | Type    | Description                  |
+| --------------- | ------- | ---------------------------- |
+| developerWallet | address | The developer wallet address |
 
-### InvalidTokenStatus
+### InvalidBookingTokenAddress
 
 ```solidity
-error InvalidTokenStatus(uint256 tokenId, enum BookingToken.BookingStatus status)
+error InvalidBookingTokenAddress(address bookingToken)
 ```
 
-Invalid token status.
+Invalid booking token address.
 
 #### Parameters
 
-| Name    | Type                            | Description |
-| ------- | ------------------------------- | ----------- |
-| tokenId | uint256                         | token id    |
-| status  | enum BookingToken.BookingStatus | status      |
+| Name         | Type    | Description               |
+| ------------ | ------- | ------------------------- |
+| bookingToken | address | The booking token address |
 
-### UnexpectedOffchainPaymentCurrency
+### InvalidServiceFeeToken
 
 ```solidity
-error UnexpectedOffchainPaymentCurrency(uint256 offchainPaymentCurrency)
+error InvalidServiceFeeToken(address serviceFeeToken)
 ```
 
-Unexpected offchain payment currency. Thrown when offchain payment currency is provided
-but payment token is not address(1).
+Invalid service fee token event.
 
 #### Parameters
 
-| Name                    | Type    | Description               |
-| ----------------------- | ------- | ------------------------- |
-| offchainPaymentCurrency | uint256 | offchain payment currency |
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| serviceFeeToken | address | The service fee token address |
 
-### UnexpectedNativePayment
-
-```solidity
-error UnexpectedNativePayment(uint256 amount)
-```
-
-Error for when there is unexpected native payment.
-
-#### Parameters
-
-| Name   | Type    | Description           |
-| ------ | ------- | --------------------- |
-| amount | uint256 | The unexpected amount |
-
-### onlyCMAccount
+### constructor
 
 ```solidity
-modifier onlyCMAccount(address account)
+constructor() public
 ```
-
-Only CMAccount modifier.
 
 ### initialize
 
 ```solidity
-function initialize(address manager, address defaultAdmin, address upgrader) public
+function initialize(address defaultAdmin, address pauser, address upgrader, address versioner, address developerWallet, uint256 developerFeeBp) public
 ```
 
-### reinitializeV2
+### pause
 
 ```solidity
-function reinitializeV2(string newName, string newSymbol) public
+function pause() public
 ```
 
-This function allows reinitializing the contract to update the name and symbol
+Pauses the CMAccountManager contract. Currently this only affects the
+creation of CMAccount. When paused, account creation is stopped.
 
-_Only callable by DEFAULT_ADMIN_ROLE_
+### unpause
 
-#### Parameters
+```solidity
+function unpause() public
+```
 
-| Name      | Type   | Description      |
-| --------- | ------ | ---------------- |
-| newName   | string | New token name   |
-| newSymbol | string | New token symbol |
+Unpauses the CMAccountManager contract.
 
 ### \_authorizeUpgrade
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal virtual
+function _authorizeUpgrade(address newImplementation) internal
 ```
 
-Function to authorize an upgrade for UUPS proxy.
+Authorization for the CMAccountManager contract upgrade.
 
-### safeMintWithReservation
+### createCMAccount
 
 ```solidity
-function safeMintWithReservation(address reservedFor, string uri, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable) public virtual
+function createCMAccount(address admin, address upgrader) external payable returns (address)
 ```
 
-Mints a new token with a reservation for a specific address.
+Creates CMAccount by deploying a ERC1967Proxy with the CMAccount
+implementation from the manager.
+
+Because this function is deploying a contract, it reverts if the caller is
+not KYC or KYB verified. (For EOAs only)
+
+Caller must send the pre-fund amount with the transaction.
+
+_Emits a {CMAccountCreated} event._
+
+### \_transferServiceFeePrefund
+
+```solidity
+function _transferServiceFeePrefund(address account) internal
+```
+
+Transfers the service fee prefund amount to the CMAccount
+
+_This function is called when a CMAccount is created. The msg.sender
+should approve the allowance of the service fee token to the
+CMAccountManager._
 
 #### Parameters
 
-| Name                    | Type            | Description                                                           |
-| ----------------------- | --------------- | --------------------------------------------------------------------- |
-| reservedFor             | address         | The CM Account address that can buy the token                         |
-| uri                     | string          | The URI of the token                                                  |
-| expirationTimestamp     | uint256         | The expiration timestamp                                              |
-| price                   | uint256         | The price of the token                                                |
-| paymentToken            | contract IERC20 | The token used to pay for the reservation. If address(0) then native. |
-| offchainPaymentCurrency | uint256         | The offchain payment currency                                         |
-| cancellable             | bool            | The flag that represents whether the booking is cancellable           |
+| Name    | Type    | Description           |
+| ------- | ------- | --------------------- |
+| account | address | The CMAccount address |
 
-### \_reserve
+### \_setCMAccountInfo
 
 ```solidity
-function _reserve(uint256 tokenId, address reservedFor, address supplier, uint256 expirationTimestamp, uint256 price, contract IERC20 paymentToken, uint256 offchainPaymentCurrency, bool cancellable) internal virtual
+function _setCMAccountInfo(address account, struct CMAccountManager.CMAccountInfo info) internal
 ```
 
-Reserve a token for a specific address with an expiration timestamp
-
-### buyReservedToken
+### getCMAccountCreator
 
 ```solidity
-function buyReservedToken(uint256 tokenId) public payable virtual
+function getCMAccountCreator(address account) public view returns (address)
 ```
 
-Buys a reserved token. The reservation must be for the message sender.
-
-Also the message sender should set allowance for the payment token to this
-contract to at least the reservation price. (only for ERC20 tokens)
-
-For native coin, the message sender should send the exact amount.
-
-Only CM Accounts can call this function
+Returns the given account's creator.
 
 #### Parameters
 
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-### processPayment
-
-```solidity
-function processPayment(contract IERC20 paymentToken, uint256 paymentAmount, address recipient) internal virtual
-```
-
-### getBookingStatus
-
-```solidity
-function getBookingStatus(uint256 tokenId) public view virtual returns (enum BookingToken.BookingStatus)
-```
-
-Return booking status
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-#### Return Values
-
-| Name | Type                            | Description        |
-| ---- | ------------------------------- | ------------------ |
-| [0]  | enum BookingToken.BookingStatus | The booking status |
-
-### getReservationPrice
-
-```solidity
-function getReservationPrice(uint256 tokenId) public view virtual returns (uint256 price, contract IERC20 paymentToken)
-```
-
-Returns the token reservation price for a specific token.
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-### getReservationPaymentToken
-
-```solidity
-function getReservationPaymentToken(uint256 tokenId) external view returns (contract IERC20 paymentToken)
-```
-
-Retrieves the payment token for a given token.
-
-#### Parameters
-
-| Name    | Type    | Description                                    |
-| ------- | ------- | ---------------------------------------------- |
-| tokenId | uint256 | The token id to retrieve the payment token for |
-
-#### Return Values
-
-| Name         | Type            | Description       |
-| ------------ | --------------- | ----------------- |
-| paymentToken | contract IERC20 | The payment token |
-
-### isCancellable
-
-```solidity
-function isCancellable(uint256 tokenId) public view virtual returns (bool)
-```
-
-Returns if the token is cancellable
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
-
-### checkTransferable
-
-```solidity
-function checkTransferable(uint256 tokenId) internal virtual
-```
-
-Check if the token is transferable
-
-### recordExpiration
-
-```solidity
-function recordExpiration(uint256 tokenId) public virtual
-```
-
-Record expiration status if the token is expired
-
-#### Parameters
-
-| Name    | Type    | Description  |
-| ------- | ------- | ------------ |
-| tokenId | uint256 | The token id |
+| Name    | Type    | Description         |
+| ------- | ------- | ------------------- |
+| account | address | The account address |
 
 ### isCMAccount
 
 ```solidity
-function isCMAccount(address account) public view virtual returns (bool)
+function isCMAccount(address account) public view returns (bool)
 ```
 
-Checks if an address is a CM Account.
+Check if an address is CMAccount created by the manager.
 
 #### Parameters
 
-| Name    | Type    | Description          |
-| ------- | ------- | -------------------- |
-| account | address | The address to check |
+| Name    | Type    | Description                  |
+| ------- | ------- | ---------------------------- |
+| account | address | The account address to check |
+
+### getServiceFeeToken
+
+```solidity
+function getServiceFeeToken() public view returns (address)
+```
+
+Returns the service fee token address.
+
+### setServiceFeeToken
+
+```solidity
+function setServiceFeeToken(address serviceFeeToken) public
+```
+
+Sets the service fee token address.
+
+#### Parameters
+
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| serviceFeeToken | address | The service fee token address |
+
+### \_setServiceFeeToken
+
+```solidity
+function _setServiceFeeToken(address serviceFeeToken) internal
+```
+
+### getAccountImplementation
+
+```solidity
+function getAccountImplementation() public view returns (address)
+```
+
+Returns the CMAccount implementation address.
+
+### setAccountImplementation
+
+```solidity
+function setAccountImplementation(address newImplementation) public
+```
+
+Set a new CMAccount implementation address.
+
+#### Parameters
+
+| Name              | Type    | Description                    |
+| ----------------- | ------- | ------------------------------ |
+| newImplementation | address | The new implementation address |
+
+### \_setAccountImplementation
+
+```solidity
+function _setAccountImplementation(address newImplementation) internal
+```
+
+### getPrefundAmount
+
+```solidity
+function getPrefundAmount() public view returns (uint256)
+```
+
+Returns the prefund amount.
+
+### setPrefundAmount
+
+```solidity
+function setPrefundAmount(uint256 newPrefundAmount) public
+```
+
+Sets the prefund amount.
+
+### getBookingTokenAddress
+
+```solidity
+function getBookingTokenAddress() public view returns (address)
+```
+
+Returns the booking token address.
+
+### setBookingTokenAddress
+
+```solidity
+function setBookingTokenAddress(address token) public
+```
+
+Sets booking token address.
+
+### \_setBookingTokenAddress
+
+```solidity
+function _setBookingTokenAddress(address token) internal
+```
+
+### getDeveloperWallet
+
+```solidity
+function getDeveloperWallet() public view returns (address developerWallet)
+```
+
+Returns developer wallet address.
+
+### setDeveloperWallet
+
+```solidity
+function setDeveloperWallet(address developerWallet) public
+```
+
+Sets developer wallet address.
+
+### getDeveloperFeeBp
+
+```solidity
+function getDeveloperFeeBp() public view returns (uint256 developerFeeBp)
+```
+
+Returns developer fee in basis points.
+
+### setDeveloperFeeBp
+
+```solidity
+function setDeveloperFeeBp(uint256 bp) public
+```
+
+Sets developer fee in basis points.
+
+A basis point (bp) is one hundredth of 1 percentage point.
+
+1 bp = 0.01%, 1/10,000⁠, or 0.0001.
+10 bp = 0.1%, 1/1,000⁠, or 0.001.
+100 bp = 1%, ⁠1/100⁠, or 0.01.
+
+### registerService
+
+```solidity
+function registerService(string serviceName) public
+```
+
+Registers a given service name. CM Accounts can only register services
+if they are also registered in the service registry on the manager contract.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### unregisterService
+
+```solidity
+function unregisterService(string serviceName) public
+```
+
+Unregisters a given service name. CM Accounts will not be able to register
+the service anymore.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+## CMAccountManagerTest
+
+### getVersion
+
+```solidity
+function getVersion() public pure returns (string)
+```
+
+## ServiceRegistry
+
+Service registry is used by the {CMAccountManager} contract to register
+services by hashing (keccak256) the service name (string) and creating a mapping
+as keccak256(serviceName) => serviceName.
+
+### ServiceRegistryStorage
+
+```solidity
+struct ServiceRegistryStorage {
+  struct EnumerableSet.Bytes32Set _servicesHashSet;
+  mapping(bytes32 => string) _serviceNameByHash;
+  mapping(string => bytes32) _hashByServiceName;
+}
+```
+
+### ServiceRegistered
+
+```solidity
+event ServiceRegistered(string serviceName, bytes32 serviceHash)
+```
+
+### ServiceUnregistered
+
+```solidity
+event ServiceUnregistered(string serviceName, bytes32 serviceHash)
+```
+
+### ServiceAlreadyRegistered
+
+```solidity
+error ServiceAlreadyRegistered(string serviceName)
+```
+
+### ServiceNotRegistered
+
+```solidity
+error ServiceNotRegistered()
+```
+
+### \_\_ServiceRegistry_init
+
+```solidity
+function __ServiceRegistry_init() internal
+```
+
+### \_\_ServiceRegistry_init_unchained
+
+```solidity
+function __ServiceRegistry_init_unchained() internal
+```
+
+### \_registerServiceName
+
+```solidity
+function _registerServiceName(string serviceName) internal virtual
+```
+
+Adds a new service by its name. This function calculates the hash of the
+service name and adds it to the registry
+
+{serviceName} is the pkg + service name as:
+
+```text
+ ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+"cmp.services.accommodation.v1alpha.AccommodationSearchService"
+```
+
+_These services are coming from the Camino Messenger Protocol's protobuf
+definitions._
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### \_unregisterServiceName
+
+```solidity
+function _unregisterServiceName(string serviceName) internal virtual
+```
+
+Removes a service by its name. This function calculates the hash of the
+service name and removes it from the registry.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### getRegisteredServiceNameByHash
+
+```solidity
+function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
+```
+
+Returns the name of a service by its hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getRegisteredServiceHashByName
+
+```solidity
+function getRegisteredServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
+```
+
+Returns the hash of a service by its name.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### getAllRegisteredServiceHashes
+
+```solidity
+function getAllRegisteredServiceHashes() public view returns (bytes32[] services)
+```
+
+Returns all registered service **hashes**.
 
 #### Return Values
 
-| Name | Type | Description                         |
-| ---- | ---- | ----------------------------------- |
-| [0]  | bool | true if the address is a CM Account |
+| Name     | Type      | Description                   |
+| -------- | --------- | ----------------------------- |
+| services | bytes32[] | All registered service hashes |
 
-### requireCMAccount
-
-```solidity
-function requireCMAccount(address account) internal view virtual
-```
-
-Checks if the address is a CM Account and reverts if not.
-
-#### Parameters
-
-| Name    | Type    | Description          |
-| ------- | ------- | -------------------- |
-| account | address | The address to check |
-
-### setManagerAddress
+### getAllRegisteredServiceNames
 
 ```solidity
-function setManagerAddress(address manager) public virtual
+function getAllRegisteredServiceNames() public view returns (string[] services)
 ```
 
-Sets for the manager address.
+Returns all registered service **names**.
 
-#### Parameters
+#### Return Values
 
-| Name    | Type    | Description                |
-| ------- | ------- | -------------------------- |
-| manager | address | The address of the manager |
-
-### getManagerAddress
-
-```solidity
-function getManagerAddress() public view virtual returns (address)
-```
-
-Returns for the manager address.
-
-### setMinExpirationTimestampDiff
-
-```solidity
-function setMinExpirationTimestampDiff(uint256 minExpirationTimestampDiff) public virtual
-```
-
-Sets minimum expiration timestamp difference in seconds.
-
-#### Parameters
-
-| Name                       | Type    | Description                                        |
-| -------------------------- | ------- | -------------------------------------------------- |
-| minExpirationTimestampDiff | uint256 | Minimum expiration timestamp difference in seconds |
-
-### getMinExpirationTimestampDiff
-
-```solidity
-function getMinExpirationTimestampDiff() public view virtual returns (uint256)
-```
-
-Returns minimum expiration timestamp difference in seconds.
-
-### initiateCancellation
-
-```solidity
-function initiateCancellation(uint256 tokenId, uint256 refundAmount, uint16 cancellationReason, uint16 cancellationReasonVersion) external virtual
-```
-
-### acceptCancellation
-
-```solidity
-function acceptCancellation(uint256 tokenId, uint256 refundAmount) external virtual
-```
-
-### counterCancellation
-
-```solidity
-function counterCancellation(uint256 tokenId, uint256 refundAmount, uint16 counterReason, uint16 counterReasonVersion) external virtual
-```
-
-### withdrawCancellation
-
-```solidity
-function withdrawCancellation(uint256 tokenId, uint16 withdrawalReason, uint16 withdrawalReasonVersion) external virtual
-```
-
-### rejectCancellation
-
-```solidity
-function rejectCancellation(uint256 tokenId, uint16 rejectionReason, uint16 rejectionReasonVersion) external virtual
-```
-
-### finalizeCancellation
-
-```solidity
-function finalizeCancellation(uint256 tokenId, uint256 checkRefundAmount) external payable virtual
-```
-
-### transferFrom
-
-```solidity
-function transferFrom(address from, address to, uint256 tokenId) public virtual
-```
-
-Override transferFrom to check if token is reserved. It reverts if
-the token is reserved.
-
-### \_update
-
-```solidity
-function _update(address to, uint256 tokenId, address auth) internal returns (address)
-```
-
-### \_increaseBalance
-
-```solidity
-function _increaseBalance(address account, uint128 value) internal
-```
-
-### tokenURI
-
-```solidity
-function tokenURI(uint256 tokenId) public view returns (string)
-```
-
-### supportsInterface
-
-```solidity
-function supportsInterface(bytes4 interfaceId) public view returns (bool)
-```
+| Name     | Type     | Description                  |
+| -------- | -------- | ---------------------------- |
+| services | string[] | All registered service names |
 
 ## Dummy
 
