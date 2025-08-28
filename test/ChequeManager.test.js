@@ -497,6 +497,89 @@ describe("ChequeManager", function () {
                 .withArgs(expiresAt);
         });
 
+        it("Should not verify/cash in a cheque with an invalid payment token", async function () {
+            const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
+                await loadFixture(deployCMAccountWithDepositFixture);
+
+            // Approve service fee
+            await nullUSD.approve(await cmAccountManager.getAddress(), serviceFeePrefundAmount);
+
+            // Create receiving account (toCMAccount)
+            const tx = await cmAccountManager.createCMAccount(
+                signers.cmAccountAdmin.address,
+                signers.cmAccountUpgrader.address,
+                { value: prefundAmount },
+            );
+
+            const receipt = await tx.wait();
+
+            // Parse event to get the CMAccount address
+            const event = receipt.logs.find((log) => {
+                try {
+                    return cmAccountManager.interface.parseLog(log).name === "CMAccountCreated";
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            const parsedEvent = cmAccountManager.interface.parseLog(event);
+            const toCMAccountAddress = parsedEvent.args.account;
+
+            // Define cheque
+            const cheque = {
+                fromCMAccount: await cmAccount.getAddress(),
+                toCMAccount: toCMAccountAddress,
+                toBot: signers.otherAccount2.address,
+                counter: 1,
+                amount: ethers.parseEther("1"),
+                createdAt: ethers.toBigInt(Math.floor(Date.now() / 1000)),
+                expiresAt: ethers.toBigInt(Math.floor(Date.now() / 1000)) + 300n,
+                paymentToken: "0x0000000000000000000000000000000000000001", // Invalid payment token
+            };
+
+            // Grant CHEQUE_OPERATOR_ROLE
+            await cmAccount
+                .connect(signers.cmAccountAdmin)
+                .grantRole(await cmAccount.CHEQUE_OPERATOR_ROLE(), signers.chequeOperator.address);
+
+            // Sign the cheque
+            const signature = await signMessengerCheque(cheque, signers.chequeOperator);
+
+            // Verify cheque, should revert with ChequeExpired
+            await expect(
+                cmAccount.verifyCheque(
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount,
+                    cheque.createdAt,
+                    cheque.expiresAt,
+                    cheque.paymentToken,
+                    signature,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidPaymentToken")
+                .withArgs(cheque.paymentToken, await nullUSD.getAddress());
+
+            // Try to cash-in the cheque, should revert with InvalidPaymentToken
+            await expect(
+                cmAccount.cashInCheque(
+                    cheque.fromCMAccount,
+                    cheque.toCMAccount,
+                    cheque.toBot,
+                    cheque.counter,
+                    cheque.amount,
+                    cheque.createdAt,
+                    cheque.expiresAt,
+                    cheque.paymentToken,
+                    signature,
+                ),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "InvalidPaymentToken")
+                .withArgs(cheque.paymentToken, await nullUSD.getAddress());
+        });
+
         it("Should cash-in multiple cheques correctly", async function () {
             const { cmAccount, cmAccountManager, prefundAmount, serviceFeePrefundAmount, nullUSD, nullUSDDecimals } =
                 await loadFixture(deployCMAccountWithDepositFixture);

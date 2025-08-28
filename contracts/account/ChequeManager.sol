@@ -189,6 +189,14 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      */
     error UnexpectedNativePayment(uint256 amount);
 
+    /**
+     * @notice Invalid payment token.
+     *
+     * @param paymentToken The payment token
+     * @param expectedPaymentToken The expected payment token
+     */
+    error InvalidPaymentToken(address paymentToken, address expectedPaymentToken);
+
     /***************************************************
      *                    FUNCS                        *
      ***************************************************/
@@ -346,7 +354,11 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
             revert ChequeExpired(expiresAt);
         }
 
-        // FIXME: Revert if payment token is not the service fee token on CMAccountManager
+        // Revert if payment token is not the service fee token on CMAccountManager
+        address serviceFeeToken = ICMAccountManager(getManagerAddress()).getServiceFeeToken();
+        if (paymentToken != serviceFeeToken) {
+            revert InvalidPaymentToken(paymentToken, serviceFeeToken);
+        }
 
         // Recover signer
         signer = recoverSigner(
