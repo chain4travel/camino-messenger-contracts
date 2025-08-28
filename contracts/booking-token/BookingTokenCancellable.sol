@@ -11,22 +11,22 @@ enum CancellationProposalStatus {
 
 contract BookingTokenCancellable {
     struct Proposal {
-        uint256 refundAmount; // Slot n
-        address initialProposer; // Slot n+1, 20 bytes
-        uint32 timesCountered; // Packed above 8 bytes
-        bool ownerAccepted; // Packed above, 1 byte
-        bool supplierAccepted; // Packed above, 1 byte, 30 bytes consumed
-        address currentProposer; // Slot n+2, 20 bytes
-        uint32 timesRejected; // Packed above, 8 bytes
-        CancellationProposalStatus status; // Packed above, 1 byte, 29 bytes consumed
-        uint16 cancellationReason; // Slot n+3, 2 bytes
-        uint16 cancellationVersion; // Packed above, 2 bytes
-        uint16 rejectionReason; // Packed above, 2 bytes
-        uint16 rejectionVersion; // Packed above, 2 bytes
-        uint16 counterReason; // Packed above, 2 bytes
-        uint16 counterVersion; // Packed above, 2 bytes
-        uint16 withdrawalReason; // Packed above, 2 bytes
-        uint16 withdrawalVersion; // Packed above, 2 bytes, 16 bytes consumed
+        uint256 refundAmount; // Slot n (32 bytes)
+        address initialProposer; // Slot n+1 (20 bytes)
+        uint32 timesCountered; // Packed above (4 bytes, 24 bytes total)
+        bool ownerAccepted; // Packed above (1 byte, 25 bytes total)
+        bool supplierAccepted; // Packed above (1 byte, 26 bytes total, 6 bytes remaining)
+        address currentProposer; // Slot n+2 (20 bytes)
+        uint32 timesRejected; // Packed above (4 bytes, 24 bytes total)
+        CancellationProposalStatus status; // Packed above (1 byte, 25 bytes total)
+        uint16 cancellationReason; // Packed above (2 bytes, 27 bytes total)
+        uint16 cancellationVersion; // Packed above (2 bytes, 29 bytes total)
+        uint16 rejectionReason; // Packed above (2 bytes, 31 bytes total, 1 byte remaining)
+        uint16 rejectionVersion; // Slot n+3 (2 bytes)
+        uint16 counterReason; // Packed above (2 bytes, 4 bytes total)
+        uint16 counterVersion; // Packed above (2 bytes, 6 bytes total)
+        uint16 withdrawalReason; // Packed above (2 bytes, 8 bytes total)
+        uint16 withdrawalVersion; // Packed above (2 bytes, 10 bytes total, 22 bytes remaining)
     }
 
     /***************************************************
