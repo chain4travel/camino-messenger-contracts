@@ -1235,6 +1235,14 @@ Returns the gas money withdrawal details for an account.
 | periodStart     | uint256 | timestamp of the withdrawal period start |
 | withdrawnAmount | uint256 | amount withdrawn within the period       |
 
+## ICMAccount
+
+### initialize
+
+```solidity
+function initialize(address manager, address bookingToken, address owner, address upgrader) external
+```
+
 ## BookingToken
 
 Booking Token contract represents a booking done on the Camino Messenger.
@@ -2441,524 +2449,6 @@ Finalizes a cancellation proposal. Only the supplier of the token can finalize.
 | tokenId      | uint256 | The token id for which to finalize the proposal                      |
 | refundAmount | uint256 | The refund amount to check, this is to prevent front-running attacks |
 
-## ICMAccountManager
-
-### getAccountImplementation
-
-```solidity
-function getAccountImplementation() external view returns (address)
-```
-
-### getDeveloperFeeBp
-
-```solidity
-function getDeveloperFeeBp() external view returns (uint256)
-```
-
-### getDeveloperWallet
-
-```solidity
-function getDeveloperWallet() external view returns (address)
-```
-
-### isCMAccount
-
-```solidity
-function isCMAccount(address account) external view returns (bool)
-```
-
-### getRegisteredServiceHashByName
-
-```solidity
-function getRegisteredServiceHashByName(string serviceName) external view returns (bytes32 serviceHash)
-```
-
-### getRegisteredServiceNameByHash
-
-```solidity
-function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string serviceName)
-```
-
-### getServiceFeeToken
-
-```solidity
-function getServiceFeeToken() external view returns (address)
-```
-
-## PartnerConfiguration
-
-Partner Configuration is used by the {CMAccount} contract to register
-supported and wanted services by the partner.
-
-### Service
-
-Struct for storing supported service details for suppliers
-
-```solidity
-struct Service {
-    uint256 _fee;
-    bool _restrictedRate;
-    string[] _capabilities;
-}
-```
-
-### PaymentInfo
-
-```solidity
-struct PaymentInfo {
-  bool _supportsOffChainPayment;
-  struct EnumerableSet.AddressSet _supportedTokens;
-}
-```
-
-### PartnerConfigurationStorage
-
-```solidity
-struct PartnerConfigurationStorage {
-  struct EnumerableSet.Bytes32Set _servicesHashSet;
-  mapping(bytes32 => struct PartnerConfiguration.Service) _supportedServices;
-  struct PartnerConfiguration.PaymentInfo _paymentInfo;
-  struct EnumerableSet.AddressSet _publicKeyAddressesSet;
-  mapping(address => bytes) _publicKeys;
-  struct EnumerableSet.Bytes32Set _wantedServicesHashSet;
-}
-```
-
-### ServiceAlreadyExists
-
-```solidity
-error ServiceAlreadyExists(bytes32 serviceHash)
-```
-
-### ServiceDoesNotExist
-
-```solidity
-error ServiceDoesNotExist(bytes32 serviceHash)
-```
-
-### WantedServiceAlreadyExists
-
-```solidity
-error WantedServiceAlreadyExists(bytes32 serviceHash)
-```
-
-### WantedServiceDoesNotExist
-
-```solidity
-error WantedServiceDoesNotExist(bytes32 serviceHash)
-```
-
-### PaymentTokenAlreadyExists
-
-```solidity
-error PaymentTokenAlreadyExists(address token)
-```
-
-### PaymentTokenDoesNotExist
-
-```solidity
-error PaymentTokenDoesNotExist(address token)
-```
-
-### PublicKeyAlreadyExists
-
-```solidity
-error PublicKeyAlreadyExists(address pubKeyAddress)
-```
-
-### PublicKeyDoesNotExist
-
-```solidity
-error PublicKeyDoesNotExist(address pubKeyAddress)
-```
-
-### InvalidPublicKeyUseType
-
-```solidity
-error InvalidPublicKeyUseType(uint8 use)
-```
-
-### PaymentTokenAdded
-
-```solidity
-event PaymentTokenAdded(address token)
-```
-
-### PaymentTokenRemoved
-
-```solidity
-event PaymentTokenRemoved(address token)
-```
-
-### OffChainPaymentSupportUpdated
-
-```solidity
-event OffChainPaymentSupportUpdated(bool supportsOffChainPayment)
-```
-
-### PublicKeyAdded
-
-```solidity
-event PublicKeyAdded(address pubKeyAddress)
-```
-
-### PublicKeyRemoved
-
-```solidity
-event PublicKeyRemoved(address pubKeyAddress)
-```
-
-### \_\_PartnerConfiguration_init
-
-```solidity
-function __PartnerConfiguration_init() internal
-```
-
-### \_\_PartnerConfiguration_init_unchained
-
-```solidity
-function __PartnerConfiguration_init_unchained() internal
-```
-
-### \_addService
-
-```solidity
-function _addService(bytes32 serviceHash, uint256 fee, string[] capabilities, bool restrictedRate) internal virtual
-```
-
-Adds a supported Service object for a given hash.
-
-#### Parameters
-
-| Name           | Type     | Description                                   |
-| -------------- | -------- | --------------------------------------------- |
-| serviceHash    | bytes32  | Hash of the service                           |
-| fee            | uint256  | Fee for the service                           |
-| capabilities   | string[] | Capabilities for the service                  |
-| restrictedRate | bool     | If the service is restricted to pre-agreement |
-
-### \_removeService
-
-```solidity
-function _removeService(bytes32 serviceHash) internal virtual
-```
-
-Removes a supported Service object for a given hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### \_setServiceFee
-
-```solidity
-function _setServiceFee(bytes32 serviceHash, uint256 fee) internal virtual
-```
-
-Sets the Service fee for a given hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-| fee         | uint256 | Fee                 |
-
-### \_setServiceRestrictedRate
-
-```solidity
-function _setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) internal virtual
-```
-
-Sets the Service restricted rate for a given hash.
-
-#### Parameters
-
-| Name           | Type    | Description         |
-| -------------- | ------- | ------------------- |
-| serviceHash    | bytes32 | Hash of the service |
-| restrictedRate | bool    | Restricted rate     |
-
-### \_setServiceCapabilities
-
-```solidity
-function _setServiceCapabilities(bytes32 serviceHash, string[] capabilities) internal virtual
-```
-
-Sets the Service capabilities for a given hash.
-
-#### Parameters
-
-| Name         | Type     | Description         |
-| ------------ | -------- | ------------------- |
-| serviceHash  | bytes32  | Hash of the service |
-| capabilities | string[] | Capabilities        |
-
-### \_addServiceCapability
-
-```solidity
-function _addServiceCapability(bytes32 serviceHash, string capability) internal virtual
-```
-
-Adds a capability to the service.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-| capability  | string  | Capability          |
-
-### \_removeServiceCapability
-
-```solidity
-function _removeServiceCapability(bytes32 serviceHash, string capability) internal virtual
-```
-
-Removes a capability from the service.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-| capability  | string  | Capability          |
-
-### getAllServiceHashes
-
-```solidity
-function getAllServiceHashes() public view returns (bytes32[] serviceHashes)
-```
-
-Returns all supported service hashes.
-
-### getService
-
-```solidity
-function getService(bytes32 serviceHash) public view virtual returns (struct PartnerConfiguration.Service service)
-```
-
-Returns the Service object for a given hash. Service object contains fee and capabilities.
-
-`serviceHash` is keccak256 hash of the pkg + service name as:
-
-```text
-           ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
-keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")
-```
-
-_These services are coming from the Camino Messenger Protocol's protobuf
-definitions._
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getServiceFee
-
-```solidity
-function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee)
-```
-
-Returns the fee for a given service hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getServiceRestrictedRate
-
-```solidity
-function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate)
-```
-
-Returns the restricted rate for a given service hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getServiceCapabilities
-
-```solidity
-function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] capabilities)
-```
-
-Returns the capabilities for a given service hash.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### \_addWantedService
-
-```solidity
-function _addWantedService(bytes32 serviceHash) internal virtual
-```
-
-Adds a wanted service hash to the wanted services set.
-
-Reverts if the service already exists.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### \_removeWantedService
-
-```solidity
-function _removeWantedService(bytes32 serviceHash) internal virtual
-```
-
-Removes a wanted service hash from the wanted services set.
-
-Reverts if the service does not exist.
-
-#### Parameters
-
-| Name        | Type    | Description         |
-| ----------- | ------- | ------------------- |
-| serviceHash | bytes32 | Hash of the service |
-
-### getWantedServiceHashes
-
-```solidity
-function getWantedServiceHashes() public view virtual returns (bytes32[] serviceHashes)
-```
-
-Returns all wanted service hashes.
-
-#### Return Values
-
-| Name          | Type      | Description           |
-| ------------- | --------- | --------------------- |
-| serviceHashes | bytes32[] | Wanted service hashes |
-
-### \_addSupportedToken
-
-```solidity
-function _addSupportedToken(address _token) internal virtual
-```
-
-Adds a supported payment token.
-
-#### Parameters
-
-| Name    | Type    | Description                       |
-| ------- | ------- | --------------------------------- |
-| \_token | address | Payment token address to be added |
-
-### \_removeSupportedToken
-
-```solidity
-function _removeSupportedToken(address _token) internal virtual
-```
-
-Removes a supported payment token.
-
-#### Parameters
-
-| Name    | Type    | Description                         |
-| ------- | ------- | ----------------------------------- |
-| \_token | address | Payment token address to be removed |
-
-### getSupportedTokens
-
-```solidity
-function getSupportedTokens() public view virtual returns (address[] tokens)
-```
-
-Returns supported token addresses.
-
-#### Return Values
-
-| Name   | Type      | Description               |
-| ------ | --------- | ------------------------- |
-| tokens | address[] | Supported token addresses |
-
-### \_setOffChainPaymentSupported
-
-```solidity
-function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual
-```
-
-Sets the off-chain payment support is supported.
-
-### offChainPaymentSupported
-
-```solidity
-function offChainPaymentSupported() public view virtual returns (bool)
-```
-
-Returns true if off-chain payment is supported for the given service.
-
-### \_addPublicKey
-
-```solidity
-function _addPublicKey(address pubKeyAddress, bytes publicKeyData) internal virtual
-```
-
-Adds public key with an address. Reverts if the public key already
-exists.
-
-Beware: This functions does not check if the public key is actually for the
-given address.
-
-### \_removePublicKey
-
-```solidity
-function _removePublicKey(address pubKeyAddress) internal virtual
-```
-
-Removes the public key for a given address
-
-Reverts if the public key does not exist
-
-### getPublicKeysAddresses
-
-```solidity
-function getPublicKeysAddresses() public view virtual returns (address[] pubKeyAddresses)
-```
-
-Returns the addresses of all public keys. These can then be used to
-retrieve the public keys the `getPublicKey(address)` function.
-
-### getPublicKey
-
-```solidity
-function getPublicKey(address pubKeyAddress) public view virtual returns (bytes data)
-```
-
-Returns the public key for a given address.
-
-Reverts if the public key does not exist
-
-#### Parameters
-
-| Name          | Type    | Description               |
-| ------------- | ------- | ------------------------- |
-| pubKeyAddress | address | Address of the public key |
-
-## ICMAccount
-
-### initialize
-
-```solidity
-function initialize(address manager, address bookingToken, address owner, address upgrader) external
-```
-
 ## CMAccountManager
 
 This contract manages the creation of the Camino Messenger accounts by
@@ -3533,6 +3023,50 @@ the service anymore.
 | ----------- | ------ | ------------------- |
 | serviceName | string | Name of the service |
 
+## ICMAccountManager
+
+### getAccountImplementation
+
+```solidity
+function getAccountImplementation() external view returns (address)
+```
+
+### getDeveloperFeeBp
+
+```solidity
+function getDeveloperFeeBp() external view returns (uint256)
+```
+
+### getDeveloperWallet
+
+```solidity
+function getDeveloperWallet() external view returns (address)
+```
+
+### isCMAccount
+
+```solidity
+function isCMAccount(address account) external view returns (bool)
+```
+
+### getRegisteredServiceHashByName
+
+```solidity
+function getRegisteredServiceHashByName(string serviceName) external view returns (bytes32 serviceHash)
+```
+
+### getRegisteredServiceNameByHash
+
+```solidity
+function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string serviceName)
+```
+
+### getServiceFeeToken
+
+```solidity
+function getServiceFeeToken() external view returns (address)
+```
+
 ## CMAccountManagerTest
 
 ### getVersion
@@ -3540,6 +3074,472 @@ the service anymore.
 ```solidity
 function getVersion() public pure returns (string)
 ```
+
+## PartnerConfiguration
+
+Partner Configuration is used by the {CMAccount} contract to register
+supported and wanted services by the partner.
+
+### Service
+
+Struct for storing supported service details for suppliers
+
+```solidity
+struct Service {
+    uint256 _fee;
+    bool _restrictedRate;
+    string[] _capabilities;
+}
+```
+
+### PaymentInfo
+
+```solidity
+struct PaymentInfo {
+  bool _supportsOffChainPayment;
+  struct EnumerableSet.AddressSet _supportedTokens;
+}
+```
+
+### PartnerConfigurationStorage
+
+```solidity
+struct PartnerConfigurationStorage {
+  struct EnumerableSet.Bytes32Set _servicesHashSet;
+  mapping(bytes32 => struct PartnerConfiguration.Service) _supportedServices;
+  struct PartnerConfiguration.PaymentInfo _paymentInfo;
+  struct EnumerableSet.AddressSet _publicKeyAddressesSet;
+  mapping(address => bytes) _publicKeys;
+  struct EnumerableSet.Bytes32Set _wantedServicesHashSet;
+}
+```
+
+### ServiceAlreadyExists
+
+```solidity
+error ServiceAlreadyExists(bytes32 serviceHash)
+```
+
+### ServiceDoesNotExist
+
+```solidity
+error ServiceDoesNotExist(bytes32 serviceHash)
+```
+
+### WantedServiceAlreadyExists
+
+```solidity
+error WantedServiceAlreadyExists(bytes32 serviceHash)
+```
+
+### WantedServiceDoesNotExist
+
+```solidity
+error WantedServiceDoesNotExist(bytes32 serviceHash)
+```
+
+### PaymentTokenAlreadyExists
+
+```solidity
+error PaymentTokenAlreadyExists(address token)
+```
+
+### PaymentTokenDoesNotExist
+
+```solidity
+error PaymentTokenDoesNotExist(address token)
+```
+
+### PublicKeyAlreadyExists
+
+```solidity
+error PublicKeyAlreadyExists(address pubKeyAddress)
+```
+
+### PublicKeyDoesNotExist
+
+```solidity
+error PublicKeyDoesNotExist(address pubKeyAddress)
+```
+
+### InvalidPublicKeyUseType
+
+```solidity
+error InvalidPublicKeyUseType(uint8 use)
+```
+
+### PaymentTokenAdded
+
+```solidity
+event PaymentTokenAdded(address token)
+```
+
+### PaymentTokenRemoved
+
+```solidity
+event PaymentTokenRemoved(address token)
+```
+
+### OffChainPaymentSupportUpdated
+
+```solidity
+event OffChainPaymentSupportUpdated(bool supportsOffChainPayment)
+```
+
+### PublicKeyAdded
+
+```solidity
+event PublicKeyAdded(address pubKeyAddress)
+```
+
+### PublicKeyRemoved
+
+```solidity
+event PublicKeyRemoved(address pubKeyAddress)
+```
+
+### \_\_PartnerConfiguration_init
+
+```solidity
+function __PartnerConfiguration_init() internal
+```
+
+### \_\_PartnerConfiguration_init_unchained
+
+```solidity
+function __PartnerConfiguration_init_unchained() internal
+```
+
+### \_addService
+
+```solidity
+function _addService(bytes32 serviceHash, uint256 fee, string[] capabilities, bool restrictedRate) internal virtual
+```
+
+Adds a supported Service object for a given hash.
+
+#### Parameters
+
+| Name           | Type     | Description                                   |
+| -------------- | -------- | --------------------------------------------- |
+| serviceHash    | bytes32  | Hash of the service                           |
+| fee            | uint256  | Fee for the service                           |
+| capabilities   | string[] | Capabilities for the service                  |
+| restrictedRate | bool     | If the service is restricted to pre-agreement |
+
+### \_removeService
+
+```solidity
+function _removeService(bytes32 serviceHash) internal virtual
+```
+
+Removes a supported Service object for a given hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### \_setServiceFee
+
+```solidity
+function _setServiceFee(bytes32 serviceHash, uint256 fee) internal virtual
+```
+
+Sets the Service fee for a given hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+| fee         | uint256 | Fee                 |
+
+### \_setServiceRestrictedRate
+
+```solidity
+function _setServiceRestrictedRate(bytes32 serviceHash, bool restrictedRate) internal virtual
+```
+
+Sets the Service restricted rate for a given hash.
+
+#### Parameters
+
+| Name           | Type    | Description         |
+| -------------- | ------- | ------------------- |
+| serviceHash    | bytes32 | Hash of the service |
+| restrictedRate | bool    | Restricted rate     |
+
+### \_setServiceCapabilities
+
+```solidity
+function _setServiceCapabilities(bytes32 serviceHash, string[] capabilities) internal virtual
+```
+
+Sets the Service capabilities for a given hash.
+
+#### Parameters
+
+| Name         | Type     | Description         |
+| ------------ | -------- | ------------------- |
+| serviceHash  | bytes32  | Hash of the service |
+| capabilities | string[] | Capabilities        |
+
+### \_addServiceCapability
+
+```solidity
+function _addServiceCapability(bytes32 serviceHash, string capability) internal virtual
+```
+
+Adds a capability to the service.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+| capability  | string  | Capability          |
+
+### \_removeServiceCapability
+
+```solidity
+function _removeServiceCapability(bytes32 serviceHash, string capability) internal virtual
+```
+
+Removes a capability from the service.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+| capability  | string  | Capability          |
+
+### getAllServiceHashes
+
+```solidity
+function getAllServiceHashes() public view returns (bytes32[] serviceHashes)
+```
+
+Returns all supported service hashes.
+
+### getService
+
+```solidity
+function getService(bytes32 serviceHash) public view virtual returns (struct PartnerConfiguration.Service service)
+```
+
+Returns the Service object for a given hash. Service object contains fee and capabilities.
+
+`serviceHash` is keccak256 hash of the pkg + service name as:
+
+```text
+           ┌────────────── pkg ─────────────┐ ┌───── service name ─────┐
+keccak256("cmp.services.accommodation.v1alpha.AccommodationSearchService")
+```
+
+_These services are coming from the Camino Messenger Protocol's protobuf
+definitions._
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getServiceFee
+
+```solidity
+function getServiceFee(bytes32 serviceHash) public view virtual returns (uint256 fee)
+```
+
+Returns the fee for a given service hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getServiceRestrictedRate
+
+```solidity
+function getServiceRestrictedRate(bytes32 serviceHash) public view virtual returns (bool restrictedRate)
+```
+
+Returns the restricted rate for a given service hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getServiceCapabilities
+
+```solidity
+function getServiceCapabilities(bytes32 serviceHash) public view virtual returns (string[] capabilities)
+```
+
+Returns the capabilities for a given service hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### \_addWantedService
+
+```solidity
+function _addWantedService(bytes32 serviceHash) internal virtual
+```
+
+Adds a wanted service hash to the wanted services set.
+
+Reverts if the service already exists.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### \_removeWantedService
+
+```solidity
+function _removeWantedService(bytes32 serviceHash) internal virtual
+```
+
+Removes a wanted service hash from the wanted services set.
+
+Reverts if the service does not exist.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getWantedServiceHashes
+
+```solidity
+function getWantedServiceHashes() public view virtual returns (bytes32[] serviceHashes)
+```
+
+Returns all wanted service hashes.
+
+#### Return Values
+
+| Name          | Type      | Description           |
+| ------------- | --------- | --------------------- |
+| serviceHashes | bytes32[] | Wanted service hashes |
+
+### \_addSupportedToken
+
+```solidity
+function _addSupportedToken(address _token) internal virtual
+```
+
+Adds a supported payment token.
+
+#### Parameters
+
+| Name    | Type    | Description                       |
+| ------- | ------- | --------------------------------- |
+| \_token | address | Payment token address to be added |
+
+### \_removeSupportedToken
+
+```solidity
+function _removeSupportedToken(address _token) internal virtual
+```
+
+Removes a supported payment token.
+
+#### Parameters
+
+| Name    | Type    | Description                         |
+| ------- | ------- | ----------------------------------- |
+| \_token | address | Payment token address to be removed |
+
+### getSupportedTokens
+
+```solidity
+function getSupportedTokens() public view virtual returns (address[] tokens)
+```
+
+Returns supported token addresses.
+
+#### Return Values
+
+| Name   | Type      | Description               |
+| ------ | --------- | ------------------------- |
+| tokens | address[] | Supported token addresses |
+
+### \_setOffChainPaymentSupported
+
+```solidity
+function _setOffChainPaymentSupported(bool _supportsOffChainPayment) internal virtual
+```
+
+Sets the off-chain payment support is supported.
+
+### offChainPaymentSupported
+
+```solidity
+function offChainPaymentSupported() public view virtual returns (bool)
+```
+
+Returns true if off-chain payment is supported for the given service.
+
+### \_addPublicKey
+
+```solidity
+function _addPublicKey(address pubKeyAddress, bytes publicKeyData) internal virtual
+```
+
+Adds public key with an address. Reverts if the public key already
+exists.
+
+Beware: This functions does not check if the public key is actually for the
+given address.
+
+### \_removePublicKey
+
+```solidity
+function _removePublicKey(address pubKeyAddress) internal virtual
+```
+
+Removes the public key for a given address
+
+Reverts if the public key does not exist
+
+### getPublicKeysAddresses
+
+```solidity
+function getPublicKeysAddresses() public view virtual returns (address[] pubKeyAddresses)
+```
+
+Returns the addresses of all public keys. These can then be used to
+retrieve the public keys the `getPublicKey(address)` function.
+
+### getPublicKey
+
+```solidity
+function getPublicKey(address pubKeyAddress) public view virtual returns (bytes data)
+```
+
+Returns the public key for a given address.
+
+Reverts if the public key does not exist
+
+#### Parameters
+
+| Name          | Type    | Description               |
+| ------------- | ------- | ------------------------- |
+| pubKeyAddress | address | Address of the public key |
 
 ## ServiceRegistry
 
