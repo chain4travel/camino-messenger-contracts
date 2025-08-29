@@ -444,6 +444,15 @@ function removeService(string serviceName) public
 
 Remove a service from the account by its name
 
+### removeAllServices
+
+```solidity
+function removeAllServices() public
+```
+
+Remove all supported services from the account.
+This function retrieves all currently supported service names and removes them one by one.
+
 ### setServiceFee
 
 ```solidity
@@ -760,14 +769,6 @@ Pre-computed hash of the EIP712Domain type
 keccak256("EIP712Domain(string name,string version,uint256 chainId)");
 ```
 
-### NATIVE_PAYMENT
-
-```solidity
-address NATIVE_PAYMENT
-```
-
-Special address for native payments.
-
 ### MessengerCheque
 
 Struct representing a Messenger Cheque.
@@ -1001,12 +1002,6 @@ A percentage of the amount is also paid to the developer wallet.
 | expiresAt     | uint256 | The expiration timestamp of the cheque.                                             |
 | paymentToken  | address | The payment token of the cheque.                                                    |
 | signature     | bytes   | The signature of the cheque.                                                        |
-
-### processPayment
-
-```solidity
-function processPayment(contract IERC20 paymentToken, uint256 paymentAmount, address recipient) internal virtual
-```
 
 ### getLastCashIn
 
@@ -2748,7 +2743,7 @@ Invalid booking token address.
 error InvalidServiceFeeToken(address serviceFeeToken)
 ```
 
-Invalid service fee token event.
+Invalid service fee token error.
 
 #### Parameters
 
