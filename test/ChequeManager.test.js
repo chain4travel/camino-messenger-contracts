@@ -549,7 +549,7 @@ describe("ChequeManager", function () {
             // Sign the cheque
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
 
-            // Verify cheque, should revert with ChequeExpired
+            // Verify cheque, should revert with InvalidPaymentToken
             await expect(
                 cmAccount.verifyCheque(
                     cheque.fromCMAccount,

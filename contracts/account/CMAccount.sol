@@ -460,6 +460,19 @@ contract CMAccount is
         emit ServiceRemoved(serviceName);
     }
 
+    /**
+     * @notice Remove all supported services from the account.
+     * This function retrieves all currently supported service names and removes them one by one.
+     */
+    function removeAllServices() public onlyRole(SERVICE_ADMIN_ROLE) {
+        (string[] memory serviceNames, ) = getSupportedServices();
+
+        for (uint256 i = 0; i < serviceNames.length; i++) {
+            _removeService(getServiceHash(serviceNames[i]));
+            emit ServiceRemoved(serviceNames[i]);
+        }
+    }
+
     // FEE
 
     /**

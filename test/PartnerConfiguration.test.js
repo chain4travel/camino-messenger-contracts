@@ -58,6 +58,13 @@ describe("PartnerConfiguration", function () {
             )
                 .to.emit(cmAccount, "ServiceAdded")
                 .withArgs(serviceName);
+
+            // Should revert if the same service is added again
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "ServiceAlreadyExists")
+                .withArgs(serviceHash);
         });
 
         it("should remove a supported service correctly", async function () {
@@ -115,6 +122,101 @@ describe("PartnerConfiguration", function () {
             await expect(
                 cmAccount.connect(signers.otherAccount1).removeService(serviceName),
             ).to.be.revertedWithCustomError(cmAccount, "ServiceDoesNotExist");
+        });
+
+        it("should remove all supported services correctly", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            // Register multiple services
+            const serviceName1 = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
+            const serviceName2 = "cmp.service.transport.v1alpha.TransportSearchService";
+            const serviceName3 = "cmp.service.activity.v1alpha.ActivitySearchService";
+
+            const serviceHash1 = ethers.keccak256(ethers.toUtf8Bytes(serviceName1));
+            const serviceHash2 = ethers.keccak256(ethers.toUtf8Bytes(serviceName2));
+            const serviceHash3 = ethers.keccak256(ethers.toUtf8Bytes(serviceName3));
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName1))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName1, serviceHash1);
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName2))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName2, serviceHash2);
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName3))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName3, serviceHash3);
+
+            // Get the SERVICE_ADMIN_ROLE
+            const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+            // Grant SERVICE_ADMIN_ROLE
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccount, "RoleGranted")
+                .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
+
+            // Add all services
+            const fee = 1000n;
+            const restrictedRate = false;
+            const capabilities = [];
+
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName1, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName1);
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName2, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName2);
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName3, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName3);
+
+            // Verify services are added
+            const [serviceNames] = await cmAccount.getSupportedServices();
+            expect(serviceNames).to.have.lengthOf(3);
+            expect(serviceNames).to.include(serviceName1);
+            expect(serviceNames).to.include(serviceName2);
+            expect(serviceNames).to.include(serviceName3);
+
+            // Try to remove all services with non-auth address
+            await expect(cmAccount.connect(signers.otherAccount3).removeAllServices())
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(signers.otherAccount3.address, await cmAccount.SERVICE_ADMIN_ROLE());
+
+            // Remove all services
+            await expect(cmAccount.connect(signers.otherAccount1).removeAllServices())
+                .to.emit(cmAccount, "ServiceRemoved")
+                .withArgs(serviceName1)
+                .to.emit(cmAccount, "ServiceRemoved")
+                .withArgs(serviceName2)
+                .to.emit(cmAccount, "ServiceRemoved")
+                .withArgs(serviceName3);
+
+            // Verify all services are removed
+            const [remainingServiceNames] = await cmAccount.getSupportedServices();
+            expect(remainingServiceNames).to.have.lengthOf(0);
+
+            // Try to remove all services again, should not fail (no-op)
+            await expect(cmAccount.connect(signers.otherAccount1).removeAllServices()).to.not.emit(
+                cmAccount,
+                "ServiceRemoved",
+            );
         });
 
         it("should revert if the caller does not have the SERVICE_ADMIN_ROLE", async function () {
