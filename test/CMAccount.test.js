@@ -102,6 +102,21 @@ describe("CMAccount", function () {
                 .to.be.revertedWithCustomError(cmAccount, "CMAccountNoUpgradeNeeded")
                 .withArgs(oldImplementationAddress, oldImplementationAddress);
         });
+
+        it("should revert upgrade if caller is not authorized", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Old implementation
+            const oldImplementationAddress = await cmAccountManager.getAccountImplementation();
+
+            const UPGRADER_ROLE = await cmAccount.UPGRADER_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to upgrade with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).upgradeToAndCall(oldImplementationAddress, "0x"))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, UPGRADER_ROLE);
+        });
     });
 
     describe("Registering Bots", function () {
@@ -299,6 +314,32 @@ describe("CMAccount", function () {
             await expect(withdrawTx).to.changeEtherBalances([cmAccount, bot], [-withdrawAmount, withdrawAmount]);
             await expect(withdrawTx).to.emit(cmAccount, "MessengerBotAdded").withArgs(bot.address);
         });
+
+        it("should revert addMessengerBot if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOT_ADMIN_ROLE = await cmAccount.BOT_ADMIN_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+            const bot = signers.otherAccount2;
+
+            // Try to add messenger bot with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).addMessengerBot(bot.address, 0n))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOT_ADMIN_ROLE);
+        });
+
+        it("should revert removeMessengerBot if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOT_ADMIN_ROLE = await cmAccount.BOT_ADMIN_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+            const bot = signers.otherAccount2;
+
+            // Try to remove messenger bot with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).removeMessengerBot(bot.address))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOT_ADMIN_ROLE);
+        });
     });
 
     describe("Transfer ERC20 & ERC721", function () {
@@ -427,6 +468,81 @@ describe("CMAccount", function () {
                     .connect(signers.otherAccount1)
                     .transferERC721(await bookingToken.getAddress(), signers.otherAccount2.address, 0n),
             ).to.be.revertedWithCustomError(supplierCMAccount, "AccessControlUnauthorizedAccount");
+        });
+    });
+
+    describe("Cancellation Functions", function () {
+        it("should revert initiateCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to initiate cancellation with unauthorized caller
+            await expect(
+                cmAccount.connect(unauthorizedCaller).initiateCancellation(0n, ethers.parseEther("0.05"), 1, 1),
+            )
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
+        });
+        it("should revert acceptCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to accept cancellation with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).acceptCancellation(0n, ethers.parseEther("0.05")))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
+        });
+
+        it("should revert rejectCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to reject cancellation with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).rejectCancellation(0n, 1, 1))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
+        });
+
+        it("should revert counterCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to counter cancellation with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).counterCancellation(0n, ethers.parseEther("0.03"), 1, 1))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
+        });
+
+        it("should revert withdrawCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to withdraw cancellation with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).withdrawCancellation(0n, 1, 1))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
+        });
+
+        it("should revert finalizeCancellation if caller is not authorized", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const BOOKING_OPERATOR_ROLE = await cmAccount.BOOKING_OPERATOR_ROLE();
+            const unauthorizedCaller = signers.otherAccount1;
+
+            // Try to finalize cancellation with unauthorized caller
+            await expect(cmAccount.connect(unauthorizedCaller).finalizeCancellation(0n, ethers.parseEther("0.05")))
+                .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
+                .withArgs(unauthorizedCaller.address, BOOKING_OPERATOR_ROLE);
         });
     });
 });
