@@ -259,7 +259,7 @@ contract CMAccountManager is
     error InvalidBookingTokenAddress(address bookingToken);
 
     /**
-     * @notice Invalid service fee token event.
+     * @notice Invalid service fee token error.
      * @param serviceFeeToken The service fee token address
      */
     error InvalidServiceFeeToken(address serviceFeeToken);

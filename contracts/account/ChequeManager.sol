@@ -51,11 +51,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
      */
     bytes32 public constant DOMAIN_TYPEHASH = 0xc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e;
 
-    /**
-     * @notice Special address for native payments.
-     */
-    address public constant NATIVE_PAYMENT = address(0);
-
     /***************************************************
      *                   STRUCTS                       *
      ***************************************************/
@@ -463,10 +458,10 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
         }
 
         // Transfer developer fee to the developer wallet
-        processPayment(IERC20(paymentToken), developerFee, ICMAccountManager(getManagerAddress()).getDeveloperWallet());
+        IERC20(paymentToken).safeTransfer(ICMAccountManager(getManagerAddress()).getDeveloperWallet(), developerFee);
 
         // Transfer the cheque payment amount to the `toCMAccount`
-        processPayment(IERC20(paymentToken), chequePaymentAmount, toCMAccount);
+        IERC20(paymentToken).safeTransfer(toCMAccount, chequePaymentAmount);
 
         // Emit cash-in event
         emit ChequeCashedIn(
@@ -480,28 +475,6 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
             developerFee, // Paid developer fee (cut from the cheque amount)
             paymentToken // Payment token
         );
-    }
-
-    function processPayment(IERC20 paymentToken, uint256 paymentAmount, address recipient) internal virtual {
-        // Handle the payment based on payment type
-        if (address(paymentToken) == NATIVE_PAYMENT) {
-            // Payment is in native currency (CAM)
-            if (msg.value != paymentAmount) {
-                revert IncorrectValue(msg.value, paymentAmount);
-            }
-
-            // Transfer payment to the supplier
-            payable(recipient).sendValue(msg.value);
-        } else {
-            // Payment is in ERC20
-            // Ensure no native currency was sent
-            if (msg.value > 0) {
-                revert UnexpectedNativePayment(msg.value);
-            }
-
-            // Transfer the ERC20 tokens from this contract to the recipient
-            IERC20(paymentToken).safeTransfer(recipient, paymentAmount);
-        }
     }
 
     /**

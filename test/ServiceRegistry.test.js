@@ -172,5 +172,86 @@ describe("ServiceRegistry", function () {
             const registeredServiceHashes = await cmAccountManager.getAllRegisteredServiceHashes();
             expect(registeredServiceHashes).to.be.deep.equal([serviceHash1, serviceHash2, serviceHash3]);
         });
+
+        it("should return empty arrays when no services are registered", async function () {
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Check that empty arrays are returned when no services are registered
+            const registeredServices = await cmAccountManager.getAllRegisteredServiceNames();
+            expect(registeredServices).to.be.deep.equal([]);
+
+            const registeredServiceHashes = await cmAccountManager.getAllRegisteredServiceHashes();
+            expect(registeredServiceHashes).to.be.deep.equal([]);
+        });
+
+        it("should handle service registration and unregistration with proper state updates", async function () {
+            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            const serviceName1 = "cmp.service.accommodation.v1.AccommodationSearchService";
+            const serviceHash1 = ethers.keccak256(ethers.toUtf8Bytes(serviceName1));
+            
+            const serviceName2 = "cmp.service.accommodation.v2.AccommodationSearchService";
+            const serviceHash2 = ethers.keccak256(ethers.toUtf8Bytes(serviceName2));
+
+            // Register two services
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName1))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName1, serviceHash1);
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName2))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName2, serviceHash2);
+
+            // Verify both services are registered
+            let registeredServices = await cmAccountManager.getAllRegisteredServiceNames();
+            let registeredServiceHashes = await cmAccountManager.getAllRegisteredServiceHashes();
+            expect(registeredServices).to.have.length(2);
+            expect(registeredServiceHashes).to.have.length(2);
+            expect(registeredServices).to.include(serviceName1);
+            expect(registeredServices).to.include(serviceName2);
+
+            // Unregister first service
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName1))
+                .to.emit(cmAccountManager, "ServiceUnregistered")
+                .withArgs(serviceName1, serviceHash1);
+
+            // Verify only second service remains
+            registeredServices = await cmAccountManager.getAllRegisteredServiceNames();
+            registeredServiceHashes = await cmAccountManager.getAllRegisteredServiceHashes();
+            expect(registeredServices).to.have.length(1);
+            expect(registeredServiceHashes).to.have.length(1);
+            expect(registeredServices[0]).to.equal(serviceName2);
+            expect(registeredServiceHashes[0]).to.equal(serviceHash2);
+
+            // Verify first service is no longer accessible
+            await expect(
+                cmAccountManager.getRegisteredServiceHashByName(serviceName1),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+            await expect(
+                cmAccountManager.getRegisteredServiceNameByHash(serviceHash1),
+            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+
+            // Unregister second service
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName2))
+                .to.emit(cmAccountManager, "ServiceUnregistered")
+                .withArgs(serviceName2, serviceHash2);
+
+            // Verify all services are unregistered
+            registeredServices = await cmAccountManager.getAllRegisteredServiceNames();
+            registeredServiceHashes = await cmAccountManager.getAllRegisteredServiceHashes();
+            expect(registeredServices).to.be.deep.equal([]);
+            expect(registeredServiceHashes).to.be.deep.equal([]);
+        });
     });
 });
