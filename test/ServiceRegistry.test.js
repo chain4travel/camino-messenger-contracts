@@ -200,7 +200,7 @@ describe("ServiceRegistry", function () {
 
             const serviceName1 = "cmp.service.accommodation.v1.AccommodationSearchService";
             const serviceHash1 = ethers.keccak256(ethers.toUtf8Bytes(serviceName1));
-            
+
             const serviceName2 = "cmp.service.accommodation.v2.AccommodationSearchService";
             const serviceHash2 = ethers.keccak256(ethers.toUtf8Bytes(serviceName2));
 
@@ -235,12 +235,14 @@ describe("ServiceRegistry", function () {
             expect(registeredServiceHashes[0]).to.equal(serviceHash2);
 
             // Verify first service is no longer accessible
-            await expect(
-                cmAccountManager.getRegisteredServiceHashByName(serviceName1),
-            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
-            await expect(
-                cmAccountManager.getRegisteredServiceNameByHash(serviceHash1),
-            ).to.be.revertedWithCustomError(cmAccountManager, "ServiceNotRegistered");
+            await expect(cmAccountManager.getRegisteredServiceHashByName(serviceName1)).to.be.revertedWithCustomError(
+                cmAccountManager,
+                "ServiceNotRegistered",
+            );
+            await expect(cmAccountManager.getRegisteredServiceNameByHash(serviceHash1)).to.be.revertedWithCustomError(
+                cmAccountManager,
+                "ServiceNotRegistered",
+            );
 
             // Unregister second service
             await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName2))
