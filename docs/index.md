@@ -2452,9 +2452,10 @@ address.
 
 Create CM Account: Users who want to create an account should call
 `createCMAccount(address admin, address upgrader)` function with addresses of
-the accounts admin and upgrader roles and also send the pre fund amount,
-which is currently set as 100 CAMs. When the manager contract is paused,
-account creation is stopped.
+the accounts admin and upgrader roles and they also need to approve the service
+fee token with the amount of prefund.
+
+When the manager contract is paused, account creation is stopped.
 
 Developer Fee: This contracts also keeps the info about the developer wallet
 and fee basis points. Which are used during the cheque cash in to pay for the
@@ -2800,7 +2801,7 @@ implementation from the manager.
 Because this function is deploying a contract, it reverts if the caller is
 not KYC or KYB verified. (For EOAs only)
 
-Caller must send the pre-fund amount with the transaction.
+Caller must approve the pre-fund amount before calling this function.
 
 _Emits a {CMAccountCreated} event._
 
