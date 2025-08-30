@@ -442,8 +442,15 @@ contract CMAccountManager is
      * @param serviceFeeToken The service fee token address
      */
     function setServiceFeeToken(address serviceFeeToken) public onlyRole(SERVICE_FEE_TOKEN_ADMIN_ROLE) {
+        // Fail fast if the provided token is the zero address or not a deployed contract
+        if (serviceFeeToken == address(0) || serviceFeeToken.code.length == 0) {
+            revert InvalidServiceFeeToken(serviceFeeToken);
+        }
+
         address oldServiceFeeToken = getServiceFeeToken();
+
         _setServiceFeeToken(serviceFeeToken);
+
         emit ServiceFeeTokenUpdated(oldServiceFeeToken, serviceFeeToken);
     }
 

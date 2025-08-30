@@ -498,22 +498,37 @@ describe("CMAccountManager", function () {
             // Set up signers
             await setupSigners();
 
-            const { cmAccountManager } = await loadFixture(deployAndConfigureAllFixture);
+            const { cmAccountManager } = await loadFixture(deployCMAccountManagerWithCMAccountImplFixture);
 
-            // Grant the SERVICE_FEE_TOKEN_ADMIN_ROLE role so we can set it to zero address
-            const SERVICE_FEE_TOKEN_ADMIN_ROLE = await cmAccountManager.SERVICE_FEE_TOKEN_ADMIN_ROLE();
-            await cmAccountManager.grantRole(SERVICE_FEE_TOKEN_ADMIN_ROLE, signers.feeAdmin.address);
-
-            // Set service fee token address to zero
-            await cmAccountManager.connect(signers.feeAdmin).setServiceFeeToken(ethers.ZeroAddress);
+            // Set dummy booking token address
+            await cmAccountManager
+                .connect(signers.managerVersioner)
+                .setBookingTokenAddress(await cmAccountManager.getAddress());
 
             // Check if service fee token address is zero
             const serviceFeeTokenAddress = await cmAccountManager.getServiceFeeToken();
             expect(serviceFeeTokenAddress).to.equal(ethers.ZeroAddress);
 
+            // Try CM Account creation
             await expect(cmAccountManager.createCMAccount(signers.cmAccountAdmin.address, signers.cmAccountUpgrader))
                 .to.be.revertedWithCustomError(cmAccountManager, "InvalidServiceFeeToken")
                 .withArgs(ethers.ZeroAddress);
+
+            // Try setting service fee token ----------------------------------------------------------------------
+
+            // Set required role
+            const SERVICE_FEE_TOKEN_ADMIN_ROLE = await cmAccountManager.SERVICE_FEE_TOKEN_ADMIN_ROLE();
+            await cmAccountManager.grantRole(SERVICE_FEE_TOKEN_ADMIN_ROLE, signers.feeAdmin.address);
+
+            // Try setting service fee token
+            await expect(cmAccountManager.connect(signers.feeAdmin).setServiceFeeToken(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(cmAccountManager, "InvalidServiceFeeToken")
+                .withArgs(ethers.ZeroAddress);
+
+            // Try with non-zero non-contract address
+            await expect(
+                cmAccountManager.connect(signers.feeAdmin).setServiceFeeToken(signers.otherAccount1.address),
+            ).to.be.revertedWithCustomError(cmAccountManager, "InvalidServiceFeeToken");
         });
 
         it("should fail if the prefund amount is not approved", async function () {
