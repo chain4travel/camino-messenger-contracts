@@ -312,7 +312,7 @@ describe("ChequeManager", function () {
 
             // Be sure that the signer does not have the CHEQUE_OPERATOR_ROLE role
             const CHEQUE_OPERATOR_ROLE = await cmAccount.CHEQUE_OPERATOR_ROLE();
-            expect(await cmAccountManager.hasRole(CHEQUE_OPERATOR_ROLE, signers.chequeOperator.address)).to.be.false;
+            expect(await cmAccount.hasRole(CHEQUE_OPERATOR_ROLE, signers.chequeOperator.address)).to.be.false;
 
             // Sign the cheque. Signature is valid but the signer is not allowed to sign on the `fromCMAccount`
             const signature = await signMessengerCheque(cheque, signers.chequeOperator);
