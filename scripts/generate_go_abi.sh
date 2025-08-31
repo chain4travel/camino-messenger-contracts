@@ -14,6 +14,7 @@ GO_MODULE_NAME="github.com/chain4travel/camino-messenger-contracts/go/contracts"
 GEN_PATH="go/contracts"
 ARTIFACTS_PATH="artifacts"
 ARTIFACTS=(
+    "contracts/test/NullUSD.sol/NullUSD.json"
     "contracts/account/CMAccount.sol/CMAccount.json"
     "contracts/manager/CMAccountManager.sol/CMAccountManager.json"
     "contracts/booking-token/BookingToken.sol/BookingToken.json"

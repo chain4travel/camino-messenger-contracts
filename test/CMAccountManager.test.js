@@ -556,7 +556,7 @@ describe("CMAccountManager", function () {
                 signers.cmAccountAdmin.address,
                 signers.cmAccountUpgrader,
                 {
-                    value: newPrefundAmount,
+                    value: newPrefundAmount, // This is not required anymore
                 },
             );
 
