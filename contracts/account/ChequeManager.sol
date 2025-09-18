@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 //
 // Camino Messenger Cheque Manager
+//
+// This contract implements EIP712 and handles the processing of cheques.
+// For more info about EIP712, see: https://eips.ethereum.org/EIPS/eip-712
 
 pragma solidity 0.8.24;
 
