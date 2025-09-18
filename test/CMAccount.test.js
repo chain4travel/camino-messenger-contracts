@@ -340,6 +340,15 @@ describe("CMAccount", function () {
                 .to.be.revertedWithCustomError(cmAccount, "AccessControlUnauthorizedAccount")
                 .withArgs(unauthorizedCaller.address, BOT_ADMIN_ROLE);
         });
+
+        it("should revert addMessengerBot if bot address is zero", async function () {
+            const { cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            // Try to add messenger bot with zero address
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).addMessengerBot(ethers.ZeroAddress, 0n),
+            ).to.be.revertedWithCustomError(cmAccount, "TransferToZeroAddress");
+        });
     });
 
     describe("Transfer ERC20 & ERC721", function () {

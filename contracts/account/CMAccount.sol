@@ -696,6 +696,9 @@ contract CMAccount is
      * need to be present in the contract.
      */
     function addMessengerBot(address bot, uint256 gasMoney) public onlyRole(BOT_ADMIN_ROLE) {
+        // Check if bot is valid to prevent accidental transfers of funds to zero address
+        if (bot == address(0)) revert TransferToZeroAddress();
+
         // Grant roles to bot
         _grantRole(CHEQUE_OPERATOR_ROLE, bot);
         _grantRole(BOOKING_OPERATOR_ROLE, bot);
