@@ -93,7 +93,7 @@ Service admin role can add & remove supported & wanted services.
 struct CMAccountStorage {
     address _manager;
     address _bookingToken;
-    uint256 _prefundAmount;
+    uint256 _unused;
 }
 ```
 
@@ -890,7 +890,7 @@ Incorrect value.
 error UnexpectedNativePayment(uint256 amount)
 ```
 
-Error for when there is unexpected native payment.
+Error if there is an unexpected native payment.
 
 #### Parameters
 
