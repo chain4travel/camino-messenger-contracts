@@ -9,7 +9,8 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Manager Interface
 import { ICMAccountManager } from "../manager/ICMAccountManager.sol";
@@ -182,7 +183,7 @@ abstract contract ChequeManager is Initializable, ReentrancyGuardUpgradeable {
     error IncorrectValue(uint256 current, uint256 expected);
 
     /**
-     * @notice Error for when there is unexpected native payment.
+     * @notice Error if there is an unexpected native payment.
      *
      * @param amount The unexpected amount
      */

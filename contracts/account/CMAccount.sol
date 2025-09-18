@@ -9,7 +9,8 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
@@ -120,7 +121,7 @@ contract CMAccount is
         /**
          * @dev Prefund amount
          */
-        uint256 _prefundAmount; // Not used, but do not remove.
+        uint256 _unused; // Not used, but do not remove. Previously used to store the prefund amount.
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.CMAccount")) - 1)) & ~bytes32(uint256(0xff));
