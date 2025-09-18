@@ -653,20 +653,20 @@ describe("ChequeManager", function () {
             );
 
             // CMAccount balance should decrease by cheque amount (developer fee cut is taken from the cheque amount)
-            await expect(await cashInResponse).to.changeTokenBalance(nullUSD, cmAccount, -cheque.amount);
+            await expect(cashInResponse).to.changeTokenBalance(nullUSD, cmAccount, -cheque.amount);
 
             // toCMAccount balance should increase by cheque amount - developerFee
-            await expect(await cashInResponse).to.changeTokenBalance(
+            await expect(cashInResponse).to.changeTokenBalance(
                 nullUSD,
                 toCMAccountAddress,
                 cheque.amount - developerFee,
             );
 
             // DeveloperWallet balance should increase by developerFee
-            await expect(await cashInResponse).to.changeTokenBalance(nullUSD, signers.developerWallet, developerFee);
+            await expect(cashInResponse).to.changeTokenBalance(nullUSD, signers.developerWallet, developerFee);
 
             // Should emit event with correct data
-            await expect(await cashInResponse)
+            await expect(cashInResponse)
                 .to.emit(cmAccount, "ChequeCashedIn")
                 .withArgs(
                     cheque.fromCMAccount,
@@ -727,24 +727,24 @@ describe("ChequeManager", function () {
             );
 
             // CMAccount balance decrease by (cheque2 amount - cheque amount)
-            await expect(await cashInResponse2).to.changeTokenBalance(
+            await expect(cashInResponse2).to.changeTokenBalance(
                 nullUSD,
                 cmAccount,
                 -cheque2.amount + cheque.amount, // Weird calculation but it works
             );
 
             // toCMAccount balance increase by (cheque2 amount - cheque amount) - developerFee2
-            await expect(await cashInResponse2).to.changeTokenBalance(
+            await expect(cashInResponse2).to.changeTokenBalance(
                 nullUSD,
                 toCMAccountAddress,
                 cheque2.amount - cheque.amount - developerFee2, // new cheque amount minus the lastCashIn amount
             );
 
             // DeveloperWallet balance increase by developerFee
-            await expect(await cashInResponse2).to.changeTokenBalance(nullUSD, signers.developerWallet, developerFee2);
+            await expect(cashInResponse2).to.changeTokenBalance(nullUSD, signers.developerWallet, developerFee2);
 
             // Should emit event with correct data
-            await expect(await cashInResponse2)
+            await expect(cashInResponse2)
                 .to.emit(cmAccount, "ChequeCashedIn")
                 .withArgs(
                     cheque2.fromCMAccount,
@@ -826,7 +826,7 @@ describe("ChequeManager", function () {
             const diffCMAccount_developerFee = (diffCMAccount_cheque.amount * developerFeeBp) / 10000n;
 
             // Should emit event with correct data
-            await expect(await diffCMAccount_cashInResponse)
+            await expect(diffCMAccount_cashInResponse)
                 .to.emit(cmAccount, "ChequeCashedIn")
                 .withArgs(
                     diffCMAccount_cheque.fromCMAccount,
@@ -841,21 +841,21 @@ describe("ChequeManager", function () {
                 );
 
             // CMAccount balance decrease by cheque amount
-            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+            await expect(diffCMAccount_cashInResponse).to.changeTokenBalance(
                 nullUSD,
                 cmAccount,
                 -diffCMAccount_cheque.amount,
             );
 
             // diffCMAccount balance increase by cheque amount - developerFee
-            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+            await expect(diffCMAccount_cashInResponse).to.changeTokenBalance(
                 nullUSD,
                 diffCMAccountAddress,
                 diffCMAccount_cheque.amount - diffCMAccount_developerFee,
             );
 
             // DeveloperWallet balance increase by developerFee
-            await expect(await diffCMAccount_cashInResponse).to.changeTokenBalance(
+            await expect(diffCMAccount_cashInResponse).to.changeTokenBalance(
                 nullUSD,
                 signers.developerWallet,
                 diffCMAccount_developerFee,
