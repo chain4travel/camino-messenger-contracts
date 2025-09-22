@@ -681,7 +681,11 @@ describe("ChequeManager", function () {
                 );
 
             // Sanity checks: should set lastCashIns
-            const lastCashIn = await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot, cheque.paymentToken);
+            const lastCashIn = await cmAccount.getLastCashIn(
+                signers.chequeOperator.address,
+                cheque.toBot,
+                cheque.paymentToken,
+            );
             expect(lastCashIn).to.be.deep.equal([cheque.counter, cheque.amount, createdAt, createdAt + 300n]);
 
             // Check total cheque payments
@@ -760,7 +764,7 @@ describe("ChequeManager", function () {
 
             // Sanity checks: should set lastCashIns
             expect(
-                await cmAccount.getLastCashIn(signers.chequeOperator, cheque.toBot, cheque2.paymentToken),
+                await cmAccount.getLastCashIn(signers.chequeOperator.address, cheque.toBot, cheque2.paymentToken),
             ).to.be.deep.equal([cheque2.counter, cheque2.amount, createdAt2, createdAt2 + 300n]);
 
             // Check total cheque payments
