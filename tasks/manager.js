@@ -15,6 +15,7 @@ const ROLES = [
     "PREFUND_ADMIN_ROLE",
     "SERVICE_REGISTRY_ADMIN_ROLE",
     "CMACCOUNT_ROLE",
+    "SERVICE_FEE_TOKEN_ADMIN_ROLE",
 ];
 
 function bold(text) {
