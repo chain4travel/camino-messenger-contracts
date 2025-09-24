@@ -14,7 +14,7 @@ const ROLES = [
     "DEVELOPER_WALLET_ADMIN_ROLE",
     "PREFUND_ADMIN_ROLE",
     "SERVICE_REGISTRY_ADMIN_ROLE",
-    "CMACCOUNT_ROLE",
+    //"CMACCOUNT_ROLE", // Disabled because it slows down the role:all output a lot. Use `account:list` instead
     "SERVICE_FEE_TOKEN_ADMIN_ROLE",
 ];
 
@@ -51,6 +51,11 @@ async function getManager(hre) {
 async function getBookingToken(hre) {
     const addresses = getAddressesForNetwork(hre);
     return await ethers.getContractAt("BookingToken", addresses["CaminoMessengerModule#BookingTokenProxy"]);
+}
+
+async function getServiceFeeToken(hre) {
+    const addresses = getAddressesForNetwork(hre);
+    return await ethers.getContractAt("ServiceFeeToken", addresses["ServiceFeeTokenModule#ServiceFeeTokenProxy"]);
 }
 
 async function handleRoles(taskArgs, hre, action, contractName) {
@@ -127,6 +132,11 @@ MANAGER_SCOPE.task("status", "Print status of deployed contracts").setAction(asy
 
     const cmAccount = await ethers.getContractAt("CMAccount", addresses["CaminoMessengerModule#CMAccount"]);
 
+    const serviceFeeToken = await ethers.getContractAt(
+        "ServiceFeeToken",
+        addresses["ServiceFeeTokenModule#ServiceFeeTokenProxy"],
+    );
+
     const bookingTokenImplementation = await ethers.getContractAt(
         "BookingToken",
         addresses["CaminoMessengerModule#BookingToken"],
@@ -137,26 +147,33 @@ MANAGER_SCOPE.task("status", "Print status of deployed contracts").setAction(asy
         addresses["CaminoMessengerModule#BookingTokenProxy"],
     );
 
-    console.log("========================= MANAGER =========================");
+    console.log("================ MANAGER =======================================");
     console.log(`Proxy: ${await manager.getAddress()}`);
     console.log(`Implementation: ${await managerImplementation.getAddress()}`);
 
     console.log();
-    console.log("======================== CM ACCOUNT ========================");
+    console.log("================ CM ACCOUNT ====================================");
     console.log(`Implementation: ${await cmAccount.getAddress()}`);
 
     console.log();
-    console.log("====================== BOOKING TOKEN ======================");
+    console.log("================ BOOKING TOKEN =================================");
     console.log(`Proxy: ${await bookingToken.getAddress()}`);
     console.log(`Implementation: ${await bookingTokenImplementation.getAddress()}`);
 
+    if (hre.network.name !== "camino") {
+        console.log();
+        console.log("================ SERVICE FEE TEST TOKEN ========================");
+        console.log(`Proxy: ${await serviceFeeToken.getAddress()}`);
+    }
+
     console.log();
-    console.log("====================== CONFIGURATION ======================");
+    console.log("================ CONFIGURATION on MANAGER ======================");
     console.log(`CM Account Impl: ${await manager.getAccountImplementation()}`);
     console.log(`Developer Wallet: ${await manager.getDeveloperWallet()}`);
     const feeBasisPoints = await manager.getDeveloperFeeBp();
     const feePercentage = (Number(feeBasisPoints) / 10000) * 100;
     console.log(`Developer Fee: ${feeBasisPoints}bp (${feePercentage}%)`);
+    console.log(`Service Fee Token: ${await manager.getServiceFeeToken()}`);
     console.log(`Prefund Amount: ${ethers.formatEther(await manager.getPrefundAmount())} CAM`);
 });
 
@@ -262,6 +279,40 @@ MANAGER_SCOPE.task("developer:set-address", "Set developer address")
         const manager = await getManager(hre);
         console.log(`Setting developer address to ${taskArgs.address}...`);
         const tx = await manager.setDeveloperWallet(taskArgs.address);
+        const txReceipt = await tx.wait();
+        console.log("Tx:", txReceipt.hash);
+    });
+
+MANAGER_SCOPE.task("sft:set", "Set Service Fee Token Address")
+    .addParam("address", "Service Fee Token Address")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        console.log(`Setting Service Fee Token Address to ${taskArgs.address}...`);
+        const tx = await manager.setServiceFeeToken(taskArgs.address);
+        const txReceipt = await tx.wait();
+        console.log("Tx:", txReceipt.hash);
+    });
+
+MANAGER_SCOPE.task("sft:get", "Get Service Fee Token Address").setAction(async (taskArgs, hre) => {
+    const manager = await getManager(hre);
+    const address = await manager.getServiceFeeToken();
+    console.log(`Service Fee Token Address: ${address}`);
+});
+
+MANAGER_SCOPE.task("sft:mint", "Mint Service Fee Token")
+    .addParam("amount", "Amount to mint in eth (not wei")
+    .addParam("recipient", "Recipient address")
+    .setAction(async (taskArgs, hre) => {
+        const serviceFeeToken = await getServiceFeeToken(hre);
+
+        // parse amount
+        const mintAmount = ethers.parseUnits(taskArgs.amount, await serviceFeeToken.decimals());
+
+        // format mint amount
+        const mintAmountStr = ethers.formatUnits(mintAmount, await serviceFeeToken.decimals());
+
+        console.log(`Minting ${mintAmountStr} SFT to ${taskArgs.recipient}...`);
+        const tx = await serviceFeeToken.mint(taskArgs.recipient, mintAmount);
         const txReceipt = await tx.wait();
         console.log("Tx:", txReceipt.hash);
     });
