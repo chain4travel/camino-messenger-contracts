@@ -64,6 +64,20 @@ async function deployNullUSDFixture() {
     return { nullUSD, nullUSDDecimals };
 }
 
+async function deployServiceFeeTokenFixture() {
+    // Set up signers
+    await setupSigners();
+
+    const ServiceFeeToken = await ethers.getContractFactory("ServiceFeeToken");
+    const serviceFeeToken = await upgrades.deployProxy(ServiceFeeToken, [
+        signers.feeAdmin.address, // admin
+        signers.managerPauser.address, // pauser
+        signers.withdrawer.address, // minter
+        signers.managerUpgrader.address, // upgrader
+    ]);
+    return { serviceFeeToken };
+}
+
 async function deployCMAccountManagerFixture() {
     // Set up signers
     await setupSigners();
@@ -594,4 +608,5 @@ module.exports = {
     deployBookingTokenWithNullUSDFixture,
     deployCancellationSupportFixture,
     deployNullUSDFixture,
+    deployServiceFeeTokenFixture,
 };
