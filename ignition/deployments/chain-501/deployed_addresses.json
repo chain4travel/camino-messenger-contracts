@@ -23,5 +23,9 @@
   "RefactorCancellationModule#CMAccount": "0x7E5Aacf1aA5efA994d979D7a68DEa256aD1b5D87",
   "ServiceFeeTokenModule#ServiceFeeToken": "0x0Cfec4708d2D0EC4eb3A76397ff19d6eaE729125",
   "ServiceFeeTokenModule#ServiceFeeTokenERC1967Proxy": "0x607539540Acc0221be30aA3f61995E3C003d561f",
-  "ServiceFeeTokenModule#ServiceFeeTokenProxy": "0x607539540Acc0221be30aA3f61995E3C003d561f"
+  "ServiceFeeTokenModule#ServiceFeeTokenProxy": "0x607539540Acc0221be30aA3f61995E3C003d561f",
+  "ERC20ServiceFeeModule#BookingTokenOperator": "0x9C4c78DbeaC83188Da9236cc3DfB06e86BE5d50c",
+  "ERC20ServiceFeeModule#CMAccountManager": "0x3ca19148B5d11d46C09fbF68818e1caa49060e23",
+  "ERC20ServiceFeeModule#ManagerProxy": "0xE5B2f76C778D082b07BDd7D51FFe83E3E055B47F",
+  "ERC20ServiceFeeModule#CMAccount": "0x3531fa105D4440e4C88D3b3e76C0aE8155D00e67"
 }
