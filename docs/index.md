@@ -3700,3 +3700,80 @@ function getVersion() public pure returns (string)
 ```solidity
 constructor() public
 ```
+
+## ServiceFeeToken
+
+This contract is intended to be used only on testnet as an ERC20 service
+fee token.
+
+For more info see:
+https://github.com/chain4travel/camino-messenger-contracts/
+
+### PAUSER_ROLE
+
+```solidity
+bytes32 PAUSER_ROLE
+```
+
+### MINTER_ROLE
+
+```solidity
+bytes32 MINTER_ROLE
+```
+
+### UPGRADER_ROLE
+
+```solidity
+bytes32 UPGRADER_ROLE
+```
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(address defaultAdmin, address pauser, address minter, address upgrader) public
+```
+
+### pause
+
+```solidity
+function pause() public
+```
+
+### unpause
+
+```solidity
+function unpause() public
+```
+
+### mint
+
+```solidity
+function mint(address to, uint256 amount) public
+```
+
+### \_authorizeUpgrade
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal
+```
+
+\_Function that should revert when `msg.sender` is not authorized to upgrade the contract. Called by
+{upgradeToAndCall}.
+
+Normally, this function will use an xref:access.adoc[access control] modifier such as {Ownable-onlyOwner}.
+
+````solidity
+function _authorizeUpgrade(address) internal onlyOwner {}
+```_
+
+### _update
+
+```solidity
+function _update(address from, address to, uint256 value) internal
+````
