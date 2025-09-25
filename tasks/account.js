@@ -52,7 +52,11 @@ async function getCMAccount(cmAccountAddress) {
 
 async function getServiceFeeTokenFromManager(hre) {
     const manager = await getManager(hre);
-    return await ethers.getContractAt("ServiceFeeToken", await manager.getServiceFeeToken());
+    const sftAddress = await manager.getServiceFeeToken();
+    if (sftAddress === ethers.ZeroAddress) {
+        throw new Error("ServiceFeeToken is not configured on the CMAccountManager");
+    }
+    return await ethers.getContractAt("ServiceFeeToken", sftAddress);
 }
 
 async function handleRoles(taskArgs, hre, action) {
