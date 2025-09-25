@@ -12,11 +12,6 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "prefundAmount",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
         "name": "owner",
         "type": "address"

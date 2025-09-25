@@ -2,17 +2,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "AddressInsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
@@ -49,8 +38,19 @@
     "type": "error"
   },
   {
-    "inputs": [],
-    "name": "FailedInnerCall",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "current",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expected",
+        "type": "uint256"
+      }
+    ],
+    "name": "IncorrectValue",
     "type": "error"
   },
   {
@@ -105,6 +105,22 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "expectedPaymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "InvalidPaymentToken",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "toCMAccount",
         "type": "address"
       }
@@ -131,6 +147,28 @@
   {
     "inputs": [],
     "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UnexpectedNativePayment",
     "type": "error"
   },
   {
@@ -183,6 +221,12 @@
         "internalType": "uint256",
         "name": "paidDeveloperFee",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "ChequeCashedIn",
@@ -265,6 +309,11 @@
         "type": "uint256"
       },
       {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
         "internalType": "bytes",
         "name": "signature",
         "type": "bytes"
@@ -298,6 +347,11 @@
       {
         "internalType": "address",
         "name": "toBot",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
         "type": "address"
       }
     ],
@@ -357,6 +411,25 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "getTotalChequePaymentsPerToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "fromCMAccount",
         "type": "address"
       },
@@ -389,6 +462,11 @@
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "hashMessengerCheque",
@@ -438,6 +516,11 @@
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "hashTypedDataV4",
@@ -506,6 +589,11 @@
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       },
       {
         "internalType": "bytes",

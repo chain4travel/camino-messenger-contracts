@@ -5,19 +5,77 @@
         "internalType": "address",
         "name": "token",
         "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
       },
       {
-        "internalType": "address",
-        "name": "spender",
+        "internalType": "contract IERC20",
+        "name": "actualPaymentToken",
         "type": "address"
       },
       {
+        "internalType": "contract IERC20",
+        "name": "expectedPaymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "UnexpectedPaymentToken",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "actualPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expectedPrice",
         "type": "uint256"
       }
     ],
-    "name": "TokenApprovalFailed",
+    "name": "UnexpectedPrice",
     "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NATIVE_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "OFFCHAIN_PAYMENT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ]

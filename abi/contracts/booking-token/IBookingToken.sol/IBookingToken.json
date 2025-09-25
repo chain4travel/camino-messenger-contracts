@@ -8,29 +8,11 @@
       },
       {
         "internalType": "uint256",
-        "name": "checkRefundAmount",
+        "name": "refundAmount",
         "type": "uint256"
       }
     ],
-    "name": "acceptCancellationProposal",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "checkRefundAmount",
-        "type": "uint256"
-      }
-    ],
-    "name": "acceptCounteredCancellationProposal",
+    "name": "acceptCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -54,9 +36,24 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "cancelCancellationProposal",
+    "name": "counterCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -70,32 +67,13 @@
       },
       {
         "internalType": "uint256",
-        "name": "newRefundAmount",
-        "type": "uint256"
-      }
-    ],
-    "name": "counterCancellationProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getCancellationProposalRefundAmount",
-    "outputs": [
-      {
-        "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "name": "finalizeCancellation",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -152,9 +130,19 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "initiateCancellationProposal",
+    "name": "initiateCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -180,12 +168,17 @@
         "type": "uint256"
       },
       {
-        "internalType": "enum CancellationRejectionReason",
-        "name": "reason",
-        "type": "uint8"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "rejectCancellationProposal",
+    "name": "rejectCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -218,6 +211,11 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
+      },
+      {
         "internalType": "bool",
         "name": "isCancellable",
         "type": "bool"
@@ -236,12 +234,17 @@
         "type": "uint256"
       },
       {
-        "internalType": "bool",
-        "name": "_isCancellable",
-        "type": "bool"
+        "internalType": "uint16",
+        "name": "withdrawalReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "withdrawalReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "setCancellable",
+    "name": "withdrawCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

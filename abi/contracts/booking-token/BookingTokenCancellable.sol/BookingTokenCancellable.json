@@ -1,0 +1,386 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CancellationProposalExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "existing",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "checked",
+        "type": "uint256"
+      }
+    ],
+    "name": "IncorrectRefundAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum CancellationProposalStatus",
+        "name": "status",
+        "type": "uint8"
+      }
+    ],
+    "name": "InvalidCancellationProposalStatus",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotOwnerOrSupplier",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "OnlyCurrentProposerCanWithdrawCancellation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "OnlySupplierCanFinalizeCancellation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "OwnerNotAcceptedCancellation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "ProposerCanNotRejectCancellation",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CancellationFinalized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "initialProposer",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "currentProposer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "ownerAccepted",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "supplierAccepted",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "timesCountered",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "timesRejected",
+        "type": "uint32"
+      }
+    ],
+    "name": "CancellationPending",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "rejectionVersion",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "counterReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "counterVersion",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "withdrawalReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "withdrawalVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "CancellationReasons",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "rejectionVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "CancellationRejected",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "withdrawalReason",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "withdrawalVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "CancellationWithdrawn",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCancellationProposal",
+    "outputs": [
+      {
+        "internalType": "enum CancellationProposalStatus",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "initialProposer",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "currentProposer",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "ownerAccepted",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "supplierAccepted",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint32",
+        "name": "timesCountered",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "timesRejected",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCancellationReasons",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationVersion",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionVersion",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterVersion",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "withdrawalReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "withdrawalVersion",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

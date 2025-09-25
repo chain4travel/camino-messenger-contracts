@@ -40,17 +40,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "AddressInsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "latestImplementation",
         "type": "address"
       },
@@ -88,17 +77,6 @@
       }
     ],
     "name": "ChequeExpired",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "DepositorNotAllowed",
     "type": "error"
   },
   {
@@ -146,7 +124,39 @@
   },
   {
     "inputs": [],
-    "name": "FailedInnerCall",
+    "name": "FailedCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "current",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expected",
+        "type": "uint256"
+      }
+    ],
+    "name": "IncorrectValue",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "needed",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientBalance",
     "type": "error"
   },
   {
@@ -195,6 +205,22 @@
   {
     "inputs": [],
     "name": "InvalidInitialization",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "expectedPaymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "InvalidPaymentToken",
     "type": "error"
   },
   {
@@ -362,6 +388,17 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UnexpectedNativePayment",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bytes32",
         "name": "serviceHash",
         "type": "bytes32"
@@ -411,17 +448,6 @@
       }
     ],
     "name": "WithdrawalLimitExceededForPeriod",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "ZeroValueDeposit",
     "type": "error"
   },
   {
@@ -493,6 +519,12 @@
         "internalType": "uint256",
         "name": "paidDeveloperFee",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "ChequeCashedIn",
@@ -1059,29 +1091,11 @@
       },
       {
         "internalType": "uint256",
-        "name": "checkRefundAmount",
-        "type": "uint256"
-      }
-    ],
-    "name": "acceptCancellationProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
       }
     ],
-    "name": "acceptCounteredCancellationProposal",
+    "name": "acceptCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1200,22 +1214,19 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expectedPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "contract IERC20",
+        "name": "expectedPaymentToken",
+        "type": "address"
       }
     ],
     "name": "buyBookingToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "cancelCancellationProposal",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1258,6 +1269,11 @@
         "type": "uint256"
       },
       {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
         "internalType": "bytes",
         "name": "signature",
         "type": "bytes"
@@ -1279,9 +1295,37 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "counterReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "counterCancellationProposal",
+    "name": "counterCancellation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "finalizeCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1378,6 +1422,11 @@
         "internalType": "address",
         "name": "toBot",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "getLastCashIn",
@@ -1414,19 +1463,6 @@
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getPrefundAmount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -1521,6 +1557,25 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getRoleMembers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
       }
     ],
     "stateMutability": "view",
@@ -1738,6 +1793,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "getTotalChequePaymentsPerToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getWantedServiceHashes",
     "outputs": [
@@ -1841,6 +1915,11 @@
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "hashMessengerCheque",
@@ -1890,6 +1969,11 @@
         "internalType": "uint256",
         "name": "expiresAt",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
       }
     ],
     "name": "hashTypedDataV4",
@@ -1914,11 +1998,6 @@
         "internalType": "address",
         "name": "bookingToken",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "prefundAmount",
-        "type": "uint256"
       },
       {
         "internalType": "address",
@@ -1947,9 +2026,19 @@
         "internalType": "uint256",
         "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "cancellationReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "initiateCancellationProposal",
+    "name": "initiateCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2001,8 +2090,13 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "offchainPaymentCurrency",
+        "type": "uint256"
+      },
+      {
         "internalType": "bool",
-        "name": "_isCancellable",
+        "name": "cancellable",
         "type": "bool"
       }
     ],
@@ -2092,12 +2186,24 @@
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "reason",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "rejectionReason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "rejectionReasonVersion",
+        "type": "uint16"
       }
     ],
-    "name": "rejectCancellationProposal",
+    "name": "rejectCancellation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "removeAllServices",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2217,24 +2323,6 @@
       }
     ],
     "name": "revokeRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "cancellable",
-        "type": "bool"
-      }
-    ],
-    "name": "setCancellable",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2445,6 +2533,11 @@
         "type": "uint256"
       },
       {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
         "internalType": "bytes",
         "name": "signature",
         "type": "bytes"
@@ -2480,6 +2573,29 @@
       }
     ],
     "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reason",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "reasonVersion",
+        "type": "uint16"
+      }
+    ],
+    "name": "withdrawCancellation",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

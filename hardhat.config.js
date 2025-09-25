@@ -73,6 +73,5 @@ module.exports = {
         runOnCompile: false,
         format: "json",
         clear: true,
-        except: ["test"],
     },
 };
