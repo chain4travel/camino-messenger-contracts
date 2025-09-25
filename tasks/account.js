@@ -50,6 +50,11 @@ async function getCMAccount(cmAccountAddress) {
     return await ethers.getContractAt("CMAccount", cmAccountAddress);
 }
 
+async function getServiceFeeTokenFromManager(hre) {
+    const manager = await getManager(hre);
+    return await ethers.getContractAt("ServiceFeeToken", await manager.getServiceFeeToken());
+}
+
 async function handleRoles(taskArgs, hre, action) {
     const cmAccount = await getCMAccount(taskArgs.cmAccount);
     console.log("CMAccount:", taskArgs.cmAccount);
@@ -199,17 +204,42 @@ ACCOUNT_SCOPE.task("role:all", "List all roles and their members")
 
 ACCOUNT_SCOPE.task("create", "Create CMAccount")
     .addOptionalParam("privateKey", "Private key to use, default: CMACCOUNT_PK env variable", process.env.CMACCOUNT_PK)
+    .addOptionalParam("camAmount", "Amount of CAM to send to CMAccount", "0")
     .setAction(async (taskArgs, hre) => {
         const manager = await getManager(hre);
+
+        console.log("We need to approve the ServiceFeeToken for the manager to create the CMAccount.");
+        console.log("Getting ServiceFeeToken...");
+        const serviceFeeToken = await getServiceFeeTokenFromManager(hre);
+        console.log("ServiceFeeToken Address:", await serviceFeeToken.getAddress());
+        console.log("ServiceFeeToken Name   :", await serviceFeeToken.name());
+        const sftSymbol = await serviceFeeToken.symbol();
+        const sftDecimals = await serviceFeeToken.decimals();
+        console.log("ServiceFeeToken Symbol :", sftSymbol);
+
         try {
             // Get signer from private key
             const signer = new ethers.Wallet(taskArgs.privateKey, ethers.provider);
-
-            console.log("Creating CMAccount...");
             console.log("Signer:", signer.address);
+
+            // Approve the Service Fee Token
+            // Get prefund amount
+            console.log("Getting Prefund Amount...");
+            const prefundAmount = await manager.getPrefundAmount();
+            const prefundAmountFormatted = ethers.formatUnits(prefundAmount, sftDecimals);
+            console.log("Prefund Amount:", prefundAmountFormatted);
+            console.log(`Approving the manager for ${prefundAmountFormatted} ${sftSymbol} ...`);
+            const txApprove = await serviceFeeToken.connect(signer).approve(await manager.getAddress(), prefundAmount);
+            const receiptApprove = await txApprove.wait();
+            console.log("Tx:", receiptApprove.hash);
+
+            // Create CMAccount
+            const parsedCAM = ethers.parseEther(taskArgs.camAmount);
+            const formattedCAM = ethers.formatEther(parsedCAM);
+            console.log(`Creating CMAccount... (Sending ${formattedCAM} CAM to the new CMAccount)`);
             const tx = await manager
                 .connect(signer)
-                .createCMAccount(signer.address, signer.address, { value: ethers.parseEther("100") });
+                .createCMAccount(signer.address, signer.address, { value: parsedCAM });
 
             const receipt = await tx.wait();
             console.log("Tx:", receipt.hash);
