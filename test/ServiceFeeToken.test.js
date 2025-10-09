@@ -130,4 +130,26 @@ describe("ServiceFeeToken", function () {
             serviceFeeToken.connect(signers.otherAccount1).upgradeToAndCall(signers.otherAccount3.address, "0x"),
         ).to.be.revertedWithCustomError(serviceFeeToken, "AccessControlUnauthorizedAccount");
     });
+
+    it("Should reinitialize correctly", async function () {
+        const { serviceFeeToken } = await loadFixture(deployServiceFeeTokenFixture);
+
+        expect(await serviceFeeToken.name()).to.be.equal("USD Service Fee Token");
+        expect(await serviceFeeToken.symbol()).to.be.equal("USD.test");
+
+        const newName = "USD Test Token";
+        const newSymbol = "USD.test.new";
+
+        // Try to re-init with unauthorized caller
+        await expect(
+            serviceFeeToken.connect(signers.otherAccount1).reinitializeV2(newName, newSymbol),
+        ).to.be.revertedWithCustomError(serviceFeeToken, "AccessControlUnauthorizedAccount");
+
+        // Reinitialize
+        await expect(serviceFeeToken.connect(signers.feeAdmin).reinitializeV2(newName, newSymbol)).to.not.reverted;
+
+        // Check new name and symbol
+        expect(await serviceFeeToken.name()).to.be.equal(newName);
+        expect(await serviceFeeToken.symbol()).to.be.equal(newSymbol);
+    });
 });
