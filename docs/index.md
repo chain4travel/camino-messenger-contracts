@@ -3739,6 +3739,23 @@ constructor() public
 function initialize(address defaultAdmin, address pauser, address minter, address upgrader) public
 ```
 
+### reinitializeV2
+
+```solidity
+function reinitializeV2(string newName, string newSymbol) public
+```
+
+This function allows reinitializing the contract to update the name and symbol
+
+_Only callable by DEFAULT_ADMIN_ROLE_
+
+#### Parameters
+
+| Name      | Type   | Description      |
+| --------- | ------ | ---------------- |
+| newName   | string | New token name   |
+| newSymbol | string | New token symbol |
+
 ### pause
 
 ```solidity
