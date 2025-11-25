@@ -1,0 +1,14 @@
+[
+    "cmp.services.accommodation.v1.AccommodationProductInfoService",
+    "cmp.services.accommodation.v1.AccommodationProductListService",
+    "cmp.services.accommodation.v1.AccommodationSearchService",
+    "cmp.services.activity.v1.ActivityProductInfoService",
+    "cmp.services.activity.v1.ActivityProductListService",
+    "cmp.services.activity.v1.ActivitySearchService",
+    "cmp.services.book.v1.MintService",
+    "cmp.services.book.v1.ValidationService",
+    "cmp.services.carbon.v1.CarbonCompensateService",
+    "cmp.services.seat_map.v1.SeatMapAvailabilityService",
+    "cmp.services.seat_map.v1.SeatMapService",
+    "cmp.services.transport.v1.TransportSearchService"
+]
