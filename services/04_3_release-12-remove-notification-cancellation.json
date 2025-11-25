@@ -1,0 +1,7 @@
+[
+    "cmp.services.notification.v1.NotificationService",
+    "cmp.services.notification.v2.NotificationService",
+    "cmp.services.notification.v3.NotificationService",
+    "cmp.services.cancellation.v1.CancellationService",
+    "cmp.services.cancellation.v2.CancellationService"
+]
