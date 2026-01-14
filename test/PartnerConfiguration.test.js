@@ -557,6 +557,157 @@ describe("PartnerConfiguration", function () {
         });
     });
 
+    describe("Unregistered Services", function () {
+        it("should remove a service even if it's unregistered on the manager", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            const serviceName = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
+            const serviceHash = ethers.keccak256(ethers.toUtf8Bytes(serviceName));
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName, serviceHash);
+
+            // get the SERVICE_ADMIN_ROLE
+            const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+            // Grant SERVICE_ADMIN_ROLE
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccount, "RoleGranted")
+                .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
+
+            const fee = 1000n;
+            const restrictedRate = false;
+            const capabilities = [];
+
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName);
+
+            // Unregister the service
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName))
+                .to.emit(cmAccountManager, "ServiceUnregistered")
+                .withArgs(serviceName, serviceHash);
+
+            // Remove the service
+            await expect(cmAccount.connect(signers.otherAccount1).removeService(serviceName))
+                .to.emit(cmAccount, "ServiceRemoved")
+                .withArgs(serviceName);
+        });
+
+        it("should get all services even if one is unregistered on the manager", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            const serviceName = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
+            const serviceHash = ethers.keccak256(ethers.toUtf8Bytes(serviceName));
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName, serviceHash);
+
+            // get the SERVICE_ADMIN_ROLE
+            const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+            // Grant SERVICE_ADMIN_ROLE
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccount, "RoleGranted")
+                .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
+
+            const fee = 1000n;
+            const restrictedRate = false;
+            const capabilities = [];
+
+            await expect(
+                cmAccount.connect(signers.otherAccount1).addService(serviceName, fee, restrictedRate, capabilities),
+            )
+                .to.emit(cmAccount, "ServiceAdded")
+                .withArgs(serviceName);
+
+            // Unregister the service on the manager
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName))
+                .to.emit(cmAccountManager, "ServiceUnregistered")
+                .withArgs(serviceName, serviceHash);
+
+            // Try to get all services
+            const servicesFromCMAccount = await cmAccount.getSupportedServices();
+            expect(servicesFromCMAccount).to.be.deep.equal([[serviceName], [[fee, restrictedRate, capabilities]]]);
+        });
+
+        it("should get all wanted services even if one is unregistered on the manager", async function () {
+            const { cmAccountManager, cmAccount } = await loadFixture(deployAndConfigureAllFixture);
+
+            const SERVICE_REGISTRY_ADMIN_ROLE = await cmAccountManager.SERVICE_REGISTRY_ADMIN_ROLE();
+
+            // Grant SERVICE_REGISTRY_ADMIN_ROLE
+            await expect(
+                cmAccountManager
+                    .connect(signers.managerAdmin)
+                    .grantRole(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccountManager, "RoleGranted")
+                .withArgs(SERVICE_REGISTRY_ADMIN_ROLE, signers.otherAccount1.address, signers.managerAdmin.address);
+
+            const serviceName = "cmp.service.accommodation.v1alpha.AccommodationSearchService";
+            const serviceHash = ethers.keccak256(ethers.toUtf8Bytes(serviceName));
+
+            await expect(cmAccountManager.connect(signers.otherAccount1).registerService(serviceName))
+                .to.emit(cmAccountManager, "ServiceRegistered")
+                .withArgs(serviceName, serviceHash);
+
+            // get the SERVICE_ADMIN_ROLE
+            const SERVICE_ADMIN_ROLE = await cmAccount.SERVICE_ADMIN_ROLE();
+
+            // Grant SERVICE_ADMIN_ROLE
+            await expect(
+                cmAccount.connect(signers.cmAccountAdmin).grantRole(SERVICE_ADMIN_ROLE, signers.otherAccount1.address),
+            )
+                .to.emit(cmAccount, "RoleGranted")
+                .withArgs(SERVICE_ADMIN_ROLE, signers.otherAccount1.address, signers.cmAccountAdmin.address);
+
+            // Add wanted service
+            await expect(cmAccount.connect(signers.otherAccount1).addWantedServices([serviceName]))
+                .to.emit(cmAccount, "WantedServiceAdded")
+                .withArgs(serviceName);
+
+            // Unregister the service on the manager
+            await expect(cmAccountManager.connect(signers.otherAccount1).unregisterService(serviceName))
+                .to.emit(cmAccountManager, "ServiceUnregistered")
+                .withArgs(serviceName, serviceHash);
+
+            // Try to get all wanted services
+            const wantedServicesFromCMAccount = await cmAccount.getWantedServices();
+            expect(wantedServicesFromCMAccount).to.be.deep.equal([serviceName]);
+        });
+    });
+
     describe("Wanted Services", function () {
         it("should add a wanted service correctly", async function () {
             const { cmAccountManager, cmAccount, services } = await loadFixture(
