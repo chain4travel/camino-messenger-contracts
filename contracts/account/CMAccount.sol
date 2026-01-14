@@ -535,11 +535,26 @@ contract CMAccount is
     }
 
     /**
+     * @notice Get service hash by name. Returns the keccak256 hash of the
+     * registered service name from the account manager
+     */
+    function getRegisteredServiceHash(string memory serviceName) private view returns (bytes32 serviceHash) {
+        return ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+    }
+
+    /**
      * @notice Get service hash by name. Returns the keccak256 hash of the service name
      * from the account manager
      */
     function getServiceHash(string memory serviceName) private view returns (bytes32 serviceHash) {
-        return ICMAccountManager(getManagerAddress()).getRegisteredServiceHashByName(serviceName);
+        return ICMAccountManager(getManagerAddress()).getServiceHashByName(serviceName);
+    }
+
+    /**
+     * @notice Get service name by hash. Returns the service name from the account manager
+     */
+    function getServiceName(bytes32 serviceHash) private view returns (string memory serviceName) {
+        return ICMAccountManager(getManagerAddress()).getServiceNameByHash(serviceHash);
     }
 
     /***************************************************

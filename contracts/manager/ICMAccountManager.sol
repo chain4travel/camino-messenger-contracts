@@ -13,7 +13,11 @@ interface ICMAccountManager {
 
     function getRegisteredServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
 
+    function getServiceHashByName(string memory serviceName) external view returns (bytes32 serviceHash);
+
     function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string memory serviceName);
+
+    function getServiceNameByHash(bytes32 serviceHash) external view returns (string memory serviceName);
 
     function getServiceFeeToken() external view returns (address);
 }
