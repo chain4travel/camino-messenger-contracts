@@ -3051,10 +3051,22 @@ function isCMAccount(address account) external view returns (bool)
 function getRegisteredServiceHashByName(string serviceName) external view returns (bytes32 serviceHash)
 ```
 
+### getServiceHashByName
+
+```solidity
+function getServiceHashByName(string serviceName) external view returns (bytes32 serviceHash)
+```
+
 ### getRegisteredServiceNameByHash
 
 ```solidity
 function getRegisteredServiceNameByHash(bytes32 serviceHash) external view returns (string serviceName)
+```
+
+### getServiceNameByHash
+
+```solidity
+function getServiceNameByHash(bytes32 serviceHash) external view returns (string serviceName)
 ```
 
 ### getServiceFeeToken
@@ -3635,7 +3647,21 @@ service name and removes it from the registry.
 function getRegisteredServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
 ```
 
-Returns the name of a service by its hash.
+Returns the name of a registered service by its hash.
+
+#### Parameters
+
+| Name        | Type    | Description         |
+| ----------- | ------- | ------------------- |
+| serviceHash | bytes32 | Hash of the service |
+
+### getServiceNameByHash
+
+```solidity
+function getServiceNameByHash(bytes32 serviceHash) public view returns (string serviceName)
+```
+
+Returns the name of a service by its hash. Even if the service is unregistered at the moment.
 
 #### Parameters
 
@@ -3650,6 +3676,20 @@ function getRegisteredServiceHashByName(string serviceName) public view returns 
 ```
 
 Returns the hash of a service by its name.
+
+#### Parameters
+
+| Name        | Type   | Description         |
+| ----------- | ------ | ------------------- |
+| serviceName | string | Name of the service |
+
+### getServiceHashByName
+
+```solidity
+function getServiceHashByName(string serviceName) public view returns (bytes32 serviceHash)
+```
+
+Returns the hash of a service by its name. Even if the service is unregistered at the moment.
 
 #### Parameters
 
