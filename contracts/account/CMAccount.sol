@@ -449,7 +449,7 @@ contract CMAccount is
         bool restrictedRate,
         string[] memory capabilities
     ) public onlyRole(SERVICE_ADMIN_ROLE) {
-        _addService(getServiceHash(serviceName), fee, capabilities, restrictedRate);
+        _addService(getRegisteredServiceHash(serviceName), fee, capabilities, restrictedRate);
         emit ServiceAdded(serviceName);
     }
 
@@ -571,7 +571,7 @@ contract CMAccount is
         Service[] memory _allSupportedServicesList = new Service[](_serviceHashes.length);
 
         for (uint256 i = 0; i < _serviceHashes.length; i++) {
-            _serviceNames[i] = ICMAccountManager(getManagerAddress()).getRegisteredServiceNameByHash(_serviceHashes[i]);
+            _serviceNames[i] = getServiceName(_serviceHashes[i]);
             _allSupportedServicesList[i] = getService(_serviceHashes[i]);
         }
 
@@ -610,7 +610,7 @@ contract CMAccount is
      */
     function addWantedServices(string[] memory serviceNames) public onlyRole(SERVICE_ADMIN_ROLE) {
         for (uint256 i = 0; i < serviceNames.length; i++) {
-            bytes32 serviceHash = getServiceHash(serviceNames[i]);
+            bytes32 serviceHash = getRegisteredServiceHash(serviceNames[i]);
             _addWantedService(serviceHash);
             emit WantedServiceAdded(serviceNames[i]);
         }
@@ -640,9 +640,7 @@ contract CMAccount is
         string[] memory _wantedServiceNames = new string[](_wantedServiceHashes.length);
 
         for (uint256 i = 0; i < _wantedServiceHashes.length; i++) {
-            _wantedServiceNames[i] = ICMAccountManager(getManagerAddress()).getRegisteredServiceNameByHash(
-                _wantedServiceHashes[i]
-            );
+            _wantedServiceNames[i] = getServiceName(_wantedServiceHashes[i]);
         }
 
         return _wantedServiceNames;
