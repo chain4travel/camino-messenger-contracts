@@ -114,9 +114,6 @@ abstract contract ServiceRegistry is Initializable {
             revert ServiceNotRegistered();
         }
 
-        delete $._serviceNameByHash[serviceHash];
-        delete $._hashByServiceName[serviceName];
-
         emit ServiceUnregistered(serviceName, serviceHash);
     }
 
