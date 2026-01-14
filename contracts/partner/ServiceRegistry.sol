@@ -22,9 +22,9 @@ abstract contract ServiceRegistry is Initializable {
 
     /// @custom:storage-location erc7201:camino.messenger.storage.ServiceRegistry
     struct ServiceRegistryStorage {
-        EnumerableSet.Bytes32Set _servicesHashSet; // set of service hashes
-        mapping(bytes32 serviceHash => string serviceName) _serviceNameByHash;
-        mapping(string serviceName => bytes32 serviceHash) _hashByServiceName;
+        EnumerableSet.Bytes32Set _servicesHashSet; // set of REGISTERED service hashes
+        mapping(bytes32 serviceHash => string serviceName) _serviceNameByHash; // Mapping to resolve hash to name
+        mapping(string serviceName => bytes32 serviceHash) _hashByServiceName; // Mapping to resolve name to hash
     }
 
     // keccak256(abi.encode(uint256(keccak256("camino.messenger.storage.ServiceRegistry")) - 1)) & ~bytes32(uint256(0xff));
@@ -121,7 +121,7 @@ abstract contract ServiceRegistry is Initializable {
     }
 
     /**
-     * @notice Returns the name of a service by its hash.
+     * @notice Returns the name of a registered service by its hash.
      *
      * @param serviceHash Hash of the service
      */
@@ -132,6 +132,16 @@ abstract contract ServiceRegistry is Initializable {
         if (!$._servicesHashSet.contains(serviceHash)) {
             revert ServiceNotRegistered();
         }
+        return $._serviceNameByHash[serviceHash];
+    }
+
+    /**
+     * @notice Returns the name of a service by its hash. Even if the service is unregistered at the moment.
+     *
+     * @param serviceHash Hash of the service
+     */
+    function getServiceNameByHash(bytes32 serviceHash) public view returns (string memory serviceName) {
+        ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
         return $._serviceNameByHash[serviceHash];
     }
 
@@ -148,6 +158,16 @@ abstract contract ServiceRegistry is Initializable {
             revert ServiceNotRegistered();
         }
 
+        return $._hashByServiceName[serviceName];
+    }
+
+    /**
+     * @notice Returns the hash of a service by its name. Even if the service is unregistered at the moment.
+     *
+     * @param serviceName Name of the service
+     */
+    function getServiceHashByName(string memory serviceName) public view returns (bytes32 serviceHash) {
+        ServiceRegistryStorage storage $ = _getServiceRegistryStorage();
         return $._hashByServiceName[serviceName];
     }
 
