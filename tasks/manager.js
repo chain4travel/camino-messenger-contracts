@@ -105,8 +105,15 @@ async function handleServices(taskArgs, hre, action) {
 
     console.log(`${action === "register" ? "Registering" : "Unregistering"} services...`);
 
-    // Iterate over the services from the services file and perform the action
-    const services = require(taskArgs.json);
+    let services = [];
+    if (taskArgs.service) {
+        services = [taskArgs.service];
+    } else if (taskArgs.json) {
+        services = require(taskArgs.json);
+    } else {
+        throw new Error("You must provide either --service or --json parameter.");
+    }
+
     for (const service of services) {
         console.log(`⏳ ${action === "register" ? "Registering" : "Unregistering"} Service:`, service);
         try {
@@ -178,13 +185,15 @@ MANAGER_SCOPE.task("status", "Print status of deployed contracts").setAction(asy
 });
 
 MANAGER_SCOPE.task("services:register", "Register services")
-    .addParam("json", "Full path to the services json file")
+    .addOptionalParam("json", "Full path to the services json file")
+    .addOptionalParam("service", "Service name to register")
     .setAction(async (taskArgs, hre) => {
         await handleServices(taskArgs, hre, "register");
     });
 
 MANAGER_SCOPE.task("services:unregister", "Unregister services")
-    .addParam("json", "Full path to the services json file")
+    .addOptionalParam("json", "Full path to the services json file")
+    .addOptionalParam("service", "Service name to unregister")
     .setAction(async (taskArgs, hre) => {
         await handleServices(taskArgs, hre, "unregister");
     });

@@ -734,4 +734,70 @@ ACCOUNT_SCOPE.task("upgrade:check", "Check if CMAccount is upgradable")
         }
     });
 
+ACCOUNT_SCOPE.task("find", "Scan all CM Accounts for roles of a given address")
+    .addParam("address", "Address to search for")
+    .setAction(async (taskArgs, hre) => {
+        const manager = await getManager(hre);
+        const cmAccountRole = await manager.CMACCOUNT_ROLE();
+        const count = await manager.getRoleMemberCount(cmAccountRole);
+
+        console.log(`🔍 Searching for address: ${bold(taskArgs.address)}`);
+        console.log(`📡 Found ${bold(count)} CM Accounts. Starting scan...\n`);
+
+        const spinners = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let spinnerIdx = 0;
+
+        const formatProgress = (current, total, address) => {
+            const percentage = Math.floor((Number(current) / Number(total)) * 100);
+            const spinner = spinners[spinnerIdx % spinners.length];
+            spinnerIdx++;
+            return `\r${spinner} [${current}/${total}] ${percentage}% | Scanning: ${address.slice(0, 10)}...${address.slice(-8)}`;
+        };
+
+        let foundCount = 0;
+        const findings = [];
+
+        for (let i = 0; i < count; i++) {
+            const cmAccountAddress = await manager.getRoleMember(cmAccountRole, i);
+
+            // Update progress on every account
+            process.stdout.write(formatProgress(i + 1, count, cmAccountAddress));
+
+            const cmAccount = await getCMAccount(cmAccountAddress);
+
+            const roleChecks = await Promise.all(
+                ACC_ROLES.map(async (roleName) => {
+                    try {
+                        const roleHash = await cmAccount[roleName]();
+                        const hasRole = await cmAccount.hasRole(roleHash, taskArgs.address);
+                        return hasRole ? roleName : null;
+                    } catch (e) {
+                        return null;
+                    }
+                }),
+            );
+
+            const rolesHeld = roleChecks.filter((r) => r !== null);
+
+            if (rolesHeld.length > 0) {
+                foundCount++;
+                findings.push({ address: cmAccountAddress, roles: rolesHeld });
+                // If we found something, clear the current progress line and print it
+                process.stdout.write("\r" + " ".repeat(80) + "\r"); // Clear line
+                console.log(`✨ ${bold("Found match:")} ${bold(cmAccountAddress)}`);
+                rolesHeld.forEach((r) => console.log(`   └─ ${r}`));
+                console.log();
+            }
+        }
+
+        // Final clear of the progress line
+        process.stdout.write("\r" + " ".repeat(80) + "\r");
+
+        if (foundCount === 0) {
+            console.log("❌ No CM Accounts found where this address holds a role.");
+        } else {
+            console.log(`✅ Search complete. Found matches in ${bold(foundCount)} CM Account(s).`);
+        }
+    });
+
 module.exports = {};
