@@ -36,6 +36,9 @@ function getAddressesForNetwork(hre) {
     } else if (hre.network.name === "localhost") {
         console.log("Running on localhost");
         addresses = require("../ignition/deployments/chain-31337/deployed_addresses.json");
+    } else if (hre.network.name === "base-sepolia") {
+        console.log("Running on base-sepolia");
+        addresses = require("../ignition/deployments/chain-84532/deployed_addresses.json");
     } else {
         throw new Error(`Unsupported network: ${hre.network.name}`);
     }
