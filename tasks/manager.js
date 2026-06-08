@@ -101,18 +101,26 @@ function handleTransactionError(error, contract) {
 }
 
 async function handleServices(taskArgs, hre, action) {
-    const manager = await getManager(hre);
-
-    console.log(`${action === "register" ? "Registering" : "Unregistering"} services...`);
+    if (taskArgs.service && taskArgs.json) {
+        throw new Error("Cannot provide both --service and --json parameters.");
+    }
 
     let services = [];
     if (taskArgs.service) {
         services = [taskArgs.service];
     } else if (taskArgs.json) {
-        services = require(taskArgs.json);
+        const parsed = require(taskArgs.json);
+        if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(s => typeof s === "string")) {
+            throw new Error("JSON file must be a non-empty array of strings.");
+        }
+        services = parsed;
     } else {
         throw new Error("You must provide either --service or --json parameter.");
     }
+
+    const manager = await getManager(hre);
+
+    console.log(`${action === "register" ? "Registering" : "Unregistering"} services...`);
 
     for (const service of services) {
         console.log(`⏳ ${action === "register" ? "Registering" : "Unregistering"} Service:`, service);
