@@ -110,7 +110,7 @@ async function handleServices(taskArgs, hre, action) {
         services = [taskArgs.service];
     } else if (taskArgs.json) {
         const parsed = require(taskArgs.json);
-        if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(s => typeof s === "string")) {
+        if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every((s) => typeof s === "string")) {
             throw new Error("JSON file must be a non-empty array of strings.");
         }
         services = parsed;
