@@ -772,7 +772,12 @@ ACCOUNT_SCOPE.task("find", "Scan all CM Accounts for roles of a given address")
                         const hasRole = await cmAccount.hasRole(roleHash, taskArgs.address);
                         return hasRole ? roleName : null;
                     } catch (e) {
-                        return null;
+                        if (e?.message?.includes("is not a function")) {
+                            return null;
+                        }
+                        throw new Error(
+                            `Role scan failed for CMAccount ${cmAccountAddress}, role ${roleName}: ${e?.message || e}`,
+                        );
                     }
                 }),
             );
